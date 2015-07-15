@@ -552,6 +552,7 @@
 /* ../../design/common.blocks/button/_theme/button_theme_simple.styl:end */
 /* ../../design/common.blocks/checkbox/_theme/checkbox_theme_islands.styl:begin */
 .checkbox_theme_islands {
+  position: relative;
   font-family: Arial, Helvetica, sans-serif;
   -webkit-tap-highlight-color: rgba(0,0,0,0);
 }
@@ -567,6 +568,7 @@
 .checkbox_theme_islands .checkbox__box {
   position: relative;
   display: inline-block;
+  pointer-events: none;
   border-radius: 3px;
   background: rgba(0,0,0,0.2);
 }
@@ -678,6 +680,10 @@
   position: absolute;
   z-index: -1;
   visibility: hidden;
+}
+.checkbox_theme_simple .checkbox__box {
+  display: inline-block;
+  pointer-events: none;
 }
 .checkbox_theme_simple .checkbox__box:before {
   line-height: 0.6em;

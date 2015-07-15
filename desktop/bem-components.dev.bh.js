@@ -1836,7 +1836,7 @@ bh.setOptions({
                                 (itemOrGroup.mods = itemOrGroup.mods || {}).checked = true;
                                 checkedItems.push(itemOrGroup);
                             }
-                        } else { // menu__group
+                        } else if(itemOrGroup.content) { // menu__group
                             iterateItems(itemOrGroup.content);
                         }
                     }
@@ -1958,7 +1958,7 @@ bh.setOptions({
 
 
     bh.match('progressbar', function(ctx, json) {
-        var val = json.val;
+        var val = json.val || 0;
 
         ctx
             .js({ val : val })
@@ -2419,7 +2419,7 @@ bh.setOptions({
                 },
                 {
                     elem : 'text',
-                    content : json.val
+                    content : json.val || 0
                 }
             ], true);
 
@@ -2428,3 +2428,5 @@ bh.setOptions({
 
 // end: ../../design/common.blocks/progressbar/_theme/progressbar_theme_simple.bh.js
 module.exports = bh;
+bh['BH'] = bh;
+bh['BEMHTML'] = bh;
