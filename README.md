@@ -1,3 +1,8 @@
+# bem-components-dist
+
+This is precompiled version of [bem-components](https://en.bem.info/libs/bem-components/) library. All the files are also available at CDN. For more info please refer to [usage documentation](https://en.bem.info/libs/bem-components/current/#usage).
+
+## HTML template to use the dist with
 
 ```html
 <!DOCTYPE html>
