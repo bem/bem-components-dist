@@ -6,7 +6,7 @@
  * http://www.opensource.org/licenses/mit-license.php
  * http://www.gnu.org/licenses/gpl.html
  *
- * @version 0.1.1
+ * @version 0.1.2
  */
 
 (function(global) {
@@ -415,8 +415,376 @@ else {
     global.modules = create();
 }
 
-})(this);
+})(typeof window !== 'undefined' ? window : global);
 if(typeof module !== 'undefined') {modules = module.exports;}
+/* ../../libs/bem-core/common.blocks/cookie/cookie.js begin */
+/**
+ * @module cookie
+ * @description Inspired from $.cookie plugin by Klaus Hartl (stilbuero.de)
+ */
+
+modules.define('cookie', function(provide) {
+
+provide(/** @exports */{
+    /**
+     * Returns cookie by given name
+     * @param {String} name
+     * @returns {String|null}
+     */
+    get : function(name) {
+        var res = null;
+        if(document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for(var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if(cookie.substring(0, name.length + 1) === (name + '=')) {
+                    res = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return res;
+    },
+
+    /**
+     * Sets cookie by given name
+     * @param {String} name
+     * @param {String} val
+     * @param {Object} options
+     * @returns {cookie} this
+     */
+    set : function(name, val, options) {
+        options = options || {};
+        if(val === null) {
+            val = '';
+            options.expires = -1;
+        }
+        var expires = '';
+        if(options.expires && (typeof options.expires === 'number' || options.expires.toUTCString)) {
+            var date;
+            if(typeof options.expires === 'number') {
+                date = new Date();
+                date.setTime(date.getTime() + (options.expires * 24 * 60 * 60 * 1000));
+            } else {
+                date = options.expires;
+            }
+            expires = '; expires=' + date.toUTCString(); // use expires attribute, max-age is not supported by IE
+        }
+        // CAUTION: Needed to parenthesize options.path and options.domain
+        // in the following expressions, otherwise they evaluate to undefined
+        // in the packed version for some reason...
+        var path = options.path? '; path=' + (options.path) : '',
+            domain = options.domain? '; domain=' + (options.domain) : '',
+            secure = options.secure? '; secure' : '';
+        document.cookie = [name, '=', encodeURIComponent(val), expires, path, domain, secure].join('');
+
+        return this;
+    }
+});
+
+});
+
+/* ../../libs/bem-core/common.blocks/cookie/cookie.js end */
+
+/* ../../libs/bem-core/common.blocks/dom/dom.js begin */
+/**
+ * @module dom
+ * @description some DOM utils
+ */
+
+modules.define('dom', ['jquery'], function(provide, $) {
+
+provide(/** @exports */{
+    /**
+     * Checks whether a DOM elem is in a context
+     * @param {jQuery} ctx DOM elem where check is being performed
+     * @param {jQuery} domElem DOM elem to check
+     * @returns {Boolean}
+     */
+    contains : function(ctx, domElem) {
+        var res = false;
+
+        domElem.each(function() {
+            var domNode = this;
+            do {
+                if(~ctx.index(domNode)) return !(res = true);
+            } while(domNode = domNode.parentNode);
+
+            return res;
+        });
+
+        return res;
+    },
+
+    /**
+     * Returns current focused DOM elem in document
+     * @returns {jQuery}
+     */
+    getFocused : function() {
+        // "Error: Unspecified error." in iframe in IE9
+        try { return $(document.activeElement); } catch(e) {}
+    },
+
+    /**
+     * Checks whether a DOM element contains focus
+     * @param {jQuery} domElem
+     * @returns {Boolean}
+     */
+    containsFocus : function(domElem) {
+        return this.contains(domElem, this.getFocused());
+    },
+
+    /**
+    * Checks whether a browser currently can set focus on DOM elem
+    * @param {jQuery} domElem
+    * @returns {Boolean}
+    */
+    isFocusable : function(domElem) {
+        var domNode = domElem[0];
+
+        if(!domNode) return false;
+        if(domNode.hasAttribute('tabindex')) return true;
+
+        switch(domNode.tagName.toLowerCase()) {
+            case 'iframe':
+                return true;
+
+            case 'input':
+            case 'button':
+            case 'textarea':
+            case 'select':
+                return !domNode.disabled;
+
+            case 'a':
+                return !!domNode.href;
+        }
+
+        return false;
+    },
+
+    /**
+    * Checks whether a domElem is intended to edit text
+    * @param {jQuery} domElem
+    * @returns {Boolean}
+    */
+    isEditable : function(domElem) {
+        var domNode = domElem[0];
+
+        if(!domNode) return false;
+
+        switch(domNode.tagName.toLowerCase()) {
+            case 'input':
+                var type = domNode.type;
+                return (type === 'text' || type === 'password') && !domNode.disabled && !domNode.readOnly;
+
+            case 'textarea':
+                return !domNode.disabled && !domNode.readOnly;
+
+            default:
+                return domNode.contentEditable === 'true';
+        }
+    }
+});
+
+});
+
+/* ../../libs/bem-core/common.blocks/dom/dom.js end */
+
+/* ../../libs/bem-core/common.blocks/jquery/jquery.js begin */
+/**
+ * @module jquery
+ * @description Provide jQuery (load if it does not exist).
+ */
+
+modules.define(
+    'jquery',
+    ['loader_type_js', 'jquery__config'],
+    function(provide, loader, cfg) {
+
+/* global jQuery */
+
+function doProvide(preserveGlobal) {
+    /**
+     * @exports
+     * @type Function
+     */
+    provide(preserveGlobal? jQuery : jQuery.noConflict(true));
+}
+
+typeof jQuery !== 'undefined'?
+    doProvide(true) :
+    loader(cfg.url, doProvide);
+});
+
+/* ../../libs/bem-core/common.blocks/jquery/jquery.js end */
+
+/* ../../libs/bem-core/common.blocks/loader/_type/loader_type_js.js begin */
+/**
+ * @module loader_type_js
+ * @description Load JS from external URL.
+ */
+
+modules.define('loader_type_js', function(provide) {
+
+var loading = {},
+    loaded = {},
+    head = document.getElementsByTagName('head')[0],
+    runCallbacks = function(path, type) {
+        var cbs = loading[path], cb, i = 0;
+        delete loading[path];
+        while(cb = cbs[i++]) {
+            cb[type] && cb[type]();
+        }
+    },
+    onSuccess = function(path) {
+        loaded[path] = true;
+        runCallbacks(path, 'success');
+    },
+    onError = function(path) {
+        runCallbacks(path, 'error');
+    };
+
+provide(
+    /**
+     * @exports
+     * @param {String} path resource link
+     * @param {Function} success to be called if the script succeeds
+     * @param {Function} error to be called if the script fails
+     */
+    function(path, success, error) {
+        if(loaded[path]) {
+            success();
+            return;
+        }
+
+        if(loading[path]) {
+            loading[path].push({ success : success, error : error });
+            return;
+        }
+
+        loading[path] = [{ success : success, error : error }];
+
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.charset = 'utf-8';
+        script.src = (location.protocol === 'file:' && !path.indexOf('//')? 'http:' : '') + path;
+
+        if('onload' in script) {
+            script.onload = function() {
+                script.onload = script.onerror = null;
+                onSuccess(path);
+            };
+
+            script.onerror = function() {
+                script.onload = script.onerror = null;
+                onError(path);
+            };
+        } else {
+            script.onreadystatechange = function() {
+                var readyState = this.readyState;
+                if(readyState === 'loaded' || readyState === 'complete') {
+                    script.onreadystatechange = null;
+                    onSuccess(path);
+                }
+            };
+        }
+
+        head.insertBefore(script, head.lastChild);
+    }
+);
+
+});
+
+/* ../../libs/bem-core/common.blocks/loader/_type/loader_type_js.js end */
+
+/* ../../libs/bem-core/common.blocks/jquery/__config/jquery__config.js begin */
+/**
+ * @module jquery__config
+ * @description Configuration for jQuery
+ */
+
+modules.define('jquery__config', function(provide) {
+
+provide(/** @exports */{
+    /**
+     * URL for loading jQuery if it does not exist
+     * @type {String}
+     */
+    url : '//yastatic.net/jquery/2.1.4/jquery.min.js'
+});
+
+});
+
+/* ../../libs/bem-core/common.blocks/jquery/__config/jquery__config.js end */
+
+/* ../../libs/bem-core/desktop.blocks/jquery/__config/jquery__config.js begin */
+/**
+ * @module jquery__config
+ * @description Configuration for jQuery
+ */
+
+modules.define(
+    'jquery__config',
+    ['ua', 'objects'],
+    function(provide, ua, objects, base) {
+
+provide(
+    ua.msie && parseInt(ua.version, 10) < 9?
+        objects.extend(
+            base,
+            {
+                url : '//yastatic.net/jquery/1.11.3/jquery.min.js'
+            }) :
+        base);
+
+});
+
+/* ../../libs/bem-core/desktop.blocks/jquery/__config/jquery__config.js end */
+
+/* ../../libs/bem-core/desktop.blocks/ua/ua.js begin */
+/**
+ * @module ua
+ * @description Detect some user agent features (works like jQuery.browser in jQuery 1.8)
+ * @see http://code.jquery.com/jquery-migrate-1.1.1.js
+ */
+
+modules.define('ua', function(provide) {
+
+var ua = navigator.userAgent.toLowerCase(),
+    match = /(chrome)[ \/]([\w.]+)/.exec(ua) ||
+        /(webkit)[ \/]([\w.]+)/.exec(ua) ||
+        /(opera)(?:.*version|)[ \/]([\w.]+)/.exec(ua) ||
+        /(msie) ([\w.]+)/.exec(ua) ||
+        ua.indexOf('compatible') < 0 && /(mozilla)(?:.*? rv:([\w.]+)|)/.exec(ua) ||
+        [],
+    matched = {
+        browser : match[1] || '',
+        version : match[2] || '0'
+    },
+    browser = {};
+
+if(matched.browser) {
+    browser[matched.browser] = true;
+    browser.version = matched.version;
+}
+
+if(browser.chrome) {
+    browser.webkit = true;
+} else if(browser.webkit) {
+    browser.safari = true;
+}
+
+/**
+ * @exports
+ * @type Object
+ */
+provide(browser);
+
+});
+
+/* ../../libs/bem-core/desktop.blocks/ua/ua.js end */
+
 /* ../../libs/bem-core/common.blocks/objects/objects.vanilla.js begin */
 /**
  * @module objects
@@ -512,13 +880,13 @@ var undef,
         __constructor : function(type, target) {
             /**
              * Type
-             * @member {String} Event
+             * @member {String}
              */
             this.type = type;
 
             /**
              * Target
-             * @member {String} Event
+             * @member {Object}
              */
             this.target = target;
 
@@ -1454,7 +1822,7 @@ var BEM = inherit(events.Emitter, /** @lends BEM.prototype */ {
      * Returns the value of the modifier of the block/nested element
      * @param {Object} [elem] Nested element
      * @param {String} modName Modifier name
-     * @returns {String} Modifier value
+     * @returns {String|Boolean} Modifier value
      */
     getMod : function(elem, modName) {
         var type = typeof elem;
@@ -2146,1978 +2514,6 @@ var global = this.global,
 });
 
 /* ../../libs/bem-core/common.blocks/next-tick/next-tick.vanilla.js end */
-
-/* ../../libs/bem-core/common.blocks/querystring/querystring.vanilla.js begin */
-/**
- * @module querystring
- * @description A set of helpers to work with query strings
- */
-
-modules.define('querystring', ['querystring__uri'], function(provide, uri) {
-
-var hasOwnProperty = Object.prototype.hasOwnProperty;
-
-function addParam(res, name, val) {
-    /* jshint eqnull: true */
-    res.push(encodeURIComponent(name) + '=' + (val == null? '' : encodeURIComponent(val)));
-}
-
-provide(/** @exports */{
-    /**
-     * Parse a query string to an object
-     * @param {String} str
-     * @returns {Object}
-     */
-    parse : function(str) {
-        if(!str) {
-            return {};
-        }
-
-        return str.split('&').reduce(
-            function(res, pair) {
-                if(!pair) {
-                    return res;
-                }
-
-                var eq = pair.indexOf('='),
-                    name, val;
-
-                if(eq >= 0) {
-                    name = pair.substr(0, eq);
-                    val = pair.substr(eq + 1);
-                } else {
-                    name = pair;
-                    val = '';
-                }
-
-                name = uri.decodeURIComponent(name);
-                val = uri.decodeURIComponent(val);
-
-                hasOwnProperty.call(res, name)?
-                    Array.isArray(res[name])?
-                        res[name].push(val) :
-                        res[name] = [res[name], val] :
-                    res[name] = val;
-
-                return res;
-            },
-            {});
-    },
-
-    /**
-     * Serialize an object to a query string
-     * @param {Object} obj
-     * @returns {String}
-     */
-    stringify : function(obj) {
-        return Object.keys(obj)
-            .reduce(
-                function(res, name) {
-                    var val = obj[name];
-                    Array.isArray(val)?
-                        val.forEach(function(val) {
-                            addParam(res, name, val);
-                        }) :
-                        addParam(res, name, val);
-                    return res;
-                },
-                [])
-            .join('&');
-    }
-});
-
-});
-
-/* ../../libs/bem-core/common.blocks/querystring/querystring.vanilla.js end */
-
-/* ../../libs/bem-core/common.blocks/querystring/__uri/querystring__uri.vanilla.js begin */
-/**
- * @module querystring__uri
- * @description A set of helpers to work with URI
- */
-
-modules.define('querystring__uri',  function(provide) {
-
-// Equivalency table for cp1251 and utf8.
-var map = { '%D0' : '%D0%A0', '%C0' : '%D0%90', '%C1' : '%D0%91', '%C2' : '%D0%92', '%C3' : '%D0%93', '%C4' : '%D0%94', '%C5' : '%D0%95', '%A8' : '%D0%81', '%C6' : '%D0%96', '%C7' : '%D0%97', '%C8' : '%D0%98', '%C9' : '%D0%99', '%CA' : '%D0%9A', '%CB' : '%D0%9B', '%CC' : '%D0%9C', '%CD' : '%D0%9D', '%CE' : '%D0%9E', '%CF' : '%D0%9F', '%D1' : '%D0%A1', '%D2' : '%D0%A2', '%D3' : '%D0%A3', '%D4' : '%D0%A4', '%D5' : '%D0%A5', '%D6' : '%D0%A6', '%D7' : '%D0%A7', '%D8' : '%D0%A8', '%D9' : '%D0%A9', '%DA' : '%D0%AA', '%DB' : '%D0%AB', '%DC' : '%D0%AC', '%DD' : '%D0%AD', '%DE' : '%D0%AE', '%DF' : '%D0%AF', '%E0' : '%D0%B0', '%E1' : '%D0%B1', '%E2' : '%D0%B2', '%E3' : '%D0%B3', '%E4' : '%D0%B4', '%E5' : '%D0%B5', '%B8' : '%D1%91', '%E6' : '%D0%B6', '%E7' : '%D0%B7', '%E8' : '%D0%B8', '%E9' : '%D0%B9', '%EA' : '%D0%BA', '%EB' : '%D0%BB', '%EC' : '%D0%BC', '%ED' : '%D0%BD', '%EE' : '%D0%BE', '%EF' : '%D0%BF', '%F0' : '%D1%80', '%F1' : '%D1%81', '%F2' : '%D1%82', '%F3' : '%D1%83', '%F4' : '%D1%84', '%F5' : '%D1%85', '%F6' : '%D1%86', '%F7' : '%D1%87', '%F8' : '%D1%88', '%F9' : '%D1%89', '%FA' : '%D1%8A', '%FB' : '%D1%8B', '%FC' : '%D1%8C', '%FD' : '%D1%8D', '%FE' : '%D1%8E', '%FF' : '%D1%8F' };
-
-function convert(str) {
-    // Symbol code in cp1251 (hex) : symbol code in utf8)
-    return str.replace(
-        /%.{2}/g,
-        function($0) {
-            return map[$0] || $0;
-        });
-}
-
-function decode(fn,  str) {
-    var decoded = '';
-
-    // Try/catch block for getting the encoding of the source string.
-    // Error is thrown if a non-UTF8 string is input.
-    // If the string was not decoded, it is returned without changes.
-    try {
-        decoded = fn(str);
-    } catch (e1) {
-        try {
-            decoded = fn(convert(str));
-        } catch (e2) {
-            decoded = str;
-        }
-    }
-
-    return decoded;
-}
-
-provide(/** @exports */{
-    /**
-     * Decodes URI string
-     * @param {String} str
-     * @returns {String}
-     */
-    decodeURI : function(str) {
-        return decode(decodeURI,  str);
-    },
-
-    /**
-     * Decodes URI component string
-     * @param {String} str
-     * @returns {String}
-     */
-    decodeURIComponent : function(str) {
-        return decode(decodeURIComponent,  str);
-    }
-});
-
-});
-
-/* ../../libs/bem-core/common.blocks/querystring/__uri/querystring__uri.vanilla.js end */
-
-/* ../../libs/bem-core/common.blocks/strings/__escape/strings__escape.vanilla.js begin */
-/**
- * @module strings__escape
- * @description A set of string escaping functions
- */
-
-modules.define('strings__escape', function(provide) {
-
-var symbols = {
-        '"' : '&quot;',
-        '\'' : '&apos;',
-        '&' : '&amp;',
-        '<' : '&lt;',
-        '>' : '&gt;'
-    },
-    mapSymbol = function(s) {
-        return symbols[s] || s;
-    },
-    buildEscape = function(regexp) {
-        regexp = new RegExp(regexp, 'g');
-        return function(str) {
-            return ('' + str).replace(regexp, mapSymbol);
-        };
-    };
-
-provide(/** @exports */{
-    /**
-     * Escape string to use in XML
-     * @type Function
-     * @param {String} str
-     * @returns {String}
-     */
-    xml : buildEscape('[&<>]'),
-
-    /**
-     * Escape string to use in HTML
-     * @type Function
-     * @param {String} str
-     * @returns {String}
-     */
-    html : buildEscape('[&<>]'),
-
-    /**
-     * Escape string to use in attributes
-     * @type Function
-     * @param {String} str
-     * @returns {String}
-     */
-    attr : buildEscape('["\'&<>]')
-});
-
-});
-
-/* ../../libs/bem-core/common.blocks/strings/__escape/strings__escape.vanilla.js end */
-
-/* ../../libs/bem-core/common.blocks/tick/tick.vanilla.js begin */
-/**
- * @module tick
- * @description Helpers for polling anything
- */
-
-modules.define('tick', ['inherit', 'events'], function(provide, inherit, events) {
-
-var TICK_INTERVAL = 50,
-    global = this.global,
-
-    /**
-     * @class Tick
-     * @augments events:Emitter
-     */
-    Tick = inherit(events.Emitter, /** @lends Tick.prototype */{
-        /**
-         * @constructor
-         */
-        __constructor : function() {
-            this._timer = null;
-            this._isStarted = false;
-        },
-
-        /**
-         * Starts polling
-         */
-        start : function() {
-            if(!this._isStarted) {
-                this._isStarted = true;
-                this._scheduleTick();
-            }
-        },
-
-        /**
-         * Stops polling
-         */
-        stop : function() {
-            if(this._isStarted) {
-                this._isStarted = false;
-                global.clearTimeout(this._timer);
-            }
-        },
-
-        _scheduleTick : function() {
-            var _this = this;
-            this._timer = global.setTimeout(
-                function() {
-                    _this._onTick();
-                },
-                TICK_INTERVAL);
-        },
-
-        _onTick : function() {
-            this.emit('tick');
-
-            this._isStarted && this._scheduleTick();
-        }
-    });
-
-provide(
-    /**
-     * @exports
-     * @type Tick
-     */
-    new Tick());
-
-});
-
-/* ../../libs/bem-core/common.blocks/tick/tick.vanilla.js end */
-
-/* ../../libs/bem-core/common.blocks/tick/_start/tick_start_auto.vanilla.js begin */
-/**
- * Automatically starts tick module
- */
-
-modules.require(['tick'], function(tick) {
-
-tick.start();
-
-});
-
-/* ../../libs/bem-core/common.blocks/tick/_start/tick_start_auto.vanilla.js end */
-
-/* ../../libs/bem-core/common.blocks/vow/vow.vanilla.js begin */
-/**
- * @module vow
- * @author Filatov Dmitry <dfilatov@yandex-team.ru>
- * @version 0.4.8
- * @license
- * Dual licensed under the MIT and GPL licenses:
- *   * http://www.opensource.org/licenses/mit-license.php
- *   * http://www.gnu.org/licenses/gpl.html
- */
-
-(function(global) {
-
-var undef,
-    nextTick = (function() {
-        var fns = [],
-            enqueueFn = function(fn) {
-                return fns.push(fn) === 1;
-            },
-            callFns = function() {
-                var fnsToCall = fns, i = 0, len = fns.length;
-                fns = [];
-                while(i < len) {
-                    fnsToCall[i++]();
-                }
-            };
-
-        if(typeof setImmediate === 'function') { // ie10, nodejs >= 0.10
-            return function(fn) {
-                enqueueFn(fn) && setImmediate(callFns);
-            };
-        }
-
-        if(typeof process === 'object' && process.nextTick) { // nodejs < 0.10
-            return function(fn) {
-                enqueueFn(fn) && process.nextTick(callFns);
-            };
-        }
-
-        if(global.postMessage) { // modern browsers
-            var isPostMessageAsync = true;
-            if(global.attachEvent) {
-                var checkAsync = function() {
-                        isPostMessageAsync = false;
-                    };
-                global.attachEvent('onmessage', checkAsync);
-                global.postMessage('__checkAsync', '*');
-                global.detachEvent('onmessage', checkAsync);
-            }
-
-            if(isPostMessageAsync) {
-                var msg = '__promise' + +new Date,
-                    onMessage = function(e) {
-                        if(e.data === msg) {
-                            e.stopPropagation && e.stopPropagation();
-                            callFns();
-                        }
-                    };
-
-                global.addEventListener?
-                    global.addEventListener('message', onMessage, true) :
-                    global.attachEvent('onmessage', onMessage);
-
-                return function(fn) {
-                    enqueueFn(fn) && global.postMessage(msg, '*');
-                };
-            }
-        }
-
-        var doc = global.document;
-        if('onreadystatechange' in doc.createElement('script')) { // ie6-ie8
-            var createScript = function() {
-                    var script = doc.createElement('script');
-                    script.onreadystatechange = function() {
-                        script.parentNode.removeChild(script);
-                        script = script.onreadystatechange = null;
-                        callFns();
-                };
-                (doc.documentElement || doc.body).appendChild(script);
-            };
-
-            return function(fn) {
-                enqueueFn(fn) && createScript();
-            };
-        }
-
-        return function(fn) { // old browsers
-            enqueueFn(fn) && setTimeout(callFns, 0);
-        };
-    })(),
-    throwException = function(e) {
-        nextTick(function() {
-            throw e;
-        });
-    },
-    isFunction = function(obj) {
-        return typeof obj === 'function';
-    },
-    isObject = function(obj) {
-        return obj !== null && typeof obj === 'object';
-    },
-    toStr = Object.prototype.toString,
-    isArray = Array.isArray || function(obj) {
-        return toStr.call(obj) === '[object Array]';
-    },
-    getArrayKeys = function(arr) {
-        var res = [],
-            i = 0, len = arr.length;
-        while(i < len) {
-            res.push(i++);
-        }
-        return res;
-    },
-    getObjectKeys = Object.keys || function(obj) {
-        var res = [];
-        for(var i in obj) {
-            obj.hasOwnProperty(i) && res.push(i);
-        }
-        return res;
-    },
-    defineCustomErrorType = function(name) {
-        var res = function(message) {
-            this.name = name;
-            this.message = message;
-        };
-
-        res.prototype = new Error();
-
-        return res;
-    },
-    wrapOnFulfilled = function(onFulfilled, idx) {
-        return function(val) {
-            onFulfilled.call(this, val, idx);
-        };
-    };
-
-/**
- * @class Deferred
- * @exports vow:Deferred
- * @description
- * The `Deferred` class is used to encapsulate newly-created promise object along with functions that resolve, reject or notify it.
- */
-
-/**
- * @constructor
- * @description
- * You can use `vow.defer()` instead of using this constructor.
- *
- * `new vow.Deferred()` gives the same result as `vow.defer()`.
- */
-var Deferred = function() {
-    this._promise = new Promise();
-};
-
-Deferred.prototype = /** @lends Deferred.prototype */{
-    /**
-     * Returns corresponding promise.
-     *
-     * @returns {vow:Promise}
-     */
-    promise : function() {
-        return this._promise;
-    },
-
-    /**
-     * Resolves corresponding promise with given `value`.
-     *
-     * @param {*} value
-     *
-     * @example
-     * ```js
-     * var defer = vow.defer(),
-     *     promise = defer.promise();
-     *
-     * promise.then(function(value) {
-     *     // value is "'success'" here
-     * });
-     *
-     * defer.resolve('success');
-     * ```
-     */
-    resolve : function(value) {
-        this._promise.isResolved() || this._promise._resolve(value);
-    },
-
-    /**
-     * Rejects corresponding promise with given `reason`.
-     *
-     * @param {*} reason
-     *
-     * @example
-     * ```js
-     * var defer = vow.defer(),
-     *     promise = defer.promise();
-     *
-     * promise.fail(function(reason) {
-     *     // reason is "'something is wrong'" here
-     * });
-     *
-     * defer.reject('something is wrong');
-     * ```
-     */
-    reject : function(reason) {
-        if(this._promise.isResolved()) {
-            return;
-        }
-
-        if(vow.isPromise(reason)) {
-            reason = reason.then(function(val) {
-                var defer = vow.defer();
-                defer.reject(val);
-                return defer.promise();
-            });
-            this._promise._resolve(reason);
-        }
-        else {
-            this._promise._reject(reason);
-        }
-    },
-
-    /**
-     * Notifies corresponding promise with given `value`.
-     *
-     * @param {*} value
-     *
-     * @example
-     * ```js
-     * var defer = vow.defer(),
-     *     promise = defer.promise();
-     *
-     * promise.progress(function(value) {
-     *     // value is "'20%'", "'40%'" here
-     * });
-     *
-     * defer.notify('20%');
-     * defer.notify('40%');
-     * ```
-     */
-    notify : function(value) {
-        this._promise.isResolved() || this._promise._notify(value);
-    }
-};
-
-var PROMISE_STATUS = {
-    PENDING   : 0,
-    RESOLVED  : 1,
-    FULFILLED : 2,
-    REJECTED  : 3
-};
-
-/**
- * @class Promise
- * @exports vow:Promise
- * @description
- * The `Promise` class is used when you want to give to the caller something to subscribe to,
- * but not the ability to resolve or reject the deferred.
- */
-
-/**
- * @constructor
- * @param {Function} resolver See https://github.com/domenic/promises-unwrapping/blob/master/README.md#the-promise-constructor for details.
- * @description
- * You should use this constructor directly only if you are going to use `vow` as DOM Promises implementation.
- * In other case you should use `vow.defer()` and `defer.promise()` methods.
- * @example
- * ```js
- * function fetchJSON(url) {
- *     return new vow.Promise(function(resolve, reject, notify) {
- *         var xhr = new XMLHttpRequest();
- *         xhr.open('GET', url);
- *         xhr.responseType = 'json';
- *         xhr.send();
- *         xhr.onload = function() {
- *             if(xhr.response) {
- *                 resolve(xhr.response);
- *             }
- *             else {
- *                 reject(new TypeError());
- *             }
- *         };
- *     });
- * }
- * ```
- */
-var Promise = function(resolver) {
-    this._value = undef;
-    this._status = PROMISE_STATUS.PENDING;
-
-    this._fulfilledCallbacks = [];
-    this._rejectedCallbacks = [];
-    this._progressCallbacks = [];
-
-    if(resolver) { // NOTE: see https://github.com/domenic/promises-unwrapping/blob/master/README.md
-        var _this = this,
-            resolverFnLen = resolver.length;
-
-        resolver(
-            function(val) {
-                _this.isResolved() || _this._resolve(val);
-            },
-            resolverFnLen > 1?
-                function(reason) {
-                    _this.isResolved() || _this._reject(reason);
-                } :
-                undef,
-            resolverFnLen > 2?
-                function(val) {
-                    _this.isResolved() || _this._notify(val);
-                } :
-                undef);
-    }
-};
-
-Promise.prototype = /** @lends Promise.prototype */ {
-    /**
-     * Returns value of fulfilled promise or reason in case of rejection.
-     *
-     * @returns {*}
-     */
-    valueOf : function() {
-        return this._value;
-    },
-
-    /**
-     * Returns `true` if promise is resolved.
-     *
-     * @returns {Boolean}
-     */
-    isResolved : function() {
-        return this._status !== PROMISE_STATUS.PENDING;
-    },
-
-    /**
-     * Returns `true` if promise is fulfilled.
-     *
-     * @returns {Boolean}
-     */
-    isFulfilled : function() {
-        return this._status === PROMISE_STATUS.FULFILLED;
-    },
-
-    /**
-     * Returns `true` if promise is rejected.
-     *
-     * @returns {Boolean}
-     */
-    isRejected : function() {
-        return this._status === PROMISE_STATUS.REJECTED;
-    },
-
-    /**
-     * Adds reactions to promise.
-     *
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
-     * @param {Object} [ctx] Context of callbacks execution
-     * @returns {vow:Promise} A new promise, see https://github.com/promises-aplus/promises-spec for details
-     */
-    then : function(onFulfilled, onRejected, onProgress, ctx) {
-        var defer = new Deferred();
-        this._addCallbacks(defer, onFulfilled, onRejected, onProgress, ctx);
-        return defer.promise();
-    },
-
-    /**
-     * Adds rejection reaction only. It is shortcut for `promise.then(undefined, onRejected)`.
-     *
-     * @param {Function} onRejected Callback to be called with the value after promise has been rejected
-     * @param {Object} [ctx] Context of callback execution
-     * @returns {vow:Promise}
-     */
-    'catch' : function(onRejected, ctx) {
-        return this.then(undef, onRejected, ctx);
-    },
-
-    /**
-     * Adds rejection reaction only. It is shortcut for `promise.then(null, onRejected)`. It's alias for `catch`.
-     *
-     * @param {Function} onRejected Callback to be called with the value after promise has been rejected
-     * @param {Object} [ctx] Context of callback execution
-     * @returns {vow:Promise}
-     */
-    fail : function(onRejected, ctx) {
-        return this.then(undef, onRejected, ctx);
-    },
-
-    /**
-     * Adds resolving reaction (to fulfillment and rejection both).
-     *
-     * @param {Function} onResolved Callback that to be called with the value after promise has been rejected
-     * @param {Object} [ctx] Context of callback execution
-     * @returns {vow:Promise}
-     */
-    always : function(onResolved, ctx) {
-        var _this = this,
-            cb = function() {
-                return onResolved.call(this, _this);
-            };
-
-        return this.then(cb, cb, ctx);
-    },
-
-    /**
-     * Adds progress reaction.
-     *
-     * @param {Function} onProgress Callback to be called with the value when promise has been notified
-     * @param {Object} [ctx] Context of callback execution
-     * @returns {vow:Promise}
-     */
-    progress : function(onProgress, ctx) {
-        return this.then(undef, undef, onProgress, ctx);
-    },
-
-    /**
-     * Like `promise.then`, but "spreads" the array into a variadic value handler.
-     * It is useful with `vow.all` and `vow.allResolved` methods.
-     *
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Object} [ctx] Context of callbacks execution
-     * @returns {vow:Promise}
-     *
-     * @example
-     * ```js
-     * var defer1 = vow.defer(),
-     *     defer2 = vow.defer();
-     *
-     * vow.all([defer1.promise(), defer2.promise()]).spread(function(arg1, arg2) {
-     *     // arg1 is "1", arg2 is "'two'" here
-     * });
-     *
-     * defer1.resolve(1);
-     * defer2.resolve('two');
-     * ```
-     */
-    spread : function(onFulfilled, onRejected, ctx) {
-        return this.then(
-            function(val) {
-                return onFulfilled.apply(this, val);
-            },
-            onRejected,
-            ctx);
-    },
-
-    /**
-     * Like `then`, but terminates a chain of promises.
-     * If the promise has been rejected, throws it as an exception in a future turn of the event loop.
-     *
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
-     * @param {Object} [ctx] Context of callbacks execution
-     *
-     * @example
-     * ```js
-     * var defer = vow.defer();
-     * defer.reject(Error('Internal error'));
-     * defer.promise().done(); // exception to be thrown
-     * ```
-     */
-    done : function(onFulfilled, onRejected, onProgress, ctx) {
-        this
-            .then(onFulfilled, onRejected, onProgress, ctx)
-            .fail(throwException);
-    },
-
-    /**
-     * Returns a new promise that will be fulfilled in `delay` milliseconds if the promise is fulfilled,
-     * or immediately rejected if promise is rejected.
-     *
-     * @param {Number} delay
-     * @returns {vow:Promise}
-     */
-    delay : function(delay) {
-        var timer,
-            promise = this.then(function(val) {
-                var defer = new Deferred();
-                timer = setTimeout(
-                    function() {
-                        defer.resolve(val);
-                    },
-                    delay);
-
-                return defer.promise();
-            });
-
-        promise.always(function() {
-            clearTimeout(timer);
-        });
-
-        return promise;
-    },
-
-    /**
-     * Returns a new promise that will be rejected in `timeout` milliseconds
-     * if the promise is not resolved beforehand.
-     *
-     * @param {Number} timeout
-     * @returns {vow:Promise}
-     *
-     * @example
-     * ```js
-     * var defer = vow.defer(),
-     *     promiseWithTimeout1 = defer.promise().timeout(50),
-     *     promiseWithTimeout2 = defer.promise().timeout(200);
-     *
-     * setTimeout(
-     *     function() {
-     *         defer.resolve('ok');
-     *     },
-     *     100);
-     *
-     * promiseWithTimeout1.fail(function(reason) {
-     *     // promiseWithTimeout to be rejected in 50ms
-     * });
-     *
-     * promiseWithTimeout2.then(function(value) {
-     *     // promiseWithTimeout to be fulfilled with "'ok'" value
-     * });
-     * ```
-     */
-    timeout : function(timeout) {
-        var defer = new Deferred(),
-            timer = setTimeout(
-                function() {
-                    defer.reject(new vow.TimedOutError('timed out'));
-                },
-                timeout);
-
-        this.then(
-            function(val) {
-                defer.resolve(val);
-            },
-            function(reason) {
-                defer.reject(reason);
-            });
-
-        defer.promise().always(function() {
-            clearTimeout(timer);
-        });
-
-        return defer.promise();
-    },
-
-    _vow : true,
-
-    _resolve : function(val) {
-        if(this._status > PROMISE_STATUS.RESOLVED) {
-            return;
-        }
-
-        if(val === this) {
-            this._reject(TypeError('Can\'t resolve promise with itself'));
-            return;
-        }
-
-        this._status = PROMISE_STATUS.RESOLVED;
-
-        if(val && !!val._vow) { // shortpath for vow.Promise
-            val.isFulfilled()?
-                this._fulfill(val.valueOf()) :
-                val.isRejected()?
-                    this._reject(val.valueOf()) :
-                    val.then(
-                        this._fulfill,
-                        this._reject,
-                        this._notify,
-                        this);
-            return;
-        }
-
-        if(isObject(val) || isFunction(val)) {
-            var then;
-            try {
-                then = val.then;
-            }
-            catch(e) {
-                this._reject(e);
-                return;
-            }
-
-            if(isFunction(then)) {
-                var _this = this,
-                    isResolved = false;
-
-                try {
-                    then.call(
-                        val,
-                        function(val) {
-                            if(isResolved) {
-                                return;
-                            }
-
-                            isResolved = true;
-                            _this._resolve(val);
-                        },
-                        function(err) {
-                            if(isResolved) {
-                                return;
-                            }
-
-                            isResolved = true;
-                            _this._reject(err);
-                        },
-                        function(val) {
-                            _this._notify(val);
-                        });
-                }
-                catch(e) {
-                    isResolved || this._reject(e);
-                }
-
-                return;
-            }
-        }
-
-        this._fulfill(val);
-    },
-
-    _fulfill : function(val) {
-        if(this._status > PROMISE_STATUS.RESOLVED) {
-            return;
-        }
-
-        this._status = PROMISE_STATUS.FULFILLED;
-        this._value = val;
-
-        this._callCallbacks(this._fulfilledCallbacks, val);
-        this._fulfilledCallbacks = this._rejectedCallbacks = this._progressCallbacks = undef;
-    },
-
-    _reject : function(reason) {
-        if(this._status > PROMISE_STATUS.RESOLVED) {
-            return;
-        }
-
-        this._status = PROMISE_STATUS.REJECTED;
-        this._value = reason;
-
-        this._callCallbacks(this._rejectedCallbacks, reason);
-        this._fulfilledCallbacks = this._rejectedCallbacks = this._progressCallbacks = undef;
-    },
-
-    _notify : function(val) {
-        this._callCallbacks(this._progressCallbacks, val);
-    },
-
-    _addCallbacks : function(defer, onFulfilled, onRejected, onProgress, ctx) {
-        if(onRejected && !isFunction(onRejected)) {
-            ctx = onRejected;
-            onRejected = undef;
-        }
-        else if(onProgress && !isFunction(onProgress)) {
-            ctx = onProgress;
-            onProgress = undef;
-        }
-
-        var cb;
-
-        if(!this.isRejected()) {
-            cb = { defer : defer, fn : isFunction(onFulfilled)? onFulfilled : undef, ctx : ctx };
-            this.isFulfilled()?
-                this._callCallbacks([cb], this._value) :
-                this._fulfilledCallbacks.push(cb);
-        }
-
-        if(!this.isFulfilled()) {
-            cb = { defer : defer, fn : onRejected, ctx : ctx };
-            this.isRejected()?
-                this._callCallbacks([cb], this._value) :
-                this._rejectedCallbacks.push(cb);
-        }
-
-        if(this._status <= PROMISE_STATUS.RESOLVED) {
-            this._progressCallbacks.push({ defer : defer, fn : onProgress, ctx : ctx });
-        }
-    },
-
-    _callCallbacks : function(callbacks, arg) {
-        var len = callbacks.length;
-        if(!len) {
-            return;
-        }
-
-        var isResolved = this.isResolved(),
-            isFulfilled = this.isFulfilled();
-
-        nextTick(function() {
-            var i = 0, cb, defer, fn;
-            while(i < len) {
-                cb = callbacks[i++];
-                defer = cb.defer;
-                fn = cb.fn;
-
-                if(fn) {
-                    var ctx = cb.ctx,
-                        res;
-                    try {
-                        res = ctx? fn.call(ctx, arg) : fn(arg);
-                    }
-                    catch(e) {
-                        defer.reject(e);
-                        continue;
-                    }
-
-                    isResolved?
-                        defer.resolve(res) :
-                        defer.notify(res);
-                }
-                else {
-                    isResolved?
-                        isFulfilled?
-                            defer.resolve(arg) :
-                            defer.reject(arg) :
-                        defer.notify(arg);
-                }
-            }
-        });
-    }
-};
-
-/** @lends Promise */
-var staticMethods = {
-    /**
-     * Coerces given `value` to a promise, or returns the `value` if it's already a promise.
-     *
-     * @param {*} value
-     * @returns {vow:Promise}
-     */
-    cast : function(value) {
-        return vow.cast(value);
-    },
-
-    /**
-     * Returns a promise to be fulfilled only after all the items in `iterable` are fulfilled,
-     * or to be rejected when any of the `iterable` is rejected.
-     *
-     * @param {Array|Object} iterable
-     * @returns {vow:Promise}
-     */
-    all : function(iterable) {
-        return vow.all(iterable);
-    },
-
-    /**
-     * Returns a promise to be fulfilled only when any of the items in `iterable` are fulfilled,
-     * or to be rejected when the first item is rejected.
-     *
-     * @param {Array} iterable
-     * @returns {vow:Promise}
-     */
-    race : function(iterable) {
-        return vow.anyResolved(iterable);
-    },
-
-    /**
-     * Returns a promise that has already been resolved with the given `value`.
-     * If `value` is a promise, returned promise will be adopted with the state of given promise.
-     *
-     * @param {*} value
-     * @returns {vow:Promise}
-     */
-    resolve : function(value) {
-        return vow.resolve(value);
-    },
-
-    /**
-     * Returns a promise that has already been rejected with the given `reason`.
-     *
-     * @param {*} reason
-     * @returns {vow:Promise}
-     */
-    reject : function(reason) {
-        return vow.reject(reason);
-    }
-};
-
-for(var prop in staticMethods) {
-    staticMethods.hasOwnProperty(prop) &&
-        (Promise[prop] = staticMethods[prop]);
-}
-
-var vow = /** @exports vow */ {
-    Deferred : Deferred,
-
-    Promise : Promise,
-
-    /**
-     * Creates a new deferred. This method is a factory method for `vow:Deferred` class.
-     * It's equivalent to `new vow.Deferred()`.
-     *
-     * @returns {vow:Deferred}
-     */
-    defer : function() {
-        return new Deferred();
-    },
-
-    /**
-     * Static equivalent to `promise.then`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
-     * @param {Object} [ctx] Context of callbacks execution
-     * @returns {vow:Promise}
-     */
-    when : function(value, onFulfilled, onRejected, onProgress, ctx) {
-        return vow.cast(value).then(onFulfilled, onRejected, onProgress, ctx);
-    },
-
-    /**
-     * Static equivalent to `promise.fail`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @param {Function} onRejected Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Object} [ctx] Context of callback execution
-     * @returns {vow:Promise}
-     */
-    fail : function(value, onRejected, ctx) {
-        return vow.when(value, undef, onRejected, ctx);
-    },
-
-    /**
-     * Static equivalent to `promise.always`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @param {Function} onResolved Callback that will to be invoked with the reason after promise has been resolved
-     * @param {Object} [ctx] Context of callback execution
-     * @returns {vow:Promise}
-     */
-    always : function(value, onResolved, ctx) {
-        return vow.when(value).always(onResolved, ctx);
-    },
-
-    /**
-     * Static equivalent to `promise.progress`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @param {Function} onProgress Callback that will to be invoked with the reason after promise has been notified
-     * @param {Object} [ctx] Context of callback execution
-     * @returns {vow:Promise}
-     */
-    progress : function(value, onProgress, ctx) {
-        return vow.when(value).progress(onProgress, ctx);
-    },
-
-    /**
-     * Static equivalent to `promise.spread`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Object} [ctx] Context of callbacks execution
-     * @returns {vow:Promise}
-     */
-    spread : function(value, onFulfilled, onRejected, ctx) {
-        return vow.when(value).spread(onFulfilled, onRejected, ctx);
-    },
-
-    /**
-     * Static equivalent to `promise.done`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
-     * @param {Object} [ctx] Context of callbacks execution
-     */
-    done : function(value, onFulfilled, onRejected, onProgress, ctx) {
-        vow.when(value).done(onFulfilled, onRejected, onProgress, ctx);
-    },
-
-    /**
-     * Checks whether the given `value` is a promise-like object
-     *
-     * @param {*} value
-     * @returns {Boolean}
-     *
-     * @example
-     * ```js
-     * vow.isPromise('something'); // returns false
-     * vow.isPromise(vow.defer().promise()); // returns true
-     * vow.isPromise({ then : function() { }); // returns true
-     * ```
-     */
-    isPromise : function(value) {
-        return isObject(value) && isFunction(value.then);
-    },
-
-    /**
-     * Coerces given `value` to a promise, or returns the `value` if it's already a promise.
-     *
-     * @param {*} value
-     * @returns {vow:Promise}
-     */
-    cast : function(value) {
-        return vow.isPromise(value)?
-            value :
-            vow.resolve(value);
-    },
-
-    /**
-     * Static equivalent to `promise.valueOf`.
-     * If given `value` is not an instance of `vow.Promise`, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @returns {*}
-     */
-    valueOf : function(value) {
-        return value && isFunction(value.valueOf)? value.valueOf() : value;
-    },
-
-    /**
-     * Static equivalent to `promise.isFulfilled`.
-     * If given `value` is not an instance of `vow.Promise`, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @returns {Boolean}
-     */
-    isFulfilled : function(value) {
-        return value && isFunction(value.isFulfilled)? value.isFulfilled() : true;
-    },
-
-    /**
-     * Static equivalent to `promise.isRejected`.
-     * If given `value` is not an instance of `vow.Promise`, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @returns {Boolean}
-     */
-    isRejected : function(value) {
-        return value && isFunction(value.isRejected)? value.isRejected() : false;
-    },
-
-    /**
-     * Static equivalent to `promise.isResolved`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @returns {Boolean}
-     */
-    isResolved : function(value) {
-        return value && isFunction(value.isResolved)? value.isResolved() : true;
-    },
-
-    /**
-     * Returns a promise that has already been resolved with the given `value`.
-     * If `value` is a promise, returned promise will be adopted with the state of given promise.
-     *
-     * @param {*} value
-     * @returns {vow:Promise}
-     */
-    resolve : function(value) {
-        var res = vow.defer();
-        res.resolve(value);
-        return res.promise();
-    },
-
-    /**
-     * Returns a promise that has already been fulfilled with the given `value`.
-     * If `value` is a promise, returned promise will be fulfilled with fulfill/rejection value of given promise.
-     *
-     * @param {*} value
-     * @returns {vow:Promise}
-     */
-    fulfill : function(value) {
-        var defer = vow.defer(),
-            promise = defer.promise();
-
-        defer.resolve(value);
-
-        return promise.isFulfilled()?
-            promise :
-            promise.then(null, function(reason) {
-                return reason;
-            });
-    },
-
-    /**
-     * Returns a promise that has already been rejected with the given `reason`.
-     * If `reason` is a promise, returned promise will be rejected with fulfill/rejection value of given promise.
-     *
-     * @param {*} reason
-     * @returns {vow:Promise}
-     */
-    reject : function(reason) {
-        var defer = vow.defer();
-        defer.reject(reason);
-        return defer.promise();
-    },
-
-    /**
-     * Invokes a given function `fn` with arguments `args`
-     *
-     * @param {Function} fn
-     * @param {...*} [args]
-     * @returns {vow:Promise}
-     *
-     * @example
-     * ```js
-     * var promise1 = vow.invoke(function(value) {
-     *         return value;
-     *     }, 'ok'),
-     *     promise2 = vow.invoke(function() {
-     *         throw Error();
-     *     });
-     *
-     * promise1.isFulfilled(); // true
-     * promise1.valueOf(); // 'ok'
-     * promise2.isRejected(); // true
-     * promise2.valueOf(); // instance of Error
-     * ```
-     */
-    invoke : function(fn, args) {
-        var len = Math.max(arguments.length - 1, 0),
-            callArgs;
-        if(len) { // optimization for V8
-            callArgs = Array(len);
-            var i = 0;
-            while(i < len) {
-                callArgs[i++] = arguments[i];
-            }
-        }
-
-        try {
-            return vow.resolve(callArgs?
-                fn.apply(global, callArgs) :
-                fn.call(global));
-        }
-        catch(e) {
-            return vow.reject(e);
-        }
-    },
-
-    /**
-     * Returns a promise to be fulfilled only after all the items in `iterable` are fulfilled,
-     * or to be rejected when any of the `iterable` is rejected.
-     *
-     * @param {Array|Object} iterable
-     * @returns {vow:Promise}
-     *
-     * @example
-     * with array:
-     * ```js
-     * var defer1 = vow.defer(),
-     *     defer2 = vow.defer();
-     *
-     * vow.all([defer1.promise(), defer2.promise(), 3])
-     *     .then(function(value) {
-     *          // value is "[1, 2, 3]" here
-     *     });
-     *
-     * defer1.resolve(1);
-     * defer2.resolve(2);
-     * ```
-     *
-     * @example
-     * with object:
-     * ```js
-     * var defer1 = vow.defer(),
-     *     defer2 = vow.defer();
-     *
-     * vow.all({ p1 : defer1.promise(), p2 : defer2.promise(), p3 : 3 })
-     *     .then(function(value) {
-     *          // value is "{ p1 : 1, p2 : 2, p3 : 3 }" here
-     *     });
-     *
-     * defer1.resolve(1);
-     * defer2.resolve(2);
-     * ```
-     */
-    all : function(iterable) {
-        var defer = new Deferred(),
-            isPromisesArray = isArray(iterable),
-            keys = isPromisesArray?
-                getArrayKeys(iterable) :
-                getObjectKeys(iterable),
-            len = keys.length,
-            res = isPromisesArray? [] : {};
-
-        if(!len) {
-            defer.resolve(res);
-            return defer.promise();
-        }
-
-        var i = len;
-        vow._forEach(
-            iterable,
-            function(value, idx) {
-                res[keys[idx]] = value;
-                if(!--i) {
-                    defer.resolve(res);
-                }
-            },
-            defer.reject,
-            defer.notify,
-            defer,
-            keys);
-
-        return defer.promise();
-    },
-
-    /**
-     * Returns a promise to be fulfilled only after all the items in `iterable` are resolved.
-     *
-     * @param {Array|Object} iterable
-     * @returns {vow:Promise}
-     *
-     * @example
-     * ```js
-     * var defer1 = vow.defer(),
-     *     defer2 = vow.defer();
-     *
-     * vow.allResolved([defer1.promise(), defer2.promise()]).spread(function(promise1, promise2) {
-     *     promise1.isRejected(); // returns true
-     *     promise1.valueOf(); // returns "'error'"
-     *     promise2.isFulfilled(); // returns true
-     *     promise2.valueOf(); // returns "'ok'"
-     * });
-     *
-     * defer1.reject('error');
-     * defer2.resolve('ok');
-     * ```
-     */
-    allResolved : function(iterable) {
-        var defer = new Deferred(),
-            isPromisesArray = isArray(iterable),
-            keys = isPromisesArray?
-                getArrayKeys(iterable) :
-                getObjectKeys(iterable),
-            i = keys.length,
-            res = isPromisesArray? [] : {};
-
-        if(!i) {
-            defer.resolve(res);
-            return defer.promise();
-        }
-
-        var onResolved = function() {
-                --i || defer.resolve(iterable);
-            };
-
-        vow._forEach(
-            iterable,
-            onResolved,
-            onResolved,
-            defer.notify,
-            defer,
-            keys);
-
-        return defer.promise();
-    },
-
-    allPatiently : function(iterable) {
-        return vow.allResolved(iterable).then(function() {
-            var isPromisesArray = isArray(iterable),
-                keys = isPromisesArray?
-                    getArrayKeys(iterable) :
-                    getObjectKeys(iterable),
-                rejectedPromises, fulfilledPromises,
-                len = keys.length, i = 0, key, promise;
-
-            if(!len) {
-                return isPromisesArray? [] : {};
-            }
-
-            while(i < len) {
-                key = keys[i++];
-                promise = iterable[key];
-                if(vow.isRejected(promise)) {
-                    rejectedPromises || (rejectedPromises = isPromisesArray? [] : {});
-                    isPromisesArray?
-                        rejectedPromises.push(promise.valueOf()) :
-                        rejectedPromises[key] = promise.valueOf();
-                }
-                else if(!rejectedPromises) {
-                    (fulfilledPromises || (fulfilledPromises = isPromisesArray? [] : {}))[key] = vow.valueOf(promise);
-                }
-            }
-
-            if(rejectedPromises) {
-                throw rejectedPromises;
-            }
-
-            return fulfilledPromises;
-        });
-    },
-
-    /**
-     * Returns a promise to be fulfilled only when any of the items in `iterable` is fulfilled,
-     * or to be rejected when all the items are rejected (with the reason of the first rejected item).
-     *
-     * @param {Array} iterable
-     * @returns {vow:Promise}
-     */
-    any : function(iterable) {
-        var defer = new Deferred(),
-            len = iterable.length;
-
-        if(!len) {
-            defer.reject(Error());
-            return defer.promise();
-        }
-
-        var i = 0, reason;
-        vow._forEach(
-            iterable,
-            defer.resolve,
-            function(e) {
-                i || (reason = e);
-                ++i === len && defer.reject(reason);
-            },
-            defer.notify,
-            defer);
-
-        return defer.promise();
-    },
-
-    /**
-     * Returns a promise to be fulfilled only when any of the items in `iterable` is fulfilled,
-     * or to be rejected when the first item is rejected.
-     *
-     * @param {Array} iterable
-     * @returns {vow:Promise}
-     */
-    anyResolved : function(iterable) {
-        var defer = new Deferred(),
-            len = iterable.length;
-
-        if(!len) {
-            defer.reject(Error());
-            return defer.promise();
-        }
-
-        vow._forEach(
-            iterable,
-            defer.resolve,
-            defer.reject,
-            defer.notify,
-            defer);
-
-        return defer.promise();
-    },
-
-    /**
-     * Static equivalent to `promise.delay`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @param {Number} delay
-     * @returns {vow:Promise}
-     */
-    delay : function(value, delay) {
-        return vow.resolve(value).delay(delay);
-    },
-
-    /**
-     * Static equivalent to `promise.timeout`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
-     *
-     * @param {*} value
-     * @param {Number} timeout
-     * @returns {vow:Promise}
-     */
-    timeout : function(value, timeout) {
-        return vow.resolve(value).timeout(timeout);
-    },
-
-    _forEach : function(promises, onFulfilled, onRejected, onProgress, ctx, keys) {
-        var len = keys? keys.length : promises.length,
-            i = 0;
-
-        while(i < len) {
-            vow.when(
-                promises[keys? keys[i] : i],
-                wrapOnFulfilled(onFulfilled, i),
-                onRejected,
-                onProgress,
-                ctx);
-            ++i;
-        }
-    },
-
-    TimedOutError : defineCustomErrorType('TimedOut')
-};
-
-var defineAsGlobal = true;
-if(typeof module === 'object' && typeof module.exports === 'object') {
-    module.exports = vow;
-    defineAsGlobal = false;
-}
-
-if(typeof modules === 'object' && isFunction(modules.define)) {
-    modules.define('vow', function(provide) {
-        provide(vow);
-    });
-    defineAsGlobal = false;
-}
-
-if(typeof define === 'function') {
-    define(function(require, exports, module) {
-        module.exports = vow;
-    });
-    defineAsGlobal = false;
-}
-
-defineAsGlobal && (global.vow = vow);
-
-})(this);
-
-/* ../../libs/bem-core/common.blocks/vow/vow.vanilla.js end */
-
-/* ../../libs/bem-core/common.blocks/cookie/cookie.js begin */
-/**
- * @module cookie
- * inspired from $.cookie plugin by Klaus Hartl (stilbuero.de)
- */
-
-modules.define('cookie', function(provide) {
-
-provide(/** @exports */{
-    /**
-     * Returns cookie by given name
-     * @param {String} name
-     * @returns {String|null}
-     */
-    get : function(name) {
-        var res = null;
-        if(document.cookie && document.cookie !== '') {
-            var cookies = document.cookie.split(';');
-            for(var i = 0; i < cookies.length; i++) {
-                var cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
-                if(cookie.substring(0, name.length + 1) === (name + '=')) {
-                    res = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return res;
-    },
-
-    /**
-     * Sets cookie by given name
-     * @param {String} name
-     * @param {String} val
-     * @param {Object} options
-     * @returns {cookie} this
-     */
-    set : function(name, val, options) {
-        options = options || {};
-        if(val === null) {
-            val = '';
-            options.expires = -1;
-        }
-        var expires = '';
-        if(options.expires && (typeof options.expires === 'number' || options.expires.toUTCString)) {
-            var date;
-            if(typeof options.expires === 'number') {
-                date = new Date();
-                date.setTime(date.getTime() + (options.expires * 24 * 60 * 60 * 1000));
-            } else {
-                date = options.expires;
-            }
-            expires = '; expires=' + date.toUTCString(); // use expires attribute, max-age is not supported by IE
-        }
-        // CAUTION: Needed to parenthesize options.path and options.domain
-        // in the following expressions, otherwise they evaluate to undefined
-        // in the packed version for some reason...
-        var path = options.path? '; path=' + (options.path) : '',
-            domain = options.domain? '; domain=' + (options.domain) : '',
-            secure = options.secure? '; secure' : '';
-        document.cookie = [name, '=', encodeURIComponent(val), expires, path, domain, secure].join('');
-
-        return this;
-    }
-});
-
-});
-
-/* ../../libs/bem-core/common.blocks/cookie/cookie.js end */
-
-/* ../../libs/bem-core/common.blocks/dom/dom.js begin */
-/**
- * @module dom
- * @description some DOM utils
- */
-
-modules.define('dom', ['jquery'], function(provide, $) {
-
-provide(/** @exports */{
-    /**
-     * Checks whether a DOM elem is in a context
-     * @param {jQuery} ctx DOM elem where check is being performed
-     * @param {jQuery} domElem DOM elem to check
-     * @returns {Boolean}
-     */
-    contains : function(ctx, domElem) {
-        var res = false;
-
-        domElem.each(function() {
-            var domNode = this;
-            do {
-                if(~ctx.index(domNode)) return !(res = true);
-            } while(domNode = domNode.parentNode);
-
-            return res;
-        });
-
-        return res;
-    },
-
-    /**
-     * Returns current focused DOM elem in document
-     * @returns {jQuery}
-     */
-    getFocused : function() {
-        // "Error: Unspecified error." in iframe in IE9
-        try { return $(document.activeElement); } catch(e) {}
-    },
-
-    /**
-     * Checks whether a DOM element contains focus
-     * @param {jQuery} domElem
-     * @returns {Boolean}
-     */
-    containsFocus : function(domElem) {
-        return this.contains(domElem, this.getFocused());
-    },
-
-    /**
-    * Checks whether a browser currently can set focus on DOM elem
-    * @param {jQuery} domElem
-    * @returns {Boolean}
-    */
-    isFocusable : function(domElem) {
-        var domNode = domElem[0];
-
-        if(!domNode) return false;
-        if(domNode.hasAttribute('tabindex')) return true;
-
-        switch(domNode.tagName.toLowerCase()) {
-            case 'iframe':
-                return true;
-
-            case 'input':
-            case 'button':
-            case 'textarea':
-            case 'select':
-                return !domNode.disabled;
-
-            case 'a':
-                return !!domNode.href;
-        }
-
-        return false;
-    },
-
-    /**
-    * Checks whether a domElem is intended to edit text
-    * @param {jQuery} domElem
-    * @returns {Boolean}
-    */
-    isEditable : function(domElem) {
-        var domNode = domElem[0];
-
-        if(!domNode) return false;
-
-        switch(domNode.tagName.toLowerCase()) {
-            case 'input':
-                var type = domNode.type;
-                return (type === 'text' || type === 'password') && !domNode.disabled && !domNode.readOnly;
-
-            case 'textarea':
-                return !domNode.disabled && !domNode.readOnly;
-
-            default:
-                return domNode.contentEditable === 'true';
-        }
-    }
-});
-
-});
-
-/* ../../libs/bem-core/common.blocks/dom/dom.js end */
-
-/* ../../libs/bem-core/common.blocks/jquery/jquery.js begin */
-/**
- * @module jquery
- * @description Provide jQuery (load if it does not exist).
- */
-
-modules.define(
-    'jquery',
-    ['loader_type_js', 'jquery__config'],
-    function(provide, loader, cfg) {
-
-/* global jQuery */
-
-function doProvide(preserveGlobal) {
-    /**
-     * @exports
-     * @type Function
-     */
-    provide(preserveGlobal? jQuery : jQuery.noConflict(true));
-}
-
-typeof jQuery !== 'undefined'?
-    doProvide(true) :
-    loader(cfg.url, doProvide);
-});
-
-/* ../../libs/bem-core/common.blocks/jquery/jquery.js end */
-
-/* ../../libs/bem-core/common.blocks/loader/_type/loader_type_js.js begin */
-/**
- * @module loader_type_js
- * @description Load JS from external URL.
- */
-
-modules.define('loader_type_js', function(provide) {
-
-var loading = {},
-    loaded = {},
-    head = document.getElementsByTagName('head')[0],
-    runCallbacks = function(path, type) {
-        var cbs = loading[path], cb, i = 0;
-        delete loading[path];
-        while(cb = cbs[i++]) {
-            cb[type] && cb[type]();
-        }
-    },
-    onSuccess = function(path) {
-        loaded[path] = true;
-        runCallbacks(path, 'success');
-    },
-    onError = function(path) {
-        runCallbacks(path, 'error');
-    };
-
-provide(
-    /**
-     * @exports
-     * @param {String} path resource link
-     * @param {Function} success to be called if the script succeeds
-     * @param {Function} error to be called if the script fails
-     */
-    function(path, success, error) {
-        if(loaded[path]) {
-            success();
-            return;
-        }
-
-        if(loading[path]) {
-            loading[path].push({ success : success, error : error });
-            return;
-        }
-
-        loading[path] = [{ success : success, error : error }];
-
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.charset = 'utf-8';
-        script.src = (location.protocol === 'file:' && !path.indexOf('//')? 'http:' : '') + path;
-
-        if('onload' in script) {
-            script.onload = function() {
-                script.onload = script.onerror = null;
-                onSuccess(path);
-            };
-
-            script.onerror = function() {
-                script.onload = script.onerror = null;
-                onError(path);
-            };
-        } else {
-            script.onreadystatechange = function() {
-                var readyState = this.readyState;
-                if(readyState === 'loaded' || readyState === 'complete') {
-                    script.onreadystatechange = null;
-                    onSuccess(path);
-                }
-            };
-        }
-
-        head.insertBefore(script, head.lastChild);
-    }
-);
-
-});
-
-/* ../../libs/bem-core/common.blocks/loader/_type/loader_type_js.js end */
-
-/* ../../libs/bem-core/common.blocks/jquery/__config/jquery__config.js begin */
-/**
- * @module jquery__config
- * @description Configuration for jQuery
- */
-
-modules.define('jquery__config', function(provide) {
-
-provide(/** @exports */{
-    /**
-     * URL for loading jQuery if it does not exist
-     */
-    url : '//yastatic.net/jquery/2.1.3/jquery.min.js'
-});
-
-});
-
-/* ../../libs/bem-core/common.blocks/jquery/__config/jquery__config.js end */
-
-/* ../../libs/bem-core/desktop.blocks/jquery/__config/jquery__config.js begin */
-/**
- * @module jquery__config
- * @description Configuration for jQuery
- */
-
-modules.define(
-    'jquery__config',
-    ['ua', 'objects'],
-    function(provide, ua, objects, base) {
-
-provide(
-    ua.msie && parseInt(ua.version, 10) < 9?
-        objects.extend(
-            base,
-            {
-                url : '//yastatic.net/jquery/1.11.2/jquery.min.js'
-            }) :
-        base);
-
-});
-
-/* ../../libs/bem-core/desktop.blocks/jquery/__config/jquery__config.js end */
-
-/* ../../libs/bem-core/desktop.blocks/ua/ua.js begin */
-/**
- * @module ua
- * @description Detect some user agent features (works like jQuery.browser in jQuery 1.8)
- * @see http://code.jquery.com/jquery-migrate-1.1.1.js
- */
-
-modules.define('ua', function(provide) {
-
-var ua = navigator.userAgent.toLowerCase(),
-    match = /(chrome)[ \/]([\w.]+)/.exec(ua) ||
-        /(webkit)[ \/]([\w.]+)/.exec(ua) ||
-        /(opera)(?:.*version|)[ \/]([\w.]+)/.exec(ua) ||
-        /(msie) ([\w.]+)/.exec(ua) ||
-        ua.indexOf('compatible') < 0 && /(mozilla)(?:.*? rv:([\w.]+)|)/.exec(ua) ||
-        [],
-    matched = {
-        browser : match[1] || '',
-        version : match[2] || '0'
-    },
-    browser = {};
-
-if(matched.browser) {
-    browser[matched.browser] = true;
-    browser.version = matched.version;
-}
-
-if(browser.chrome) {
-    browser.webkit = true;
-} else if(browser.webkit) {
-    browser.safari = true;
-}
-
-/**
- * @exports
- * @type Object
- */
-provide(browser);
-
-});
-
-/* ../../libs/bem-core/desktop.blocks/ua/ua.js end */
 
 /* ../../libs/bem-core/common.blocks/i-bem/_elem-instances/i-bem_elem-instances.js begin */
 /**
@@ -4903,7 +3299,7 @@ DOM = BEM.decl('i-bem__dom',/** @lends BEMDOM.prototype */{
 
                 (oldModVal === true?
                     classRE.test(className) :
-                    className.indexOf(classPrefix + MOD_DELIM) > -1)?
+                    (' ' + className).indexOf(' ' + classPrefix + MOD_DELIM) > -1)?
                         this.className = className.replace(
                             classRE,
                             (needDel? '' : '$1' + modClassName)) :
@@ -4941,12 +3337,24 @@ DOM = BEM.decl('i-bem__dom',/** @lends BEMDOM.prototype */{
             modName = undef;
         }
 
+        names = names.split(' ');
+
         var _self = this.__self,
-            selector = '.' +
-                names.split(' ').map(function(name) {
-                    return _self.buildClass(name, modName, modVal);
-                }).join(',.'),
-            res = findDomElem(ctx, selector);
+            modPostfix = buildModPostfix(modName, modVal),
+            selectors = [],
+            keys = names.map(function(name) {
+                selectors.push(_self.buildSelector(name, modName, modVal));
+                return name + modPostfix;
+            }),
+            isSingleName = keys.length === 1,
+            res = findDomElem(ctx, selectors.join(','));
+
+        // caching results if possible
+        ctx === this.domElem &&
+            selectors.forEach(function(selector, i) {
+                (this._elemCache[keys[i]] = isSingleName? res : res.filter(selector))
+                    .__bemElemName = names[i];
+            }, this);
 
         return strictMode? this._filterFindElemResults(res) : res;
     },
@@ -4973,15 +3381,8 @@ DOM = BEM.decl('i-bem__dom',/** @lends BEMDOM.prototype */{
      * @returns {jQuery} DOM elements
      */
     _elem : function(name, modName, modVal) {
-        var key = name + buildModPostfix(modName, modVal),
-            res;
-
-        if(!(res = this._elemCache[key])) {
-            res = this._elemCache[key] = this.findElem(name, modName, modVal);
-            res.__bemElemName = name;
-        }
-
-        return res;
+        return this._elemCache[name + buildModPostfix(modName, modVal)] ||
+            this.findElem(name, modName, modVal);
     },
 
     /**
@@ -5185,18 +3586,19 @@ DOM = BEM.decl('i-bem__dom',/** @lends BEMDOM.prototype */{
     },
 
     /**
-     * Destroys blocks on a fragment of the DOM tree
      * @param {jQuery} ctx Root DOM node
      * @param {Boolean} [excludeSelf=false] Exclude the main domElem
+     * @param {Boolean} [destructDom=false] Remove DOM node during destruction
+     * @private
      */
-    destruct : function(ctx, excludeSelf) {
+    _destruct : function(ctx, excludeSelf, destructDom) {
         var _ctx;
         if(excludeSelf) {
             storeDomNodeParents(_ctx = ctx.children());
-            ctx.empty();
+            destructDom && ctx.empty();
         } else {
             storeDomNodeParents(_ctx = ctx);
-            ctx.remove();
+            destructDom && ctx.remove();
         }
 
         reverse.call(findDomElem(_ctx, BEM_SELECTOR)).each(function(_, domNode) {
@@ -5211,9 +3613,24 @@ DOM = BEM.decl('i-bem__dom',/** @lends BEMDOM.prototype */{
             });
             delete domElemToParams[identify(domNode)];
         });
+    },
 
-        // flush parent nodes storage that has been filled above
-        domNodesToParents = {};
+    /**
+     * Destroys blocks on a fragment of the DOM tree
+     * @param {jQuery} ctx Root DOM node
+     * @param {Boolean} [excludeSelf=false] Exclude the main domElem
+     */
+    destruct : function(ctx, excludeSelf) {
+        this._destruct(ctx, excludeSelf, true);
+    },
+
+    /**
+     * Detaches blocks on a fragment of the DOM tree without destructing DOM tree
+     * @param {jQuery} ctx Root DOM node
+     * @param {Boolean} [excludeSelf=false] Exclude the main domElem
+     */
+    detach : function(ctx, excludeSelf) {
+        this._destruct(ctx, excludeSelf);
     },
 
     /**
@@ -7143,9 +5560,6 @@ $(function() {
 /* ../../libs/bem-core/common.blocks/jquery/__event/_type/jquery__event_type_pointerclick.js end */
 
 /* ../../libs/bem-core/common.blocks/jquery/__event/_type/jquery__event_type_pointernative.js begin */
-/*!
- * Basic pointer events polyfill
- */
 ;(function(global, factory) {
 
 if(typeof modules === 'object' && modules.isDefined('jquery')) {
@@ -7159,7 +5573,17 @@ if(typeof modules === 'object' && modules.isDefined('jquery')) {
 
 }(this, function(window, $) {
 
-// include "jquery-pointerevents.js"
+var jqEvent = $.event;
+
+// NOTE: Remove jQuery special fixes for pointerevents – we fix them ourself
+delete jqEvent.special.pointerenter;
+delete jqEvent.special.pointerleave;
+
+if(window.PointerEvent) {
+    // Have native PointerEvent support, nothing to do than
+    return;
+}
+
 /*!
  * Most of source code is taken from PointerEvents Polyfill
  * written by Polymer Team (https://github.com/Polymer/PointerEvents)
@@ -7167,17 +5591,11 @@ if(typeof modules === 'object' && modules.isDefined('jquery')) {
  */
 
 var doc = document,
-    USE_NATIVE_MAP = window.Map && window.Map.prototype.forEach,
     HAS_BITMAP_TYPE = window.MSPointerEvent && typeof window.MSPointerEvent.MSPOINTER_TYPE_MOUSE === 'number',
-    POINTERS_FN = function() { return this.size },
-    jqEvent = $.event;
-
-// NOTE: Remove jQuery special fixes for pointerevents – we fix them ourself
-delete jqEvent.special.pointerenter;
-delete jqEvent.special.pointerleave;
+    undef;
 
 /*!
- * Returns a snapshot of inEvent, with writable properties.
+ * Returns a snapshot of the event, with writable properties.
  *
  * @param {Event} event An event that contains properties to copy.
  * @returns {Object} An object containing shallow copies of `inEvent`'s
@@ -7275,68 +5693,53 @@ function PointerEvent(type, params) {
     return e;
 }
 
-/*!
- * Implements a map of pointer states
- * @returns {PointerMap}
- * @constructor
- */
-function PointerMap() {
-    if(USE_NATIVE_MAP) {
-        var m = new Map();
-        m.pointers = POINTERS_FN;
-        return m;
-    }
-
-    this.keys = [];
-    this.values = [];
+function SparseArrayMap() {
+    this.array = [];
+    this.size = 0;
 }
 
-PointerMap.prototype = {
-    set : function(id, event) {
-        var i = this.keys.indexOf(id);
-        if(i > -1) {
-            this.values[i] = event;
-        } else {
-            this.keys.push(id);
-            this.values.push(event);
+SparseArrayMap.prototype = {
+    set : function(k, v) {
+        if(v === undef) {
+            return this.delete(k);
+        }
+        if(!this.has(k)) {
+            this.size++;
+        }
+        this.array[k] = v;
+    },
+
+    has : function(k) {
+        return this.array[k] !== undef;
+    },
+
+    delete : function(k) {
+        if(this.has(k)){
+            delete this.array[k];
+            this.size--;
         }
     },
 
-    has : function(id) {
-        return this.keys.indexOf(id) > -1;
-    },
-
-    'delete' : function(id) {
-        var i = this.keys.indexOf(id);
-        if(i > -1) {
-            this.keys.splice(i, 1);
-            this.values.splice(i, 1);
-        }
-    },
-
-    get : function(id) {
-        var i = this.keys.indexOf(id);
-        return this.values[i];
+    get : function(k) {
+        return this.array[k];
     },
 
     clear : function() {
-        this.keys.length = 0;
-        this.values.length = 0;
+        this.array.length = 0;
+        this.size = 0;
     },
 
+    // return value, key, map
     forEach : function(callback, ctx) {
-        var keys = this.keys;
-        this.values.forEach(function(v, i) {
-            callback.call(ctx, v, keys[i], this);
+        return this.array.forEach(function(v, k) {
+            callback.call(ctx, v, k, this);
         }, this);
-    },
-
-    pointers : function() {
-        return this.keys.length;
     }
 };
 
-var pointermap = new PointerMap();
+// jscs:disable requireMultipleVarDecl
+var PointerMap = window.Map && window.Map.prototype.forEach? Map : SparseArrayMap,
+    pointerMap = new PointerMap();
 
 var dispatcher = {
     eventMap : {},
@@ -7580,12 +5983,12 @@ var mouseEvents = {
 
     mousedown : function(event) {
         if(!this.isEventSimulatedFromTouch(event)) {
-            if(pointermap.has(MOUSE_POINTER_ID)) {
+            if(pointerMap.has(MOUSE_POINTER_ID)) {
                 // http://crbug/149091
                 this.cancel(event);
             }
 
-            pointermap.set(MOUSE_POINTER_ID, event);
+            pointerMap.set(MOUSE_POINTER_ID, event);
 
             var e = this.prepareEvent(event);
             dispatcher.down(e);
@@ -7601,7 +6004,7 @@ var mouseEvents = {
 
     mouseup : function(event) {
         if(!this.isEventSimulatedFromTouch(event)) {
-            var p = pointermap.get(MOUSE_POINTER_ID);
+            var p = pointerMap.get(MOUSE_POINTER_ID);
             if(p && p.button === event.button) {
                 var e = this.prepareEvent(event);
                 dispatcher.up(e);
@@ -7631,7 +6034,7 @@ var mouseEvents = {
     },
 
     cleanupMouse : function() {
-        pointermap['delete'](MOUSE_POINTER_ID);
+        pointerMap['delete'](MOUSE_POINTER_ID);
     }
 };
 
@@ -7664,8 +6067,8 @@ var touchEvents = {
      * Sets primary touch if there no pointers, or the only pointer is the mouse
      */
     setPrimaryTouch : function(touch) {
-        if(pointermap.pointers() === 0 ||
-                (pointermap.pointers() === 1 && pointermap.has(MOUSE_POINTER_ID))) {
+        if(pointerMap.size === 0 ||
+                (pointerMap.size === 1 && pointerMap.has(MOUSE_POINTER_ID))) {
             this.firstTouch = touch.identifier;
             this.firstXY = { X : touch.clientX, Y : touch.clientY };
             this.scrolling = null;
@@ -7769,12 +6172,12 @@ var touchEvents = {
      */
     vacuumTouches : function(touchEvent) {
         var touches = touchEvent.touches;
-        // pointermap.pointers() should be less than length of touches here, as the touchstart has not
+        // `pointermap.size` should be less than length of touches here, as the touchstart has not
         // been processed yet.
-        if(pointermap.pointers() >= touches.length) {
+        if(pointerMap.size >= touches.length) {
             var d = [];
 
-            pointermap.forEach(function(pointer, pointerId) {
+            pointerMap.forEach(function(pointer, pointerId) {
                 // Never remove pointerId == 1, which is mouse.
                 // Touch identifiers are 2 smaller than their pointerId, which is the
                 // index in pointermap.
@@ -7854,7 +6257,7 @@ var touchEvents = {
 
     overDown : function(pEvent) {
         var target = pEvent.target;
-        pointermap.set(pEvent.pointerId, {
+        pointerMap.set(pEvent.pointerId, {
             target : target,
             outTarget : target,
             outEvent : pEvent
@@ -7865,7 +6268,7 @@ var touchEvents = {
     },
 
     moveOverOut : function(pEvent) {
-        var pointer = pointermap.get(pEvent.pointerId);
+        var pointer = pointerMap.get(pEvent.pointerId);
 
         // a finger drifted off the screen, ignore it
         if(!pointer) {
@@ -7914,7 +6317,7 @@ var touchEvents = {
     },
 
     cleanUpPointer : function(pEvent) {
-        pointermap['delete'](pEvent.pointerId);
+        pointerMap['delete'](pEvent.pointerId);
         this.removePrimaryPointer(pEvent);
     }
 };
@@ -7952,7 +6355,7 @@ var msEvents = {
     },
 
     MSPointerDown : function(event) {
-        pointermap.set(event.pointerId, event);
+        pointerMap.set(event.pointerId, event);
         var e = this.prepareEvent(event);
         dispatcher.down(e);
     },
@@ -7985,7 +6388,7 @@ var msEvents = {
     },
 
     cleanup : function(id) {
-        pointermap['delete'](id);
+        pointerMap['delete'](id);
     }
 };
 
@@ -8049,22 +6452,38 @@ provide($);
 modules.define('keyboard__codes', function(provide) {
 
 provide(/** @exports */{
+    /** @type {Number} */
     BACKSPACE : 8,
+    /** @type {Number} */
     TAB : 9,
+    /** @type {Number} */
     ENTER : 13,
+    /** @type {Number} */
     CAPS_LOCK : 20,
+    /** @type {Number} */
     ESC : 27,
+    /** @type {Number} */
     SPACE : 32,
+    /** @type {Number} */
     PAGE_UP : 33,
+    /** @type {Number} */
     PAGE_DOWN : 34,
+    /** @type {Number} */
     END : 35,
+    /** @type {Number} */
     HOME : 36,
+    /** @type {Number} */
     LEFT : 37,
+    /** @type {Number} */
     UP : 38,
+    /** @type {Number} */
     RIGHT : 39,
+    /** @type {Number} */
     DOWN : 40,
-    INSERT : 41,
-    DELETE : 42
+    /** @type {Number} */
+    INSERT : 45,
+    /** @type {Number} */
+    DELETE : 46
 });
 
 });
@@ -8191,6 +6610,1611 @@ provide(load);
 });
 
 /* ../../libs/bem-core/common.blocks/loader/_type/loader_type_bundle.js end */
+
+/* ../../libs/bem-core/common.blocks/querystring/querystring.vanilla.js begin */
+/**
+ * @module querystring
+ * @description A set of helpers to work with query strings
+ */
+
+modules.define('querystring', ['querystring__uri'], function(provide, uri) {
+
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+
+function addParam(res, name, val) {
+    /* jshint eqnull: true */
+    res.push(encodeURIComponent(name) + '=' + (val == null? '' : encodeURIComponent(val)));
+}
+
+provide(/** @exports */{
+    /**
+     * Parse a query string to an object
+     * @param {String} str
+     * @returns {Object}
+     */
+    parse : function(str) {
+        if(!str) {
+            return {};
+        }
+
+        return str.split('&').reduce(
+            function(res, pair) {
+                if(!pair) {
+                    return res;
+                }
+
+                var eq = pair.indexOf('='),
+                    name, val;
+
+                if(eq >= 0) {
+                    name = pair.substr(0, eq);
+                    val = pair.substr(eq + 1);
+                } else {
+                    name = pair;
+                    val = '';
+                }
+
+                name = uri.decodeURIComponent(name);
+                val = uri.decodeURIComponent(val);
+
+                hasOwnProperty.call(res, name)?
+                    Array.isArray(res[name])?
+                        res[name].push(val) :
+                        res[name] = [res[name], val] :
+                    res[name] = val;
+
+                return res;
+            },
+            {});
+    },
+
+    /**
+     * Serialize an object to a query string
+     * @param {Object} obj
+     * @returns {String}
+     */
+    stringify : function(obj) {
+        return Object.keys(obj)
+            .reduce(
+                function(res, name) {
+                    var val = obj[name];
+                    Array.isArray(val)?
+                        val.forEach(function(val) {
+                            addParam(res, name, val);
+                        }) :
+                        addParam(res, name, val);
+                    return res;
+                },
+                [])
+            .join('&');
+    }
+});
+
+});
+
+/* ../../libs/bem-core/common.blocks/querystring/querystring.vanilla.js end */
+
+/* ../../libs/bem-core/common.blocks/querystring/__uri/querystring__uri.vanilla.js begin */
+/**
+ * @module querystring__uri
+ * @description A set of helpers to work with URI
+ */
+
+modules.define('querystring__uri',  function(provide) {
+
+// Equivalency table for cp1251 and utf8.
+var map = { '%D0' : '%D0%A0', '%C0' : '%D0%90', '%C1' : '%D0%91', '%C2' : '%D0%92', '%C3' : '%D0%93', '%C4' : '%D0%94', '%C5' : '%D0%95', '%A8' : '%D0%81', '%C6' : '%D0%96', '%C7' : '%D0%97', '%C8' : '%D0%98', '%C9' : '%D0%99', '%CA' : '%D0%9A', '%CB' : '%D0%9B', '%CC' : '%D0%9C', '%CD' : '%D0%9D', '%CE' : '%D0%9E', '%CF' : '%D0%9F', '%D1' : '%D0%A1', '%D2' : '%D0%A2', '%D3' : '%D0%A3', '%D4' : '%D0%A4', '%D5' : '%D0%A5', '%D6' : '%D0%A6', '%D7' : '%D0%A7', '%D8' : '%D0%A8', '%D9' : '%D0%A9', '%DA' : '%D0%AA', '%DB' : '%D0%AB', '%DC' : '%D0%AC', '%DD' : '%D0%AD', '%DE' : '%D0%AE', '%DF' : '%D0%AF', '%E0' : '%D0%B0', '%E1' : '%D0%B1', '%E2' : '%D0%B2', '%E3' : '%D0%B3', '%E4' : '%D0%B4', '%E5' : '%D0%B5', '%B8' : '%D1%91', '%E6' : '%D0%B6', '%E7' : '%D0%B7', '%E8' : '%D0%B8', '%E9' : '%D0%B9', '%EA' : '%D0%BA', '%EB' : '%D0%BB', '%EC' : '%D0%BC', '%ED' : '%D0%BD', '%EE' : '%D0%BE', '%EF' : '%D0%BF', '%F0' : '%D1%80', '%F1' : '%D1%81', '%F2' : '%D1%82', '%F3' : '%D1%83', '%F4' : '%D1%84', '%F5' : '%D1%85', '%F6' : '%D1%86', '%F7' : '%D1%87', '%F8' : '%D1%88', '%F9' : '%D1%89', '%FA' : '%D1%8A', '%FB' : '%D1%8B', '%FC' : '%D1%8C', '%FD' : '%D1%8D', '%FE' : '%D1%8E', '%FF' : '%D1%8F' };
+
+function convert(str) {
+    // Symbol code in cp1251 (hex) : symbol code in utf8)
+    return str.replace(
+        /%.{2}/g,
+        function($0) {
+            return map[$0] || $0;
+        });
+}
+
+function decode(fn,  str) {
+    var decoded = '';
+
+    // Try/catch block for getting the encoding of the source string.
+    // Error is thrown if a non-UTF8 string is input.
+    // If the string was not decoded, it is returned without changes.
+    try {
+        decoded = fn(str);
+    } catch (e1) {
+        try {
+            decoded = fn(convert(str));
+        } catch (e2) {
+            decoded = str;
+        }
+    }
+
+    return decoded;
+}
+
+provide(/** @exports */{
+    /**
+     * Decodes URI string
+     * @param {String} str
+     * @returns {String}
+     */
+    decodeURI : function(str) {
+        return decode(decodeURI,  str);
+    },
+
+    /**
+     * Decodes URI component string
+     * @param {String} str
+     * @returns {String}
+     */
+    decodeURIComponent : function(str) {
+        return decode(decodeURIComponent,  str);
+    }
+});
+
+});
+
+/* ../../libs/bem-core/common.blocks/querystring/__uri/querystring__uri.vanilla.js end */
+
+/* ../../libs/bem-core/common.blocks/strings/__escape/strings__escape.vanilla.js begin */
+/**
+ * @module strings__escape
+ * @description A set of string escaping functions
+ */
+
+modules.define('strings__escape', function(provide) {
+
+var symbols = {
+        '"' : '&quot;',
+        '\'' : '&apos;',
+        '&' : '&amp;',
+        '<' : '&lt;',
+        '>' : '&gt;'
+    },
+    mapSymbol = function(s) {
+        return symbols[s] || s;
+    },
+    buildEscape = function(regexp) {
+        regexp = new RegExp(regexp, 'g');
+        return function(str) {
+            return ('' + str).replace(regexp, mapSymbol);
+        };
+    };
+
+provide(/** @exports */{
+    /**
+     * Escape string to use in XML
+     * @type Function
+     * @param {String} str
+     * @returns {String}
+     */
+    xml : buildEscape('[&<>]'),
+
+    /**
+     * Escape string to use in HTML
+     * @type Function
+     * @param {String} str
+     * @returns {String}
+     */
+    html : buildEscape('[&<>]'),
+
+    /**
+     * Escape string to use in attributes
+     * @type Function
+     * @param {String} str
+     * @returns {String}
+     */
+    attr : buildEscape('["\'&<>]')
+});
+
+});
+
+/* ../../libs/bem-core/common.blocks/strings/__escape/strings__escape.vanilla.js end */
+
+/* ../../libs/bem-core/common.blocks/tick/tick.vanilla.js begin */
+/**
+ * @module tick
+ * @description Helpers for polling anything
+ */
+
+modules.define('tick', ['inherit', 'events'], function(provide, inherit, events) {
+
+var TICK_INTERVAL = 50,
+    global = this.global,
+
+    /**
+     * @class Tick
+     * @augments events:Emitter
+     */
+    Tick = inherit(events.Emitter, /** @lends Tick.prototype */{
+        /**
+         * @constructor
+         */
+        __constructor : function() {
+            this._timer = null;
+            this._isStarted = false;
+        },
+
+        /**
+         * Starts polling
+         */
+        start : function() {
+            if(!this._isStarted) {
+                this._isStarted = true;
+                this._scheduleTick();
+            }
+        },
+
+        /**
+         * Stops polling
+         */
+        stop : function() {
+            if(this._isStarted) {
+                this._isStarted = false;
+                global.clearTimeout(this._timer);
+            }
+        },
+
+        _scheduleTick : function() {
+            var _this = this;
+            this._timer = global.setTimeout(
+                function() {
+                    _this._onTick();
+                },
+                TICK_INTERVAL);
+        },
+
+        _onTick : function() {
+            this.emit('tick');
+
+            this._isStarted && this._scheduleTick();
+        }
+    });
+
+provide(
+    /**
+     * @exports
+     * @type Tick
+     */
+    new Tick());
+
+});
+
+/* ../../libs/bem-core/common.blocks/tick/tick.vanilla.js end */
+
+/* ../../libs/bem-core/common.blocks/tick/_start/tick_start_auto.vanilla.js begin */
+/**
+ * Automatically starts tick module
+ */
+
+modules.require(['tick'], function(tick) {
+
+tick.start();
+
+});
+
+/* ../../libs/bem-core/common.blocks/tick/_start/tick_start_auto.vanilla.js end */
+
+/* ../../libs/bem-core/common.blocks/vow/vow.vanilla.js begin */
+/**
+ * @module vow
+ * @author Filatov Dmitry <dfilatov@yandex-team.ru>
+ * @version 0.4.8
+ * @license
+ * Dual licensed under the MIT and GPL licenses:
+ *   * http://www.opensource.org/licenses/mit-license.php
+ *   * http://www.gnu.org/licenses/gpl.html
+ */
+
+(function(global) {
+
+var undef,
+    nextTick = (function() {
+        var fns = [],
+            enqueueFn = function(fn) {
+                return fns.push(fn) === 1;
+            },
+            callFns = function() {
+                var fnsToCall = fns, i = 0, len = fns.length;
+                fns = [];
+                while(i < len) {
+                    fnsToCall[i++]();
+                }
+            };
+
+        if(typeof setImmediate === 'function') { // ie10, nodejs >= 0.10
+            return function(fn) {
+                enqueueFn(fn) && setImmediate(callFns);
+            };
+        }
+
+        if(typeof process === 'object' && process.nextTick) { // nodejs < 0.10
+            return function(fn) {
+                enqueueFn(fn) && process.nextTick(callFns);
+            };
+        }
+
+        if(global.postMessage) { // modern browsers
+            var isPostMessageAsync = true;
+            if(global.attachEvent) {
+                var checkAsync = function() {
+                        isPostMessageAsync = false;
+                    };
+                global.attachEvent('onmessage', checkAsync);
+                global.postMessage('__checkAsync', '*');
+                global.detachEvent('onmessage', checkAsync);
+            }
+
+            if(isPostMessageAsync) {
+                var msg = '__promise' + +new Date,
+                    onMessage = function(e) {
+                        if(e.data === msg) {
+                            e.stopPropagation && e.stopPropagation();
+                            callFns();
+                        }
+                    };
+
+                global.addEventListener?
+                    global.addEventListener('message', onMessage, true) :
+                    global.attachEvent('onmessage', onMessage);
+
+                return function(fn) {
+                    enqueueFn(fn) && global.postMessage(msg, '*');
+                };
+            }
+        }
+
+        var doc = global.document;
+        if('onreadystatechange' in doc.createElement('script')) { // ie6-ie8
+            var createScript = function() {
+                    var script = doc.createElement('script');
+                    script.onreadystatechange = function() {
+                        script.parentNode.removeChild(script);
+                        script = script.onreadystatechange = null;
+                        callFns();
+                };
+                (doc.documentElement || doc.body).appendChild(script);
+            };
+
+            return function(fn) {
+                enqueueFn(fn) && createScript();
+            };
+        }
+
+        return function(fn) { // old browsers
+            enqueueFn(fn) && setTimeout(callFns, 0);
+        };
+    })(),
+    throwException = function(e) {
+        nextTick(function() {
+            throw e;
+        });
+    },
+    isFunction = function(obj) {
+        return typeof obj === 'function';
+    },
+    isObject = function(obj) {
+        return obj !== null && typeof obj === 'object';
+    },
+    toStr = Object.prototype.toString,
+    isArray = Array.isArray || function(obj) {
+        return toStr.call(obj) === '[object Array]';
+    },
+    getArrayKeys = function(arr) {
+        var res = [],
+            i = 0, len = arr.length;
+        while(i < len) {
+            res.push(i++);
+        }
+        return res;
+    },
+    getObjectKeys = Object.keys || function(obj) {
+        var res = [];
+        for(var i in obj) {
+            obj.hasOwnProperty(i) && res.push(i);
+        }
+        return res;
+    },
+    defineCustomErrorType = function(name) {
+        var res = function(message) {
+            this.name = name;
+            this.message = message;
+        };
+
+        res.prototype = new Error();
+
+        return res;
+    },
+    wrapOnFulfilled = function(onFulfilled, idx) {
+        return function(val) {
+            onFulfilled.call(this, val, idx);
+        };
+    };
+
+/**
+ * @class Deferred
+ * @exports vow:Deferred
+ * @description
+ * The `Deferred` class is used to encapsulate newly-created promise object along with functions that resolve, reject or notify it.
+ */
+
+/**
+ * @constructor
+ * @description
+ * You can use `vow.defer()` instead of using this constructor.
+ *
+ * `new vow.Deferred()` gives the same result as `vow.defer()`.
+ */
+var Deferred = function() {
+    this._promise = new Promise();
+};
+
+Deferred.prototype = /** @lends Deferred.prototype */{
+    /**
+     * Returns corresponding promise.
+     *
+     * @returns {vow:Promise}
+     */
+    promise : function() {
+        return this._promise;
+    },
+
+    /**
+     * Resolves corresponding promise with given `value`.
+     *
+     * @param {*} value
+     *
+     * @example
+     * ```js
+     * var defer = vow.defer(),
+     *     promise = defer.promise();
+     *
+     * promise.then(function(value) {
+     *     // value is "'success'" here
+     * });
+     *
+     * defer.resolve('success');
+     * ```
+     */
+    resolve : function(value) {
+        this._promise.isResolved() || this._promise._resolve(value);
+    },
+
+    /**
+     * Rejects corresponding promise with given `reason`.
+     *
+     * @param {*} reason
+     *
+     * @example
+     * ```js
+     * var defer = vow.defer(),
+     *     promise = defer.promise();
+     *
+     * promise.fail(function(reason) {
+     *     // reason is "'something is wrong'" here
+     * });
+     *
+     * defer.reject('something is wrong');
+     * ```
+     */
+    reject : function(reason) {
+        if(this._promise.isResolved()) {
+            return;
+        }
+
+        if(vow.isPromise(reason)) {
+            reason = reason.then(function(val) {
+                var defer = vow.defer();
+                defer.reject(val);
+                return defer.promise();
+            });
+            this._promise._resolve(reason);
+        }
+        else {
+            this._promise._reject(reason);
+        }
+    },
+
+    /**
+     * Notifies corresponding promise with given `value`.
+     *
+     * @param {*} value
+     *
+     * @example
+     * ```js
+     * var defer = vow.defer(),
+     *     promise = defer.promise();
+     *
+     * promise.progress(function(value) {
+     *     // value is "'20%'", "'40%'" here
+     * });
+     *
+     * defer.notify('20%');
+     * defer.notify('40%');
+     * ```
+     */
+    notify : function(value) {
+        this._promise.isResolved() || this._promise._notify(value);
+    }
+};
+
+var PROMISE_STATUS = {
+    PENDING   : 0,
+    RESOLVED  : 1,
+    FULFILLED : 2,
+    REJECTED  : 3
+};
+
+/**
+ * @class Promise
+ * @exports vow:Promise
+ * @description
+ * The `Promise` class is used when you want to give to the caller something to subscribe to,
+ * but not the ability to resolve or reject the deferred.
+ */
+
+/**
+ * @constructor
+ * @param {Function} resolver See https://github.com/domenic/promises-unwrapping/blob/master/README.md#the-promise-constructor for details.
+ * @description
+ * You should use this constructor directly only if you are going to use `vow` as DOM Promises implementation.
+ * In other case you should use `vow.defer()` and `defer.promise()` methods.
+ * @example
+ * ```js
+ * function fetchJSON(url) {
+ *     return new vow.Promise(function(resolve, reject, notify) {
+ *         var xhr = new XMLHttpRequest();
+ *         xhr.open('GET', url);
+ *         xhr.responseType = 'json';
+ *         xhr.send();
+ *         xhr.onload = function() {
+ *             if(xhr.response) {
+ *                 resolve(xhr.response);
+ *             }
+ *             else {
+ *                 reject(new TypeError());
+ *             }
+ *         };
+ *     });
+ * }
+ * ```
+ */
+var Promise = function(resolver) {
+    this._value = undef;
+    this._status = PROMISE_STATUS.PENDING;
+
+    this._fulfilledCallbacks = [];
+    this._rejectedCallbacks = [];
+    this._progressCallbacks = [];
+
+    if(resolver) { // NOTE: see https://github.com/domenic/promises-unwrapping/blob/master/README.md
+        var _this = this,
+            resolverFnLen = resolver.length;
+
+        resolver(
+            function(val) {
+                _this.isResolved() || _this._resolve(val);
+            },
+            resolverFnLen > 1?
+                function(reason) {
+                    _this.isResolved() || _this._reject(reason);
+                } :
+                undef,
+            resolverFnLen > 2?
+                function(val) {
+                    _this.isResolved() || _this._notify(val);
+                } :
+                undef);
+    }
+};
+
+Promise.prototype = /** @lends Promise.prototype */ {
+    /**
+     * Returns value of fulfilled promise or reason in case of rejection.
+     *
+     * @returns {*}
+     */
+    valueOf : function() {
+        return this._value;
+    },
+
+    /**
+     * Returns `true` if promise is resolved.
+     *
+     * @returns {Boolean}
+     */
+    isResolved : function() {
+        return this._status !== PROMISE_STATUS.PENDING;
+    },
+
+    /**
+     * Returns `true` if promise is fulfilled.
+     *
+     * @returns {Boolean}
+     */
+    isFulfilled : function() {
+        return this._status === PROMISE_STATUS.FULFILLED;
+    },
+
+    /**
+     * Returns `true` if promise is rejected.
+     *
+     * @returns {Boolean}
+     */
+    isRejected : function() {
+        return this._status === PROMISE_STATUS.REJECTED;
+    },
+
+    /**
+     * Adds reactions to promise.
+     *
+     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
+     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
+     * @param {Object} [ctx] Context of callbacks execution
+     * @returns {vow:Promise} A new promise, see https://github.com/promises-aplus/promises-spec for details
+     */
+    then : function(onFulfilled, onRejected, onProgress, ctx) {
+        var defer = new Deferred();
+        this._addCallbacks(defer, onFulfilled, onRejected, onProgress, ctx);
+        return defer.promise();
+    },
+
+    /**
+     * Adds rejection reaction only. It is shortcut for `promise.then(undefined, onRejected)`.
+     *
+     * @param {Function} onRejected Callback to be called with the value after promise has been rejected
+     * @param {Object} [ctx] Context of callback execution
+     * @returns {vow:Promise}
+     */
+    'catch' : function(onRejected, ctx) {
+        return this.then(undef, onRejected, ctx);
+    },
+
+    /**
+     * Adds rejection reaction only. It is shortcut for `promise.then(null, onRejected)`. It's alias for `catch`.
+     *
+     * @param {Function} onRejected Callback to be called with the value after promise has been rejected
+     * @param {Object} [ctx] Context of callback execution
+     * @returns {vow:Promise}
+     */
+    fail : function(onRejected, ctx) {
+        return this.then(undef, onRejected, ctx);
+    },
+
+    /**
+     * Adds resolving reaction (to fulfillment and rejection both).
+     *
+     * @param {Function} onResolved Callback that to be called with the value after promise has been rejected
+     * @param {Object} [ctx] Context of callback execution
+     * @returns {vow:Promise}
+     */
+    always : function(onResolved, ctx) {
+        var _this = this,
+            cb = function() {
+                return onResolved.call(this, _this);
+            };
+
+        return this.then(cb, cb, ctx);
+    },
+
+    /**
+     * Adds progress reaction.
+     *
+     * @param {Function} onProgress Callback to be called with the value when promise has been notified
+     * @param {Object} [ctx] Context of callback execution
+     * @returns {vow:Promise}
+     */
+    progress : function(onProgress, ctx) {
+        return this.then(undef, undef, onProgress, ctx);
+    },
+
+    /**
+     * Like `promise.then`, but "spreads" the array into a variadic value handler.
+     * It is useful with `vow.all` and `vow.allResolved` methods.
+     *
+     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
+     * @param {Object} [ctx] Context of callbacks execution
+     * @returns {vow:Promise}
+     *
+     * @example
+     * ```js
+     * var defer1 = vow.defer(),
+     *     defer2 = vow.defer();
+     *
+     * vow.all([defer1.promise(), defer2.promise()]).spread(function(arg1, arg2) {
+     *     // arg1 is "1", arg2 is "'two'" here
+     * });
+     *
+     * defer1.resolve(1);
+     * defer2.resolve('two');
+     * ```
+     */
+    spread : function(onFulfilled, onRejected, ctx) {
+        return this.then(
+            function(val) {
+                return onFulfilled.apply(this, val);
+            },
+            onRejected,
+            ctx);
+    },
+
+    /**
+     * Like `then`, but terminates a chain of promises.
+     * If the promise has been rejected, throws it as an exception in a future turn of the event loop.
+     *
+     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
+     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
+     * @param {Object} [ctx] Context of callbacks execution
+     *
+     * @example
+     * ```js
+     * var defer = vow.defer();
+     * defer.reject(Error('Internal error'));
+     * defer.promise().done(); // exception to be thrown
+     * ```
+     */
+    done : function(onFulfilled, onRejected, onProgress, ctx) {
+        this
+            .then(onFulfilled, onRejected, onProgress, ctx)
+            .fail(throwException);
+    },
+
+    /**
+     * Returns a new promise that will be fulfilled in `delay` milliseconds if the promise is fulfilled,
+     * or immediately rejected if promise is rejected.
+     *
+     * @param {Number} delay
+     * @returns {vow:Promise}
+     */
+    delay : function(delay) {
+        var timer,
+            promise = this.then(function(val) {
+                var defer = new Deferred();
+                timer = setTimeout(
+                    function() {
+                        defer.resolve(val);
+                    },
+                    delay);
+
+                return defer.promise();
+            });
+
+        promise.always(function() {
+            clearTimeout(timer);
+        });
+
+        return promise;
+    },
+
+    /**
+     * Returns a new promise that will be rejected in `timeout` milliseconds
+     * if the promise is not resolved beforehand.
+     *
+     * @param {Number} timeout
+     * @returns {vow:Promise}
+     *
+     * @example
+     * ```js
+     * var defer = vow.defer(),
+     *     promiseWithTimeout1 = defer.promise().timeout(50),
+     *     promiseWithTimeout2 = defer.promise().timeout(200);
+     *
+     * setTimeout(
+     *     function() {
+     *         defer.resolve('ok');
+     *     },
+     *     100);
+     *
+     * promiseWithTimeout1.fail(function(reason) {
+     *     // promiseWithTimeout to be rejected in 50ms
+     * });
+     *
+     * promiseWithTimeout2.then(function(value) {
+     *     // promiseWithTimeout to be fulfilled with "'ok'" value
+     * });
+     * ```
+     */
+    timeout : function(timeout) {
+        var defer = new Deferred(),
+            timer = setTimeout(
+                function() {
+                    defer.reject(new vow.TimedOutError('timed out'));
+                },
+                timeout);
+
+        this.then(
+            function(val) {
+                defer.resolve(val);
+            },
+            function(reason) {
+                defer.reject(reason);
+            });
+
+        defer.promise().always(function() {
+            clearTimeout(timer);
+        });
+
+        return defer.promise();
+    },
+
+    _vow : true,
+
+    _resolve : function(val) {
+        if(this._status > PROMISE_STATUS.RESOLVED) {
+            return;
+        }
+
+        if(val === this) {
+            this._reject(TypeError('Can\'t resolve promise with itself'));
+            return;
+        }
+
+        this._status = PROMISE_STATUS.RESOLVED;
+
+        if(val && !!val._vow) { // shortpath for vow.Promise
+            val.isFulfilled()?
+                this._fulfill(val.valueOf()) :
+                val.isRejected()?
+                    this._reject(val.valueOf()) :
+                    val.then(
+                        this._fulfill,
+                        this._reject,
+                        this._notify,
+                        this);
+            return;
+        }
+
+        if(isObject(val) || isFunction(val)) {
+            var then;
+            try {
+                then = val.then;
+            }
+            catch(e) {
+                this._reject(e);
+                return;
+            }
+
+            if(isFunction(then)) {
+                var _this = this,
+                    isResolved = false;
+
+                try {
+                    then.call(
+                        val,
+                        function(val) {
+                            if(isResolved) {
+                                return;
+                            }
+
+                            isResolved = true;
+                            _this._resolve(val);
+                        },
+                        function(err) {
+                            if(isResolved) {
+                                return;
+                            }
+
+                            isResolved = true;
+                            _this._reject(err);
+                        },
+                        function(val) {
+                            _this._notify(val);
+                        });
+                }
+                catch(e) {
+                    isResolved || this._reject(e);
+                }
+
+                return;
+            }
+        }
+
+        this._fulfill(val);
+    },
+
+    _fulfill : function(val) {
+        if(this._status > PROMISE_STATUS.RESOLVED) {
+            return;
+        }
+
+        this._status = PROMISE_STATUS.FULFILLED;
+        this._value = val;
+
+        this._callCallbacks(this._fulfilledCallbacks, val);
+        this._fulfilledCallbacks = this._rejectedCallbacks = this._progressCallbacks = undef;
+    },
+
+    _reject : function(reason) {
+        if(this._status > PROMISE_STATUS.RESOLVED) {
+            return;
+        }
+
+        this._status = PROMISE_STATUS.REJECTED;
+        this._value = reason;
+
+        this._callCallbacks(this._rejectedCallbacks, reason);
+        this._fulfilledCallbacks = this._rejectedCallbacks = this._progressCallbacks = undef;
+    },
+
+    _notify : function(val) {
+        this._callCallbacks(this._progressCallbacks, val);
+    },
+
+    _addCallbacks : function(defer, onFulfilled, onRejected, onProgress, ctx) {
+        if(onRejected && !isFunction(onRejected)) {
+            ctx = onRejected;
+            onRejected = undef;
+        }
+        else if(onProgress && !isFunction(onProgress)) {
+            ctx = onProgress;
+            onProgress = undef;
+        }
+
+        var cb;
+
+        if(!this.isRejected()) {
+            cb = { defer : defer, fn : isFunction(onFulfilled)? onFulfilled : undef, ctx : ctx };
+            this.isFulfilled()?
+                this._callCallbacks([cb], this._value) :
+                this._fulfilledCallbacks.push(cb);
+        }
+
+        if(!this.isFulfilled()) {
+            cb = { defer : defer, fn : onRejected, ctx : ctx };
+            this.isRejected()?
+                this._callCallbacks([cb], this._value) :
+                this._rejectedCallbacks.push(cb);
+        }
+
+        if(this._status <= PROMISE_STATUS.RESOLVED) {
+            this._progressCallbacks.push({ defer : defer, fn : onProgress, ctx : ctx });
+        }
+    },
+
+    _callCallbacks : function(callbacks, arg) {
+        var len = callbacks.length;
+        if(!len) {
+            return;
+        }
+
+        var isResolved = this.isResolved(),
+            isFulfilled = this.isFulfilled();
+
+        nextTick(function() {
+            var i = 0, cb, defer, fn;
+            while(i < len) {
+                cb = callbacks[i++];
+                defer = cb.defer;
+                fn = cb.fn;
+
+                if(fn) {
+                    var ctx = cb.ctx,
+                        res;
+                    try {
+                        res = ctx? fn.call(ctx, arg) : fn(arg);
+                    }
+                    catch(e) {
+                        defer.reject(e);
+                        continue;
+                    }
+
+                    isResolved?
+                        defer.resolve(res) :
+                        defer.notify(res);
+                }
+                else {
+                    isResolved?
+                        isFulfilled?
+                            defer.resolve(arg) :
+                            defer.reject(arg) :
+                        defer.notify(arg);
+                }
+            }
+        });
+    }
+};
+
+/** @lends Promise */
+var staticMethods = {
+    /**
+     * Coerces given `value` to a promise, or returns the `value` if it's already a promise.
+     *
+     * @param {*} value
+     * @returns {vow:Promise}
+     */
+    cast : function(value) {
+        return vow.cast(value);
+    },
+
+    /**
+     * Returns a promise to be fulfilled only after all the items in `iterable` are fulfilled,
+     * or to be rejected when any of the `iterable` is rejected.
+     *
+     * @param {Array|Object} iterable
+     * @returns {vow:Promise}
+     */
+    all : function(iterable) {
+        return vow.all(iterable);
+    },
+
+    /**
+     * Returns a promise to be fulfilled only when any of the items in `iterable` are fulfilled,
+     * or to be rejected when the first item is rejected.
+     *
+     * @param {Array} iterable
+     * @returns {vow:Promise}
+     */
+    race : function(iterable) {
+        return vow.anyResolved(iterable);
+    },
+
+    /**
+     * Returns a promise that has already been resolved with the given `value`.
+     * If `value` is a promise, returned promise will be adopted with the state of given promise.
+     *
+     * @param {*} value
+     * @returns {vow:Promise}
+     */
+    resolve : function(value) {
+        return vow.resolve(value);
+    },
+
+    /**
+     * Returns a promise that has already been rejected with the given `reason`.
+     *
+     * @param {*} reason
+     * @returns {vow:Promise}
+     */
+    reject : function(reason) {
+        return vow.reject(reason);
+    }
+};
+
+for(var prop in staticMethods) {
+    staticMethods.hasOwnProperty(prop) &&
+        (Promise[prop] = staticMethods[prop]);
+}
+
+var vow = /** @exports vow */ {
+    Deferred : Deferred,
+
+    Promise : Promise,
+
+    /**
+     * Creates a new deferred. This method is a factory method for `vow:Deferred` class.
+     * It's equivalent to `new vow.Deferred()`.
+     *
+     * @returns {vow:Deferred}
+     */
+    defer : function() {
+        return new Deferred();
+    },
+
+    /**
+     * Static equivalent to `promise.then`.
+     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
+     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
+     * @param {Object} [ctx] Context of callbacks execution
+     * @returns {vow:Promise}
+     */
+    when : function(value, onFulfilled, onRejected, onProgress, ctx) {
+        return vow.cast(value).then(onFulfilled, onRejected, onProgress, ctx);
+    },
+
+    /**
+     * Static equivalent to `promise.fail`.
+     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @param {Function} onRejected Callback that will to be invoked with the reason after promise has been rejected
+     * @param {Object} [ctx] Context of callback execution
+     * @returns {vow:Promise}
+     */
+    fail : function(value, onRejected, ctx) {
+        return vow.when(value, undef, onRejected, ctx);
+    },
+
+    /**
+     * Static equivalent to `promise.always`.
+     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @param {Function} onResolved Callback that will to be invoked with the reason after promise has been resolved
+     * @param {Object} [ctx] Context of callback execution
+     * @returns {vow:Promise}
+     */
+    always : function(value, onResolved, ctx) {
+        return vow.when(value).always(onResolved, ctx);
+    },
+
+    /**
+     * Static equivalent to `promise.progress`.
+     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @param {Function} onProgress Callback that will to be invoked with the reason after promise has been notified
+     * @param {Object} [ctx] Context of callback execution
+     * @returns {vow:Promise}
+     */
+    progress : function(value, onProgress, ctx) {
+        return vow.when(value).progress(onProgress, ctx);
+    },
+
+    /**
+     * Static equivalent to `promise.spread`.
+     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
+     * @param {Object} [ctx] Context of callbacks execution
+     * @returns {vow:Promise}
+     */
+    spread : function(value, onFulfilled, onRejected, ctx) {
+        return vow.when(value).spread(onFulfilled, onRejected, ctx);
+    },
+
+    /**
+     * Static equivalent to `promise.done`.
+     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
+     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
+     * @param {Object} [ctx] Context of callbacks execution
+     */
+    done : function(value, onFulfilled, onRejected, onProgress, ctx) {
+        vow.when(value).done(onFulfilled, onRejected, onProgress, ctx);
+    },
+
+    /**
+     * Checks whether the given `value` is a promise-like object
+     *
+     * @param {*} value
+     * @returns {Boolean}
+     *
+     * @example
+     * ```js
+     * vow.isPromise('something'); // returns false
+     * vow.isPromise(vow.defer().promise()); // returns true
+     * vow.isPromise({ then : function() { }); // returns true
+     * ```
+     */
+    isPromise : function(value) {
+        return isObject(value) && isFunction(value.then);
+    },
+
+    /**
+     * Coerces given `value` to a promise, or returns the `value` if it's already a promise.
+     *
+     * @param {*} value
+     * @returns {vow:Promise}
+     */
+    cast : function(value) {
+        return vow.isPromise(value)?
+            value :
+            vow.resolve(value);
+    },
+
+    /**
+     * Static equivalent to `promise.valueOf`.
+     * If given `value` is not an instance of `vow.Promise`, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @returns {*}
+     */
+    valueOf : function(value) {
+        return value && isFunction(value.valueOf)? value.valueOf() : value;
+    },
+
+    /**
+     * Static equivalent to `promise.isFulfilled`.
+     * If given `value` is not an instance of `vow.Promise`, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @returns {Boolean}
+     */
+    isFulfilled : function(value) {
+        return value && isFunction(value.isFulfilled)? value.isFulfilled() : true;
+    },
+
+    /**
+     * Static equivalent to `promise.isRejected`.
+     * If given `value` is not an instance of `vow.Promise`, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @returns {Boolean}
+     */
+    isRejected : function(value) {
+        return value && isFunction(value.isRejected)? value.isRejected() : false;
+    },
+
+    /**
+     * Static equivalent to `promise.isResolved`.
+     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @returns {Boolean}
+     */
+    isResolved : function(value) {
+        return value && isFunction(value.isResolved)? value.isResolved() : true;
+    },
+
+    /**
+     * Returns a promise that has already been resolved with the given `value`.
+     * If `value` is a promise, returned promise will be adopted with the state of given promise.
+     *
+     * @param {*} value
+     * @returns {vow:Promise}
+     */
+    resolve : function(value) {
+        var res = vow.defer();
+        res.resolve(value);
+        return res.promise();
+    },
+
+    /**
+     * Returns a promise that has already been fulfilled with the given `value`.
+     * If `value` is a promise, returned promise will be fulfilled with fulfill/rejection value of given promise.
+     *
+     * @param {*} value
+     * @returns {vow:Promise}
+     */
+    fulfill : function(value) {
+        var defer = vow.defer(),
+            promise = defer.promise();
+
+        defer.resolve(value);
+
+        return promise.isFulfilled()?
+            promise :
+            promise.then(null, function(reason) {
+                return reason;
+            });
+    },
+
+    /**
+     * Returns a promise that has already been rejected with the given `reason`.
+     * If `reason` is a promise, returned promise will be rejected with fulfill/rejection value of given promise.
+     *
+     * @param {*} reason
+     * @returns {vow:Promise}
+     */
+    reject : function(reason) {
+        var defer = vow.defer();
+        defer.reject(reason);
+        return defer.promise();
+    },
+
+    /**
+     * Invokes a given function `fn` with arguments `args`
+     *
+     * @param {Function} fn
+     * @param {...*} [args]
+     * @returns {vow:Promise}
+     *
+     * @example
+     * ```js
+     * var promise1 = vow.invoke(function(value) {
+     *         return value;
+     *     }, 'ok'),
+     *     promise2 = vow.invoke(function() {
+     *         throw Error();
+     *     });
+     *
+     * promise1.isFulfilled(); // true
+     * promise1.valueOf(); // 'ok'
+     * promise2.isRejected(); // true
+     * promise2.valueOf(); // instance of Error
+     * ```
+     */
+    invoke : function(fn, args) {
+        var len = Math.max(arguments.length - 1, 0),
+            callArgs;
+        if(len) { // optimization for V8
+            callArgs = Array(len);
+            var i = 0;
+            while(i < len) {
+                callArgs[i++] = arguments[i];
+            }
+        }
+
+        try {
+            return vow.resolve(callArgs?
+                fn.apply(global, callArgs) :
+                fn.call(global));
+        }
+        catch(e) {
+            return vow.reject(e);
+        }
+    },
+
+    /**
+     * Returns a promise to be fulfilled only after all the items in `iterable` are fulfilled,
+     * or to be rejected when any of the `iterable` is rejected.
+     *
+     * @param {Array|Object} iterable
+     * @returns {vow:Promise}
+     *
+     * @example
+     * with array:
+     * ```js
+     * var defer1 = vow.defer(),
+     *     defer2 = vow.defer();
+     *
+     * vow.all([defer1.promise(), defer2.promise(), 3])
+     *     .then(function(value) {
+     *          // value is "[1, 2, 3]" here
+     *     });
+     *
+     * defer1.resolve(1);
+     * defer2.resolve(2);
+     * ```
+     *
+     * @example
+     * with object:
+     * ```js
+     * var defer1 = vow.defer(),
+     *     defer2 = vow.defer();
+     *
+     * vow.all({ p1 : defer1.promise(), p2 : defer2.promise(), p3 : 3 })
+     *     .then(function(value) {
+     *          // value is "{ p1 : 1, p2 : 2, p3 : 3 }" here
+     *     });
+     *
+     * defer1.resolve(1);
+     * defer2.resolve(2);
+     * ```
+     */
+    all : function(iterable) {
+        var defer = new Deferred(),
+            isPromisesArray = isArray(iterable),
+            keys = isPromisesArray?
+                getArrayKeys(iterable) :
+                getObjectKeys(iterable),
+            len = keys.length,
+            res = isPromisesArray? [] : {};
+
+        if(!len) {
+            defer.resolve(res);
+            return defer.promise();
+        }
+
+        var i = len;
+        vow._forEach(
+            iterable,
+            function(value, idx) {
+                res[keys[idx]] = value;
+                if(!--i) {
+                    defer.resolve(res);
+                }
+            },
+            defer.reject,
+            defer.notify,
+            defer,
+            keys);
+
+        return defer.promise();
+    },
+
+    /**
+     * Returns a promise to be fulfilled only after all the items in `iterable` are resolved.
+     *
+     * @param {Array|Object} iterable
+     * @returns {vow:Promise}
+     *
+     * @example
+     * ```js
+     * var defer1 = vow.defer(),
+     *     defer2 = vow.defer();
+     *
+     * vow.allResolved([defer1.promise(), defer2.promise()]).spread(function(promise1, promise2) {
+     *     promise1.isRejected(); // returns true
+     *     promise1.valueOf(); // returns "'error'"
+     *     promise2.isFulfilled(); // returns true
+     *     promise2.valueOf(); // returns "'ok'"
+     * });
+     *
+     * defer1.reject('error');
+     * defer2.resolve('ok');
+     * ```
+     */
+    allResolved : function(iterable) {
+        var defer = new Deferred(),
+            isPromisesArray = isArray(iterable),
+            keys = isPromisesArray?
+                getArrayKeys(iterable) :
+                getObjectKeys(iterable),
+            i = keys.length,
+            res = isPromisesArray? [] : {};
+
+        if(!i) {
+            defer.resolve(res);
+            return defer.promise();
+        }
+
+        var onResolved = function() {
+                --i || defer.resolve(iterable);
+            };
+
+        vow._forEach(
+            iterable,
+            onResolved,
+            onResolved,
+            defer.notify,
+            defer,
+            keys);
+
+        return defer.promise();
+    },
+
+    allPatiently : function(iterable) {
+        return vow.allResolved(iterable).then(function() {
+            var isPromisesArray = isArray(iterable),
+                keys = isPromisesArray?
+                    getArrayKeys(iterable) :
+                    getObjectKeys(iterable),
+                rejectedPromises, fulfilledPromises,
+                len = keys.length, i = 0, key, promise;
+
+            if(!len) {
+                return isPromisesArray? [] : {};
+            }
+
+            while(i < len) {
+                key = keys[i++];
+                promise = iterable[key];
+                if(vow.isRejected(promise)) {
+                    rejectedPromises || (rejectedPromises = isPromisesArray? [] : {});
+                    isPromisesArray?
+                        rejectedPromises.push(promise.valueOf()) :
+                        rejectedPromises[key] = promise.valueOf();
+                }
+                else if(!rejectedPromises) {
+                    (fulfilledPromises || (fulfilledPromises = isPromisesArray? [] : {}))[key] = vow.valueOf(promise);
+                }
+            }
+
+            if(rejectedPromises) {
+                throw rejectedPromises;
+            }
+
+            return fulfilledPromises;
+        });
+    },
+
+    /**
+     * Returns a promise to be fulfilled only when any of the items in `iterable` is fulfilled,
+     * or to be rejected when all the items are rejected (with the reason of the first rejected item).
+     *
+     * @param {Array} iterable
+     * @returns {vow:Promise}
+     */
+    any : function(iterable) {
+        var defer = new Deferred(),
+            len = iterable.length;
+
+        if(!len) {
+            defer.reject(Error());
+            return defer.promise();
+        }
+
+        var i = 0, reason;
+        vow._forEach(
+            iterable,
+            defer.resolve,
+            function(e) {
+                i || (reason = e);
+                ++i === len && defer.reject(reason);
+            },
+            defer.notify,
+            defer);
+
+        return defer.promise();
+    },
+
+    /**
+     * Returns a promise to be fulfilled only when any of the items in `iterable` is fulfilled,
+     * or to be rejected when the first item is rejected.
+     *
+     * @param {Array} iterable
+     * @returns {vow:Promise}
+     */
+    anyResolved : function(iterable) {
+        var defer = new Deferred(),
+            len = iterable.length;
+
+        if(!len) {
+            defer.reject(Error());
+            return defer.promise();
+        }
+
+        vow._forEach(
+            iterable,
+            defer.resolve,
+            defer.reject,
+            defer.notify,
+            defer);
+
+        return defer.promise();
+    },
+
+    /**
+     * Static equivalent to `promise.delay`.
+     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @param {Number} delay
+     * @returns {vow:Promise}
+     */
+    delay : function(value, delay) {
+        return vow.resolve(value).delay(delay);
+    },
+
+    /**
+     * Static equivalent to `promise.timeout`.
+     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     *
+     * @param {*} value
+     * @param {Number} timeout
+     * @returns {vow:Promise}
+     */
+    timeout : function(value, timeout) {
+        return vow.resolve(value).timeout(timeout);
+    },
+
+    _forEach : function(promises, onFulfilled, onRejected, onProgress, ctx, keys) {
+        var len = keys? keys.length : promises.length,
+            i = 0;
+
+        while(i < len) {
+            vow.when(
+                promises[keys? keys[i] : i],
+                wrapOnFulfilled(onFulfilled, i),
+                onRejected,
+                onProgress,
+                ctx);
+            ++i;
+        }
+    },
+
+    TimedOutError : defineCustomErrorType('TimedOut')
+};
+
+var defineAsGlobal = true;
+if(typeof module === 'object' && typeof module.exports === 'object') {
+    module.exports = vow;
+    defineAsGlobal = false;
+}
+
+if(typeof modules === 'object' && isFunction(modules.define)) {
+    modules.define('vow', function(provide) {
+        provide(vow);
+    });
+    defineAsGlobal = false;
+}
+
+if(typeof define === 'function') {
+    define(function(require, exports, module) {
+        module.exports = vow;
+    });
+    defineAsGlobal = false;
+}
+
+defineAsGlobal && (global.vow = vow);
+
+})(this);
+
+/* ../../libs/bem-core/common.blocks/vow/vow.vanilla.js end */
 
 /* ../../libs/bem-core/desktop.blocks/jquery/__event/_type/jquery__event_type_winresize.js begin */
 /**
@@ -11538,10 +11562,9 @@ provide(BEMDOM.decl(this.name, /** @lends select.prototype */{
                     }, this);
 
                 this._isPointerPressInProgress = false;
+                this._buttonWidth = null;
 
                 this.hasMod('focused') && this._focus();
-
-                this._updateMenuWidth();
             }
         },
 
@@ -11561,6 +11584,8 @@ provide(BEMDOM.decl(this.name, /** @lends select.prototype */{
             },
 
             'true' : function() {
+                this._buttonWidth === null && this._updateMenuWidth();
+
                 this._updateMenuHeight();
                 this._popup.setMod('visible');
                 this
@@ -11642,7 +11667,7 @@ provide(BEMDOM.decl(this.name, /** @lends select.prototype */{
     },
 
     _updateMenuWidth : function() {
-        this._menu.domElem.css('min-width', this._button.domElem.outerWidth());
+        this._menu.domElem.css('min-width', this._buttonWidth = this._button.domElem.outerWidth());
 
         this._popup.redraw();
     },
@@ -11699,7 +11724,10 @@ provide(BEMDOM.decl(this.name, /** @lends select.prototype */{
     _onMenuChange : function() {
         this._updateControl();
         this._updateButton();
-        this._updateMenuWidth();
+
+        this.hasMod('opened')?
+            this._updateMenuWidth() :
+            this._buttonWidth = null;
 
         this.emit('change');
     },
@@ -12193,23 +12221,23 @@ function applyc(__$ctx, __$ref) {
     } else if (__$t === "cls") {
         return undefined;
     } else if (__$t === "") {
-        if (__$ctx.ctx && __$ctx.ctx._vow && (__$ctx.__$a1 & 64) === 0) {
-            var __$r = __$b159(__$ctx, __$ref);
-            if (__$r !== __$ref) return __$r;
-        }
-        if (__$ctx.isSimple(__$ctx.ctx)) {
+        if (__$ctx.ctx && __$ctx.ctx._vow && (__$ctx.__$a1 & 1024) === 0) {
             var __$r = __$b160(__$ctx, __$ref);
             if (__$r !== __$ref) return __$r;
         }
-        if (!__$ctx.ctx) {
+        if (__$ctx.isSimple(__$ctx.ctx)) {
             var __$r = __$b161(__$ctx, __$ref);
             if (__$r !== __$ref) return __$r;
         }
-        if (__$ctx.isArray(__$ctx.ctx)) {
+        if (!__$ctx.ctx) {
             var __$r = __$b162(__$ctx, __$ref);
             if (__$r !== __$ref) return __$r;
         }
-        var __$r = __$b163(__$ctx, __$ref);
+        if (__$ctx.isArray(__$ctx.ctx)) {
+            var __$r = __$b163(__$ctx, __$ref);
+            if (__$r !== __$ref) return __$r;
+        }
+        var __$r = __$b164(__$ctx, __$ref);
         if (__$r !== __$ref) return __$r;
     }
 }
@@ -12233,7 +12261,7 @@ function applyc(__$ctx, __$ref) {
         param: 1,
         source: 1,
         wbr: 1
-    };
+    }, resetApplyNext = context.resetApplyNext || function() {};
     (function(BEM, undefined) {
         var MOD_DELIM = "_", ELEM_DELIM = "__", NAME_PATTERN = "[a-zA-Z0-9-]+";
         function buildModPostfix(modName, modVal) {
@@ -12297,20 +12325,6 @@ function applyc(__$ctx, __$ref) {
             }
         };
     })(BEM_);
-    var ts = {
-        '"': "&quot;",
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;"
-    }, f = function(t) {
-        return ts[t] || t;
-    };
-    var buildEscape = function(r) {
-        r = new RegExp(r, "g");
-        return function(s) {
-            return ("" + s).replace(r, f);
-        };
-    };
     context.BEMContext = BEMContext;
     function BEMContext(context, apply_) {
         this.ctx = typeof context === "undefined" ? "" : context;
@@ -12336,6 +12350,7 @@ function applyc(__$ctx, __$ref) {
         this.elem = undef;
         this.mods = undef;
         this.elemMods = undef;
+        this._resetApplyNext = resetApplyNext;
     }
     BEMContext.prototype.isArray = isArray;
     BEMContext.prototype.isSimple = function isSimple(obj) {
@@ -12364,8 +12379,15 @@ function applyc(__$ctx, __$ref) {
             return obj[expando] = get();
         }
     };
-    BEMContext.prototype.xmlEscape = buildEscape("[&<>]");
-    BEMContext.prototype.attrEscape = buildEscape('["&<>]');
+    BEMContext.prototype.xmlEscape = function xmlEscape(str) {
+        return (str + "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    };
+    BEMContext.prototype.attrEscape = function attrEscape(str) {
+        return (str + "").replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    };
+    BEMContext.prototype.jsAttrEscape = function jsAttrEscape(str) {
+        return (str + "").replace(/&/g, "&amp;").replace(/'/g, "&#39;");
+    };
     BEMContext.prototype.BEM = BEM_;
     BEMContext.prototype.isFirst = function isFirst() {
         return this.position === 1;
@@ -12418,9 +12440,10 @@ function applyc(__$ctx, __$ref) {
         ctx["_checkedItems"] = undefined;
         ctx["_menuMods"] = undefined;
         ctx["_input"] = undefined;
-        ctx["_attach"] = undefined;
         ctx["__$a1"] = 0;
-        ctx["_ieCommented"] = undefined;
+        ctx["_isRealButton"] = undefined;
+        ctx["_attach"] = undefined;
+        ctx["_pageInit"] = undefined;
         ctx["_str"] = undefined;
         ctx["block"] = undefined;
         ctx["elem"] = undefined;
@@ -12506,12 +12529,12 @@ function __$b12(__$ctx, __$ref) {
 }
 
 function __$b16(__$ctx, __$ref) {
-    var ctx__$189 = __$ctx.ctx, content__$190 = [ ctx__$189.icon ];
-    "text" in ctx__$189 && content__$190.push({
+    var ctx__$195 = __$ctx.ctx, content__$196 = [ ctx__$195.icon ];
+    "text" in ctx__$195 && content__$196.push({
         elem: "text",
-        content: ctx__$189.text
+        content: ctx__$195.text
     });
-    return content__$190;
+    return content__$196;
 }
 
 function __$b18(__$ctx, __$ref) {
@@ -12539,73 +12562,73 @@ function __$b18(__$ctx, __$ref) {
 }
 
 function __$b22(__$ctx, __$ref) {
-    var content__$154 = __$ctx.ctx.content;
-    if (Array.isArray(content__$154)) return content__$154;
-    var res__$155 = __$ctx.isSimple(content__$154) ? {
+    var content__$160 = __$ctx.ctx.content;
+    if (Array.isArray(content__$160)) return content__$160;
+    var res__$161 = __$ctx.isSimple(content__$160) ? {
         block: "button",
-        text: content__$154
-    } : content__$154;
-    if (res__$155.block === "button") {
-        var resMods__$156 = res__$155.mods || (res__$155.mods = {}), dropdownMods__$157 = $$mods;
-        resMods__$156.size || (resMods__$156.size = dropdownMods__$157.size);
-        resMods__$156.theme || (resMods__$156.theme = dropdownMods__$157.theme);
-        resMods__$156.disabled = dropdownMods__$157.disabled;
+        text: content__$160
+    } : content__$160;
+    if (res__$161.block === "button") {
+        var resMods__$162 = res__$161.mods || (res__$161.mods = {}), dropdownMods__$163 = $$mods;
+        resMods__$162.size || (resMods__$162.size = dropdownMods__$163.size);
+        resMods__$162.theme || (resMods__$162.theme = dropdownMods__$163.theme);
+        resMods__$162.disabled = dropdownMods__$163.disabled;
     }
-    return res__$155;
+    return res__$161;
 }
 
 function __$b23(__$ctx, __$ref) {
-    var content__$150 = __$ctx.ctx.content;
-    if (Array.isArray(content__$150)) return content__$150;
-    var res__$151 = __$ctx.isSimple(content__$150) ? {
+    var content__$156 = __$ctx.ctx.content;
+    if (Array.isArray(content__$156)) return content__$156;
+    var res__$157 = __$ctx.isSimple(content__$156) ? {
         block: "link",
         mods: {
             pseudo: true
         },
-        content: content__$150
-    } : content__$150;
-    if (res__$151.block === "link") {
-        var resMods__$152 = res__$151.mods || (res__$151.mods = {}), dropdownMods__$153 = $$mods;
-        resMods__$152.theme || (resMods__$152.theme = dropdownMods__$153.theme);
-        resMods__$152.disabled = dropdownMods__$153.disabled;
+        content: content__$156
+    } : content__$156;
+    if (res__$157.block === "link") {
+        var resMods__$158 = res__$157.mods || (res__$157.mods = {}), dropdownMods__$159 = $$mods;
+        resMods__$158.theme || (resMods__$158.theme = dropdownMods__$159.theme);
+        resMods__$158.disabled = dropdownMods__$159.disabled;
     }
-    return res__$151;
+    return res__$157;
 }
 
 function __$b24(__$ctx, __$ref) {
-    var popup__$159 = __$ctx.ctx.popup;
-    if (__$ctx.isSimple(popup__$159) || popup__$159.block !== "popup") {
-        popup__$159 = {
+    var popup__$165 = __$ctx.ctx.popup;
+    if (__$ctx.isSimple(popup__$165) || popup__$165.block !== "popup") {
+        popup__$165 = {
             block: "popup",
-            content: popup__$159
+            content: popup__$165
         };
     }
-    var popupMods__$160 = popup__$159.mods || (popup__$159.mods = {});
-    popupMods__$160.theme || (popupMods__$160.theme = $$mods.theme);
-    popupMods__$160.hasOwnProperty("autoclosable") || (popupMods__$160.autoclosable = true);
-    popupMods__$160.target = "anchor";
+    var popupMods__$166 = popup__$165.mods || (popup__$165.mods = {});
+    popupMods__$166.theme || (popupMods__$166.theme = $$mods.theme);
+    popupMods__$166.hasOwnProperty("autoclosable") || (popupMods__$166.autoclosable = true);
+    popupMods__$166.target = "anchor";
     return [ {
         elem: "switcher",
         content: __$ctx.ctx.switcher
-    }, popup__$159 ];
+    }, popup__$165 ];
 }
 
 function __$b25(__$ctx, __$ref) {
-    var mods__$161 = $$mods, ctx__$162 = __$ctx.ctx, val__$163 = ctx__$162.val, isValDef__$164 = typeof val__$163 !== "undefined";
-    if (isValDef__$164 && !Array.isArray(val__$163)) throw Error("checkbox-group: val must be an array");
-    return (ctx__$162.options || []).map(function(option, i) {
-        return [ !!i && !mods__$161.type && {
+    var mods__$167 = $$mods, ctx__$168 = __$ctx.ctx, val__$169 = ctx__$168.val, isValDef__$170 = typeof val__$169 !== "undefined";
+    if (isValDef__$170 && !Array.isArray(val__$169)) throw Error("checkbox-group: val must be an array");
+    return (ctx__$168.options || []).map(function(option, i) {
+        return [ !!i && !mods__$167.type && {
             tag: "br"
         }, {
             block: "checkbox",
             mods: {
-                type: mods__$161.type,
-                theme: mods__$161.theme,
-                size: mods__$161.size,
-                checked: isValDef__$164 && val__$163.indexOf(option.val) > -1,
-                disabled: option.disabled || mods__$161.disabled
+                type: mods__$167.type,
+                theme: mods__$167.theme,
+                size: mods__$167.size,
+                checked: isValDef__$170 && val__$169.indexOf(option.val) > -1,
+                disabled: option.disabled || mods__$167.disabled
             },
-            name: ctx__$162.name,
+            name: ctx__$168.name,
             val: option.val,
             text: option.text,
             title: option.title,
@@ -12615,72 +12638,72 @@ function __$b25(__$ctx, __$ref) {
 }
 
 function __$b26(__$ctx, __$ref) {
-    var ctx__$165 = __$ctx.ctx, mods__$166 = $$mods;
+    var ctx__$171 = __$ctx.ctx, mods__$172 = $$mods;
     return [ {
         block: "button",
         mods: {
             togglable: "check",
-            checked: mods__$166.checked,
-            disabled: mods__$166.disabled,
-            theme: mods__$166.theme,
-            size: mods__$166.size
+            checked: mods__$172.checked,
+            disabled: mods__$172.disabled,
+            theme: mods__$172.theme,
+            size: mods__$172.size
         },
-        title: ctx__$165.title,
-        content: [ ctx__$165.icon, typeof ctx__$165.text !== "undefined" ? {
+        title: ctx__$171.title,
+        content: [ ctx__$171.icon, typeof ctx__$171.text !== "undefined" ? {
             elem: "text",
-            content: ctx__$165.text
+            content: ctx__$171.text
         } : "" ]
     }, {
         block: "checkbox",
         elem: "control",
-        checked: mods__$166.checked,
-        disabled: mods__$166.disabled,
-        name: ctx__$165.name,
-        val: ctx__$165.val
+        checked: mods__$172.checked,
+        disabled: mods__$172.disabled,
+        name: ctx__$171.name,
+        val: ctx__$171.val
     } ];
 }
 
 function __$b27(__$ctx, __$ref) {
-    var ctx__$169 = __$ctx.ctx, mods__$170 = $$mods;
+    var ctx__$175 = __$ctx.ctx, mods__$176 = $$mods;
     return [ {
         elem: "box",
         content: {
             elem: "control",
-            checked: mods__$170.checked,
-            disabled: mods__$170.disabled,
-            name: ctx__$169.name,
-            val: ctx__$169.val
+            checked: mods__$176.checked,
+            disabled: mods__$176.disabled,
+            name: ctx__$175.name,
+            val: ctx__$175.val
         }
-    }, ctx__$169.text ];
+    }, ctx__$175.text ];
 }
 
 function __$b28(__$ctx, __$ref) {
-    var ctx__$197 = __$ctx.ctx, button__$198 = ctx__$197.button;
-    __$ctx.isSimple(button__$198) && (button__$198 = {
+    var ctx__$214 = __$ctx.ctx, button__$215 = ctx__$214.button;
+    __$ctx.isSimple(button__$215) && (button__$215 = {
         block: "button",
         tag: "span",
-        text: button__$198
+        text: button__$215
     });
-    var attachMods__$199 = $$mods, buttonMods__$200 = button__$198.mods || (button__$198.mods = {});
+    var attachMods__$216 = $$mods, buttonMods__$217 = button__$215.mods || (button__$215.mods = {});
     [ "size", "theme", "disabled", "focused" ].forEach(function(mod) {
-        buttonMods__$200[mod] || (buttonMods__$200[mod] = attachMods__$199[mod]);
+        buttonMods__$217[mod] || (buttonMods__$217[mod] = attachMods__$216[mod]);
     });
-    return [ button__$198, {
+    return [ button__$215, {
         elem: "no-file",
         content: __$ctx.ctx.noFileText
     } ];
 }
 
 function __$b29(__$ctx, __$ref) {
-    var ctx__$207 = __$ctx.ctx, cond__$208 = ctx__$207.condition.replace("<", "lt").replace(">", "gt").replace("=", "e"), hasNegation__$209 = cond__$208.indexOf("!") > -1, includeOthers__$210 = ctx__$207.msieOnly === false, hasNegationOrIncludeOthers__$211 = hasNegation__$209 || includeOthers__$210;
-    return [ "<!--[if " + cond__$208 + "]>", includeOthers__$210 ? "<!" : "", hasNegationOrIncludeOthers__$211 ? "-->" : "", function __$lb__$212() {
-        var __$r__$213;
-        var __$l0__$214 = __$ctx.__$a1;
-        __$ctx.__$a1 = __$ctx.__$a1 | 2;
-        __$r__$213 = applyc(__$ctx, __$ref);
-        __$ctx.__$a1 = __$l0__$214;
-        return __$r__$213;
-    }(), hasNegationOrIncludeOthers__$211 ? "<!--" : "", "<![endif]-->" ];
+    var ctx__$224 = __$ctx.ctx, cond__$225 = ctx__$224.condition.replace("<", "lt").replace(">", "gt").replace("=", "e"), hasNegation__$226 = cond__$225.indexOf("!") > -1, includeOthers__$227 = ctx__$224.msieOnly === false, hasNegationOrIncludeOthers__$228 = hasNegation__$226 || includeOthers__$227;
+    return [ "<!--[if " + cond__$225 + "]>", includeOthers__$227 ? "<!" : "", hasNegationOrIncludeOthers__$228 ? "-->" : "", function __$lb__$229() {
+        var __$r__$230;
+        var __$l0__$231 = __$ctx.__$a1;
+        __$ctx.__$a1 = __$ctx.__$a1 | 16;
+        __$r__$230 = applyc(__$ctx, __$ref);
+        __$ctx.__$a1 = __$l0__$231;
+        return __$r__$230;
+    }(), hasNegationOrIncludeOthers__$228 ? "<!--" : "", "<![endif]-->" ];
 }
 
 function __$b34(__$ctx, __$ref) {
@@ -12708,142 +12731,143 @@ function __$b35(__$ctx, __$ref) {
 }
 
 function __$b37(__$ctx, __$ref) {
-    var ctx__$174 = __$ctx.ctx, attrs__$175 = {};
-    ctx__$174.target && (attrs__$175.target = ctx__$174.target);
-    $$mods.disabled ? attrs__$175["aria-disabled"] = true : attrs__$175.href = ctx__$174.url;
-    return __$ctx.extend(function __$lb__$176() {
-        var __$r__$177;
-        var __$l0__$178 = __$ctx.__$a0;
-        __$ctx.__$a0 = __$ctx.__$a0 | 67108864;
-        __$r__$177 = applyc(__$ctx, __$ref);
-        __$ctx.__$a0 = __$l0__$178;
-        return __$r__$177;
-    }(), attrs__$175);
+    var ctx__$180 = __$ctx.ctx, attrs__$181 = {};
+    ctx__$180.target && (attrs__$181.target = ctx__$180.target);
+    $$mods.disabled ? attrs__$181["aria-disabled"] = true : attrs__$181.href = ctx__$180.url;
+    return __$ctx.extend(function __$lb__$182() {
+        var __$r__$183;
+        var __$l0__$184 = __$ctx.__$a0;
+        __$ctx.__$a0 = __$ctx.__$a0 | 268435456;
+        __$r__$183 = applyc(__$ctx, __$ref);
+        __$ctx.__$a0 = __$l0__$184;
+        return __$r__$183;
+    }(), attrs__$181);
 }
 
 function __$b38(__$ctx, __$ref) {
-    var ctx__$191 = __$ctx.ctx, attrs__$192 = {
+    var ctx__$197 = __$ctx.ctx, attrs__$198 = {
         type: $$mods.type || "button",
-        name: ctx__$191.name,
-        value: ctx__$191.val
+        name: ctx__$197.name,
+        value: ctx__$197.val
     };
-    $$mods.disabled && (attrs__$192.disabled = "disabled");
-    return __$ctx.extend(function __$lb__$193() {
-        var __$r__$194;
-        var __$l0__$195 = __$ctx.__$a0;
-        __$ctx.__$a0 = __$ctx.__$a0 | 536870912;
-        __$r__$194 = applyc(__$ctx, __$ref);
-        __$ctx.__$a0 = __$l0__$195;
-        return __$r__$194;
-    }(), attrs__$192);
+    $$mods.disabled && (attrs__$198.disabled = "disabled");
+    return __$ctx.extend(function __$lb__$199() {
+        var __$r__$200;
+        var __$l0__$201 = __$ctx.__$a1;
+        __$ctx.__$a1 = __$ctx.__$a1 | 2;
+        __$r__$200 = applyc(__$ctx, __$ref);
+        __$ctx.__$a1 = __$l0__$201;
+        return __$r__$200;
+    }(), attrs__$198);
 }
 
 function __$b39(__$ctx, __$ref) {
-    var ctx__$196 = __$ctx.ctx;
-    return {
+    var ctx__$202 = __$ctx.ctx, attrs__$203 = {
         role: "button",
-        tabindex: ctx__$196.tabIndex,
-        id: ctx__$196.id,
-        title: ctx__$196.title
+        tabindex: ctx__$202.tabIndex,
+        id: ctx__$202.id,
+        title: ctx__$202.title
     };
+    $$mods.disabled && !__$ctx._isRealButton && (attrs__$203["aria-disabled"] = true);
+    return attrs__$203;
 }
 
 function __$b43(__$ctx, __$ref) {
-    var attrs__$104 = {
+    var attrs__$110 = {
         role: "menu"
     };
-    $$mods.disabled || (attrs__$104.tabindex = 0);
-    return attrs__$104;
+    $$mods.disabled || (attrs__$110.tabindex = 0);
+    return attrs__$110;
 }
 
 function __$b44(__$ctx, __$ref) {
-    var ctx__$143 = __$ctx.ctx, attrs__$144 = {}, tabIndex__$145;
+    var ctx__$149 = __$ctx.ctx, attrs__$150 = {}, tabIndex__$151;
     if (!$$mods.disabled) {
-        if (ctx__$143.url) {
-            attrs__$144.href = ctx__$143.url;
-            tabIndex__$145 = ctx__$143.tabIndex;
+        if (ctx__$149.url) {
+            attrs__$150.href = ctx__$149.url;
+            tabIndex__$151 = ctx__$149.tabIndex;
         } else {
-            tabIndex__$145 = ctx__$143.tabIndex || 0;
+            tabIndex__$151 = ctx__$149.tabIndex || 0;
         }
     }
-    typeof tabIndex__$145 === "undefined" || (attrs__$144.tabindex = tabIndex__$145);
-    ctx__$143.title && (attrs__$144.title = ctx__$143.title);
-    ctx__$143.target && (attrs__$144.target = ctx__$143.target);
-    return attrs__$144;
+    typeof tabIndex__$151 === "undefined" || (attrs__$150.tabindex = tabIndex__$151);
+    ctx__$149.title && (attrs__$150.title = ctx__$149.title);
+    ctx__$149.target && (attrs__$150.target = ctx__$149.target);
+    return attrs__$150;
 }
 
 function __$b48(__$ctx, __$ref) {
-    var input__$128 = __$ctx._input, attrs__$129 = {
-        id: input__$128.id,
-        name: input__$128.name,
-        value: input__$128.val,
-        maxlength: input__$128.maxLength,
-        tabindex: input__$128.tabIndex,
-        placeholder: input__$128.placeholder
+    var input__$134 = __$ctx._input, attrs__$135 = {
+        id: input__$134.id,
+        name: input__$134.name,
+        value: input__$134.val,
+        maxlength: input__$134.maxLength,
+        tabindex: input__$134.tabIndex,
+        placeholder: input__$134.placeholder
     };
-    input__$128.autocomplete === false && (attrs__$129.autocomplete = "off");
-    $$mods.disabled && (attrs__$129.disabled = "disabled");
-    return attrs__$129;
+    input__$134.autocomplete === false && (attrs__$135.autocomplete = "off");
+    $$mods.disabled && (attrs__$135.disabled = "disabled");
+    return attrs__$135;
 }
 
 function __$b49(__$ctx, __$ref) {
-    var ctx__$136 = __$ctx.ctx;
-    return __$ctx.extend(function __$lb__$137() {
-        var __$r__$138;
-        var __$l0__$139 = __$ctx.__$a0;
-        __$ctx.__$a0 = __$ctx.__$a0 | 4194304;
-        __$r__$138 = applyc(__$ctx, __$ref);
-        __$ctx.__$a0 = __$l0__$139;
-        return __$r__$138;
+    var ctx__$142 = __$ctx.ctx;
+    return __$ctx.extend(function __$lb__$143() {
+        var __$r__$144;
+        var __$l0__$145 = __$ctx.__$a0;
+        __$ctx.__$a0 = __$ctx.__$a0 | 16777216;
+        __$r__$144 = applyc(__$ctx, __$ref);
+        __$ctx.__$a0 = __$l0__$145;
+        return __$r__$144;
     }(), {
-        src: ctx__$136.url,
-        width: ctx__$136.width,
-        height: ctx__$136.height,
-        alt: ctx__$136.alt,
-        title: ctx__$136.title
+        src: ctx__$142.url,
+        width: ctx__$142.width,
+        height: ctx__$142.height,
+        alt: ctx__$142.alt,
+        title: ctx__$142.title
     });
 }
 
 function __$b51(__$ctx, __$ref) {
-    var attrs__$167 = {
+    var attrs__$173 = {
         type: "checkbox",
         autocomplete: "off"
-    }, ctx__$168 = __$ctx.ctx;
-    attrs__$167.name = ctx__$168.name;
-    attrs__$167.value = ctx__$168.val;
-    ctx__$168.checked && (attrs__$167.checked = "checked");
-    ctx__$168.disabled && (attrs__$167.disabled = "disabled");
-    return attrs__$167;
+    }, ctx__$174 = __$ctx.ctx;
+    attrs__$173.name = ctx__$174.name;
+    attrs__$173.value = ctx__$174.val;
+    ctx__$174.checked && (attrs__$173.checked = "checked");
+    ctx__$174.disabled && (attrs__$173.disabled = "disabled");
+    return attrs__$173;
 }
 
 function __$b52(__$ctx, __$ref) {
-    var attrs__$179 = {
+    var attrs__$185 = {
         type: "file"
-    }, attach__$180 = __$ctx._attach;
-    if (attach__$180) {
-        attrs__$179.name = attach__$180.name;
-        attach__$180.mods && attach__$180.mods.disabled && (attrs__$179.disabled = "disabled");
-        attach__$180.tabIndex && (attrs__$179.tabindex = attach__$180.tabIndex);
+    }, attach__$186 = __$ctx._attach;
+    if (attach__$186) {
+        attrs__$185.name = attach__$186.name;
+        attach__$186.mods && attach__$186.mods.disabled && (attrs__$185.disabled = "disabled");
+        attach__$186.tabIndex && (attrs__$185.tabindex = attach__$186.tabIndex);
     }
-    return attrs__$179;
+    return attrs__$185;
 }
 
 function __$b53(__$ctx, __$ref) {
-    var attrs__$184 = {
+    var attrs__$190 = {
         "aria-hidden": "true"
-    }, url__$185 = __$ctx.ctx.url;
-    if (url__$185) attrs__$184.style = "background-image:url(" + url__$185 + ")";
-    return attrs__$184;
+    }, url__$191 = __$ctx.ctx.url;
+    if (url__$191) attrs__$190.style = "background-image:url(" + url__$191 + ")";
+    return attrs__$190;
 }
 
 function __$b54(__$ctx, __$ref) {
-    var attrs__$218 = {};
+    var attrs__$235 = {};
     if (__$ctx.ctx.url) {
-        attrs__$218.src = __$ctx.ctx.url;
+        attrs__$235.src = __$ctx.ctx.url;
     } else if (__$ctx._nonceCsp) {
-        attrs__$218.nonce = __$ctx._nonceCsp;
+        attrs__$235.nonce = __$ctx._nonceCsp;
     }
-    return attrs__$218;
+    return attrs__$235;
 }
 
 function __$b114(__$ctx, __$ref) {
@@ -12855,13 +12879,13 @@ function __$b114(__$ctx, __$ref) {
 }
 
 function __$b127(__$ctx, __$ref) {
-    var ctx__$158 = __$ctx.ctx;
+    var ctx__$164 = __$ctx.ctx;
     return {
-        mainOffset: ctx__$158.mainOffset,
-        secondaryOffset: ctx__$158.secondaryOffset,
-        viewportOffset: ctx__$158.viewportOffset,
-        directions: ctx__$158.directions,
-        zIndexGroupLevel: ctx__$158.zIndexGroupLevel
+        mainOffset: ctx__$164.mainOffset,
+        secondaryOffset: ctx__$164.secondaryOffset,
+        viewportOffset: ctx__$164.viewportOffset,
+        directions: ctx__$164.directions,
+        zIndexGroupLevel: ctx__$164.zIndexGroupLevel
     };
 }
 
@@ -12881,7 +12905,7 @@ function __$b132(__$ctx, __$ref) {
     __$ctx.__$a0 = __$l1__$15;
     __$r__$11 = __$r__$14;
     __$ctx._checkedOption = __$l0__$12;
-    return;
+    return __$r__$11;
 }
 
 function __$b133(__$ctx, __$ref) {
@@ -12929,7 +12953,7 @@ function __$b133(__$ctx, __$ref) {
     __$r__$42 = __$r__$48;
     $$mode = __$l0__$43;
     __$ctx.ctx = __$l1__$44;
-    return;
+    return __$r__$42;
 }
 
 function __$b134(__$ctx, __$ref) {
@@ -12974,9 +12998,6 @@ function __$b134(__$ctx, __$ref) {
         content: __$ctx._select.options.map(function(optionOrGroup) {
             return optionOrGroup.group ? {
                 elem: "group",
-                mods: {
-                    "has-title": !!optionOrGroup.title
-                },
                 title: optionOrGroup.title,
                 content: optionOrGroup.group.map(optionToMenuItem__$31)
             } : optionToMenuItem__$31(optionOrGroup);
@@ -12990,7 +13011,7 @@ function __$b134(__$ctx, __$ref) {
     __$r__$34 = __$r__$38;
     $$mode = __$l0__$35;
     __$ctx.ctx = __$l1__$36;
-    return;
+    return __$r__$34;
 }
 
 function __$b135(__$ctx, __$ref) {
@@ -13028,189 +13049,182 @@ function __$b135(__$ctx, __$ref) {
     __$ctx._select = __$l0__$65;
     __$ctx._checkedOptions = __$l1__$66;
     __$ctx._firstOption = __$l2__$67;
-    return;
+    return __$r__$64;
 }
 
 function __$b136(__$ctx, __$ref) {
-    (__$ctx._firstItem.mods = __$ctx._firstItem.mods || {}).checked = true;
-    var __$r__$89;
-    var __$l0__$90 = __$ctx.__$a0;
-    __$ctx.__$a0 = __$ctx.__$a0 | 8192;
-    __$r__$89 = applyc(__$ctx, __$ref);
-    __$ctx.__$a0 = __$l0__$90;
-    return;
+    var tag__$204 = function __$lb__$205() {
+        var __$r__$206;
+        var __$l2__$207 = $$mode;
+        $$mode = "tag";
+        __$r__$206 = applyc(__$ctx, __$ref);
+        $$mode = __$l2__$207;
+        return __$r__$206;
+    }(), isRealButton__$208 = tag__$204 === "button" && (!$$mods.type || $$mods.type === "submit");
+    var __$r__$209;
+    var __$l0__$210 = __$ctx._isRealButton;
+    __$ctx._isRealButton = isRealButton__$208;
+    var __$r__$212;
+    var __$l1__$213 = __$ctx.__$a1;
+    __$ctx.__$a1 = __$ctx.__$a1 | 4;
+    __$r__$212 = applyc(__$ctx, __$ref);
+    __$ctx.__$a1 = __$l1__$213;
+    __$r__$209 = __$r__$212;
+    __$ctx._isRealButton = __$l0__$210;
+    return __$r__$209;
 }
 
 function __$b137(__$ctx, __$ref) {
-    var ctx__$105 = __$ctx.ctx, mods__$106 = $$mods, firstItem__$107, checkedItems__$108 = [];
-    if (ctx__$105.content) {
-        var isValDef__$109 = typeof ctx__$105.val !== "undefined", containsVal__$110 = function(val) {
-            return isValDef__$109 && (mods__$106.mode === "check" ? ctx__$105.val.indexOf(val) > -1 : ctx__$105.val === val);
-        }, iterateItems__$111 = function(content) {
-            var i__$112 = 0, itemOrGroup__$113;
-            while (itemOrGroup__$113 = content[i__$112++]) {
-                if (itemOrGroup__$113.block === "menu-item") {
-                    firstItem__$107 || (firstItem__$107 = itemOrGroup__$113);
-                    if (containsVal__$110(itemOrGroup__$113.val)) {
-                        (itemOrGroup__$113.mods = itemOrGroup__$113.mods || {}).checked = true;
-                        checkedItems__$108.push(itemOrGroup__$113);
-                    }
-                } else if (itemOrGroup__$113.content) {
-                    iterateItems__$111(itemOrGroup__$113.content);
-                }
-            }
-        };
-        if (!__$ctx.isArray(ctx__$105.content)) throw Error("menu: content must be an array of the menu items");
-        iterateItems__$111(ctx__$105.content);
-    }
-    var __$r__$115;
-    var __$l0__$116 = __$ctx._firstItem;
-    __$ctx._firstItem = firstItem__$107;
-    var __$l1__$117 = __$ctx._checkedItems;
-    __$ctx._checkedItems = checkedItems__$108;
-    var __$l2__$118 = __$ctx._menuMods;
-    __$ctx._menuMods = {
-        theme: mods__$106.theme,
-        disabled: mods__$106.disabled
-    };
-    var __$r__$120;
-    var __$l3__$121 = __$ctx.__$a0;
-    __$ctx.__$a0 = __$ctx.__$a0 | 262144;
-    __$r__$120 = applyc(__$ctx, __$ref);
-    __$ctx.__$a0 = __$l3__$121;
-    __$r__$115 = __$r__$120;
-    __$ctx._firstItem = __$l0__$116;
-    __$ctx._checkedItems = __$l1__$117;
-    __$ctx._menuMods = __$l2__$118;
-    return;
+    (__$ctx._firstItem.mods || (__$ctx._firstItem.mods = {})).checked = true;
+    var __$r__$95;
+    var __$l0__$96 = __$ctx.__$a0;
+    __$ctx.__$a0 = __$ctx.__$a0 | 32768;
+    __$r__$95 = applyc(__$ctx, __$ref);
+    __$ctx.__$a0 = __$l0__$96;
+    return __$r__$95;
 }
 
 function __$b138(__$ctx, __$ref) {
+    var ctx__$111 = __$ctx.ctx, mods__$112 = $$mods, firstItem__$113, checkedItems__$114 = [];
+    if (ctx__$111.content) {
+        var isValDef__$115 = typeof ctx__$111.val !== "undefined", containsVal__$116 = function(val) {
+            return isValDef__$115 && (mods__$112.mode === "check" ? ctx__$111.val.indexOf(val) > -1 : ctx__$111.val === val);
+        }, iterateItems__$117 = function(content) {
+            var i__$118 = 0, itemOrGroup__$119;
+            while (itemOrGroup__$119 = content[i__$118++]) {
+                if (itemOrGroup__$119.block === "menu-item") {
+                    firstItem__$113 || (firstItem__$113 = itemOrGroup__$119);
+                    if (containsVal__$116(itemOrGroup__$119.val)) {
+                        (itemOrGroup__$119.mods = itemOrGroup__$119.mods || {}).checked = true;
+                        checkedItems__$114.push(itemOrGroup__$119);
+                    }
+                } else if (itemOrGroup__$119.content) {
+                    iterateItems__$117(itemOrGroup__$119.content);
+                }
+            }
+        };
+        if (!__$ctx.isArray(ctx__$111.content)) throw Error("menu: content must be an array of the menu items");
+        iterateItems__$117(ctx__$111.content);
+    }
+    var __$r__$121;
+    var __$l0__$122 = __$ctx._firstItem;
+    __$ctx._firstItem = firstItem__$113;
+    var __$l1__$123 = __$ctx._checkedItems;
+    __$ctx._checkedItems = checkedItems__$114;
+    var __$l2__$124 = __$ctx._menuMods;
+    __$ctx._menuMods = {
+        theme: mods__$112.theme,
+        disabled: mods__$112.disabled
+    };
+    var __$r__$126;
+    var __$l3__$127 = __$ctx.__$a0;
+    __$ctx.__$a0 = __$ctx.__$a0 | 1048576;
+    __$r__$126 = applyc(__$ctx, __$ref);
+    __$ctx.__$a0 = __$l3__$127;
+    __$r__$121 = __$r__$126;
+    __$ctx._firstItem = __$l0__$122;
+    __$ctx._checkedItems = __$l1__$123;
+    __$ctx._menuMods = __$l2__$124;
+    return __$r__$121;
+}
+
+function __$b139(__$ctx, __$ref) {
     if ($$mods.type !== "button") throw Error("Modifier mode=radio-check can be only with modifier type=button");
     var __$r__$72;
     var __$l0__$73 = __$ctx.__$a0;
     __$ctx.__$a0 = __$ctx.__$a0 | 2048;
     __$r__$72 = applyc(__$ctx, __$ref);
     __$ctx.__$a0 = __$l0__$73;
-    return;
-}
-
-function __$b139(__$ctx, __$ref) {
-    delete __$ctx._menuItemDisabled;
-    $$mods.disabled = true;
-    applyc(__$ctx, __$ref);
-    return;
+    return __$r__$72;
 }
 
 function __$b140(__$ctx, __$ref) {
-    var ctx__$146 = __$ctx.ctx;
-    typeof ctx__$146.url === "object" && (ctx__$146.url = __$ctx.reapply(ctx__$146.url));
-    var __$r__$148;
-    var __$l0__$149 = __$ctx.__$a0;
-    __$ctx.__$a0 = __$ctx.__$a0 | 16777216;
-    __$r__$148 = applyc(__$ctx, __$ref);
-    __$ctx.__$a0 = __$l0__$149;
-    return;
+    delete __$ctx._menuItemDisabled;
+    $$mods.disabled = true;
+    var __$r__$86;
+    var __$l0__$87 = __$ctx.__$a0;
+    __$ctx.__$a0 = __$ctx.__$a0 | 8192;
+    __$r__$86 = applyc(__$ctx, __$ref);
+    __$ctx.__$a0 = __$l0__$87;
+    return __$r__$86;
 }
 
 function __$b141(__$ctx, __$ref) {
-    var __$r__$86;
-    var __$l0__$87 = __$ctx._menuItemDisabled;
-    __$ctx._menuItemDisabled = true;
-    __$r__$86 = applyc(__$ctx, __$ref);
-    __$ctx._menuItemDisabled = __$l0__$87;
-    return;
-}
-
-function __$b142(__$ctx, __$ref) {
-    var mods__$100 = $$mods;
-    mods__$100.theme = mods__$100.theme || __$ctx._menuMods.theme;
-    mods__$100.disabled = mods__$100.disabled || __$ctx._menuMods.disabled;
-    var __$r__$102;
-    var __$l0__$103 = __$ctx.__$a0;
-    __$ctx.__$a0 = __$ctx.__$a0 | 131072;
-    __$r__$102 = applyc(__$ctx, __$ref);
-    __$ctx.__$a0 = __$l0__$103;
-    return;
+    var ctx__$152 = __$ctx.ctx;
+    typeof ctx__$152.url === "object" && (ctx__$152.url = __$ctx.reapply(ctx__$152.url));
+    var __$r__$154;
+    var __$l0__$155 = __$ctx.__$a0;
+    __$ctx.__$a0 = __$ctx.__$a0 | 67108864;
+    __$r__$154 = applyc(__$ctx, __$ref);
+    __$ctx.__$a0 = __$l0__$155;
+    return __$r__$154;
 }
 
 function __$b143(__$ctx, __$ref) {
-    var __$r__$131;
-    var __$l0__$132 = __$ctx._input;
-    __$ctx._input = __$ctx.ctx;
-    var __$r__$134;
-    var __$l1__$135 = __$ctx.__$a0;
-    __$ctx.__$a0 = __$ctx.__$a0 | 2097152;
-    __$r__$134 = applyc(__$ctx, __$ref);
-    __$ctx.__$a0 = __$l1__$135;
-    __$r__$131 = __$r__$134;
-    __$ctx._input = __$l0__$132;
-    return;
-}
-
-function __$b144(__$ctx, __$ref) {
-    var __$r__$202;
-    var __$l0__$203 = __$ctx._attach;
-    __$ctx._attach = __$ctx.ctx;
-    var __$r__$205;
-    var __$l1__$206 = __$ctx.__$a1;
-    __$ctx.__$a1 = __$ctx.__$a1 | 1;
-    __$r__$205 = applyc(__$ctx, __$ref);
-    __$ctx.__$a1 = __$l1__$206;
-    __$r__$202 = __$r__$205;
-    __$ctx._attach = __$l0__$203;
-    return;
-}
-
-function __$b145(__$ctx, __$ref) {
-    var url__$219 = __$ctx.ctx.url;
-    var __$r__$221;
-    var __$l0__$222 = $$mode;
-    $$mode = "";
-    var __$l1__$223 = __$ctx.ctx;
-    __$ctx.ctx = [ 6, 7, 8, 9 ].map(function(v) {
-        return {
-            elem: "css",
-            url: url__$219 + ".ie" + v + ".css",
-            ie: "IE " + v
-        };
-    });
-    var __$r__$225;
-    var __$l2__$226 = __$ctx.__$a1;
-    __$ctx.__$a1 = __$ctx.__$a1 | 8;
-    __$r__$225 = applyc(__$ctx, __$ref);
-    __$ctx.__$a1 = __$l2__$226;
-    __$r__$221 = __$r__$225;
-    $$mode = __$l0__$222;
-    __$ctx.ctx = __$l1__$223;
-    return;
+    var mods__$106 = $$mods;
+    mods__$106.theme = mods__$106.theme || __$ctx._menuMods.theme;
+    mods__$106.disabled = mods__$106.disabled || __$ctx._menuMods.disabled;
+    var __$r__$108;
+    var __$l0__$109 = __$ctx.__$a0;
+    __$ctx.__$a0 = __$ctx.__$a0 | 524288;
+    __$r__$108 = applyc(__$ctx, __$ref);
+    __$ctx.__$a0 = __$l0__$109;
+    return __$r__$108;
 }
 
 function __$b146(__$ctx, __$ref) {
-    var ie__$227 = __$ctx.ctx.ie, hideRule__$228 = !ie__$227 ? [ "gt IE 9", "<!-->", "<!--" ] : ie__$227 === "!IE" ? [ ie__$227, "<!-->", "<!--" ] : [ ie__$227, "", "" ];
-    var __$r__$230;
-    var __$l0__$231 = $$mode;
+    var url__$236 = __$ctx.ctx.url;
+    var __$r__$238;
+    var __$l0__$239 = $$mode;
     $$mode = "";
-    var __$l3__$232 = __$ctx.ctx;
-    var __$l1__$233 = __$l3__$232._ieCommented;
-    __$l3__$232._ieCommented = true;
-    var __$l2__$234 = __$ctx.ctx;
-    __$ctx.ctx = [ "<!--[if " + hideRule__$228[0] + "]>" + hideRule__$228[1], __$ctx.ctx, hideRule__$228[2] + "<![endif]-->" ];
-    __$r__$230 = applyc(__$ctx, __$ref);
-    $$mode = __$l0__$231;
-    __$l3__$232._ieCommented = __$l1__$233;
-    __$ctx.ctx = __$l2__$234;
-    return;
+    var __$l1__$240 = __$ctx.ctx;
+    __$ctx.ctx = [ 6, 7, 8, 9 ].map(function(v) {
+        return {
+            elem: "css",
+            url: url__$236 + ".ie" + v + ".css",
+            ie: "IE " + v
+        };
+    });
+    var __$r__$242;
+    var __$l2__$243 = __$ctx.__$a1;
+    __$ctx.__$a1 = __$ctx.__$a1 | 64;
+    __$r__$242 = applyc(__$ctx, __$ref);
+    __$ctx.__$a1 = __$l2__$243;
+    __$r__$238 = __$r__$242;
+    $$mode = __$l0__$239;
+    __$ctx.ctx = __$l1__$240;
+    return __$r__$238;
 }
 
 function __$b147(__$ctx, __$ref) {
-    var ctx__$238 = __$ctx.ctx;
-    __$ctx._nonceCsp = ctx__$238.nonce;
-    var __$r__$240;
-    var __$l0__$241 = $$mode;
+    var ie__$244 = __$ctx.ctx.ie, hideRule__$245 = !ie__$244 ? [ "gt IE 9", "<!-->", "<!--" ] : ie__$244 === "!IE" ? [ ie__$244, "<!-->", "<!--" ] : [ ie__$244, "", "" ];
+    var __$r__$247;
+    var __$l0__$248 = $$mode;
     $$mode = "";
-    var __$l1__$242 = __$ctx.ctx;
-    __$ctx.ctx = [ ctx__$238.doctype || "<!DOCTYPE html>", {
+    var __$l1__$249 = __$ctx.ctx;
+    __$ctx.ctx = [ "<!--[if " + hideRule__$245[0] + "]>" + hideRule__$245[1], __$ctx.ctx, hideRule__$245[2] + "<![endif]-->" ];
+    var __$r__$251;
+    var __$l2__$252 = __$ctx.__$a1;
+    __$ctx.__$a1 = __$ctx.__$a1 | 128;
+    __$r__$251 = applyc(__$ctx, __$ref);
+    __$ctx.__$a1 = __$l2__$252;
+    __$r__$247 = __$r__$251;
+    $$mode = __$l0__$248;
+    __$ctx.ctx = __$l1__$249;
+    return __$r__$247;
+}
+
+function __$b148(__$ctx, __$ref) {
+    var ctx__$256 = __$ctx.ctx;
+    __$ctx._nonceCsp = ctx__$256.nonce;
+    var __$r__$258;
+    var __$l0__$259 = __$ctx._pageInit;
+    __$ctx._pageInit = true;
+    var __$r__$261;
+    var __$l1__$262 = $$mode;
+    $$mode = "";
+    var __$l2__$263 = __$ctx.ctx;
+    __$ctx.ctx = [ ctx__$256.doctype || "<!DOCTYPE html>", {
         tag: "html",
         cls: "ua_js_no",
         content: [ {
@@ -13220,136 +13234,143 @@ function __$b147(__$ctx, __$ref) {
                 attrs: {
                     charset: "utf-8"
                 }
-            }, ctx__$238.uaCompatible === false ? "" : {
+            }, ctx__$256.uaCompatible === false ? "" : {
                 tag: "meta",
                 attrs: {
                     "http-equiv": "X-UA-Compatible",
-                    content: ctx__$238.uaCompatible || "IE=edge"
+                    content: ctx__$256.uaCompatible || "IE=edge"
                 }
             }, {
                 tag: "title",
-                content: ctx__$238.title
+                content: ctx__$256.title
             }, {
                 block: "ua",
                 attrs: {
-                    nonce: ctx__$238.nonce
+                    nonce: ctx__$256.nonce
                 }
-            }, ctx__$238.head, ctx__$238.styles, ctx__$238.favicon ? {
+            }, ctx__$256.head, ctx__$256.styles, ctx__$256.favicon ? {
                 elem: "favicon",
-                url: ctx__$238.favicon
+                url: ctx__$256.favicon
             } : "" ]
-        }, ctx__$238 ]
+        }, ctx__$256 ]
     } ];
-    var __$r__$244;
-    var __$l2__$245 = __$ctx.__$a1;
-    __$ctx.__$a1 = __$ctx.__$a1 | 32;
-    __$r__$244 = applyc(__$ctx, __$ref);
-    __$ctx.__$a1 = __$l2__$245;
-    __$r__$240 = __$r__$244;
-    $$mode = __$l0__$241;
-    __$ctx.ctx = __$l1__$242;
-    return;
-}
-
-function __$b148(__$ctx, __$ref) {
-    if (!__$ctx.ctx) return "";
-    var ctx__$246 = __$ctx.ctx, keyset__$247 = ctx__$246.keyset, key__$248 = ctx__$246.key, params__$249 = ctx__$246.params || {};
-    if (!(keyset__$247 || key__$248)) return "";
-    if (typeof ctx__$246.content === "undefined" || ctx__$246.content !== null) {
-        params__$249.content = exports.apply(ctx__$246.content);
-    }
-    __$ctx._buf.push(BEM.I18N(keyset__$247, key__$248, params__$249));
-    return;
+    var __$r__$265;
+    var __$l3__$266 = __$ctx.__$a1;
+    __$ctx.__$a1 = __$ctx.__$a1 | 512;
+    __$r__$265 = applyc(__$ctx, __$ref);
+    __$ctx.__$a1 = __$l3__$266;
+    __$r__$261 = __$r__$265;
+    $$mode = __$l1__$262;
+    __$ctx.ctx = __$l2__$263;
+    __$r__$258 = __$r__$261;
+    __$ctx._pageInit = __$l0__$259;
+    return __$r__$258;
 }
 
 function __$b149(__$ctx, __$ref) {
-    var BEM_INTERNAL__$250 = __$ctx.BEM.INTERNAL, ctx__$251 = __$ctx.ctx, isBEM__$252, tag__$253, res__$254;
-    var __$r__$256;
-    var __$l0__$257 = __$ctx._str;
+    if (!__$ctx.ctx) return "";
+    var ctx__$267 = __$ctx.ctx, keyset__$268 = ctx__$267.keyset, key__$269 = ctx__$267.key, params__$270 = ctx__$267.params || {};
+    if (!(keyset__$268 || key__$269)) return "";
+    if (typeof ctx__$267.content === "undefined" || ctx__$267.content !== null) {
+        params__$270.content = exports.apply(ctx__$267.content);
+    }
+    __$ctx._buf.push(BEM.I18N(keyset__$268, key__$269, params__$270));
+    return;
+}
+
+function __$b150(__$ctx, __$ref) {
+    var BEM_INTERNAL__$271 = __$ctx.BEM.INTERNAL, ctx__$272 = __$ctx.ctx, isBEM__$273, tag__$274, res__$275;
+    var __$r__$277;
+    var __$l0__$278 = __$ctx._str;
     __$ctx._str = "";
-    var vBlock__$258 = $$block;
-    var __$r__$260;
-    var __$l1__$261 = $$mode;
+    var vBlock__$279 = $$block;
+    var __$r__$281;
+    var __$l1__$282 = $$mode;
     $$mode = "tag";
-    __$r__$260 = applyc(__$ctx, __$ref);
-    $$mode = __$l1__$261;
-    tag__$253 = __$r__$260;
-    typeof tag__$253 !== "undefined" || (tag__$253 = ctx__$251.tag);
-    typeof tag__$253 !== "undefined" || (tag__$253 = "div");
-    if (tag__$253) {
-        var jsParams__$262, js__$263;
-        if (vBlock__$258 && ctx__$251.js !== false) {
-            var __$r__$264;
-            var __$l2__$265 = $$mode;
+    __$r__$281 = applyc(__$ctx, __$ref);
+    $$mode = __$l1__$282;
+    tag__$274 = __$r__$281;
+    typeof tag__$274 !== "undefined" || (tag__$274 = ctx__$272.tag);
+    typeof tag__$274 !== "undefined" || (tag__$274 = "div");
+    if (tag__$274) {
+        var jsParams__$283, js__$284;
+        if (vBlock__$279 && ctx__$272.js !== false) {
+            var __$r__$285;
+            var __$l2__$286 = $$mode;
             $$mode = "js";
-            __$r__$264 = applyc(__$ctx, __$ref);
-            $$mode = __$l2__$265;
-            js__$263 = __$r__$264;
-            js__$263 = js__$263 ? __$ctx.extend(ctx__$251.js, js__$263 === true ? {} : js__$263) : ctx__$251.js === true ? {} : ctx__$251.js;
-            js__$263 && ((jsParams__$262 = {})[BEM_INTERNAL__$250.buildClass(vBlock__$258, ctx__$251.elem)] = js__$263);
+            __$r__$285 = applyc(__$ctx, __$ref);
+            $$mode = __$l2__$286;
+            js__$284 = __$r__$285;
+            js__$284 = js__$284 ? __$ctx.extend(ctx__$272.js, js__$284 === true ? {} : js__$284) : ctx__$272.js === true ? {} : ctx__$272.js;
+            js__$284 && ((jsParams__$283 = {})[BEM_INTERNAL__$271.buildClass(vBlock__$279, ctx__$272.elem)] = js__$284);
         }
-        __$ctx._str += "<" + tag__$253;
-        var __$r__$266;
-        var __$l3__$267 = $$mode;
+        __$ctx._str += "<" + tag__$274;
+        var __$r__$287;
+        var __$l3__$288 = $$mode;
         $$mode = "bem";
-        __$r__$266 = applyc(__$ctx, __$ref);
-        $$mode = __$l3__$267;
-        isBEM__$252 = __$r__$266;
-        typeof isBEM__$252 !== "undefined" || (isBEM__$252 = typeof ctx__$251.bem !== "undefined" ? ctx__$251.bem : ctx__$251.block || ctx__$251.elem);
-        var __$r__$269;
-        var __$l4__$270 = $$mode;
+        __$r__$287 = applyc(__$ctx, __$ref);
+        $$mode = __$l3__$288;
+        isBEM__$273 = __$r__$287;
+        typeof isBEM__$273 !== "undefined" || (isBEM__$273 = typeof ctx__$272.bem !== "undefined" ? ctx__$272.bem : ctx__$272.block || ctx__$272.elem);
+        var __$r__$290;
+        var __$l4__$291 = $$mode;
         $$mode = "cls";
-        __$r__$269 = applyc(__$ctx, __$ref);
-        $$mode = __$l4__$270;
-        var cls__$268 = __$r__$269;
-        cls__$268 || (cls__$268 = ctx__$251.cls);
-        var addJSInitClass__$271 = ctx__$251.block && jsParams__$262 && !ctx__$251.elem;
-        if (isBEM__$252 || cls__$268) {
+        __$r__$290 = applyc(__$ctx, __$ref);
+        $$mode = __$l4__$291;
+        var cls__$289 = __$r__$290;
+        cls__$289 || (cls__$289 = ctx__$272.cls);
+        var addJSInitClass__$292 = ctx__$272.block && jsParams__$283 && !ctx__$272.elem;
+        if (isBEM__$273 || cls__$289) {
             __$ctx._str += ' class="';
-            if (isBEM__$252) {
-                __$ctx._str += BEM_INTERNAL__$250.buildClasses(vBlock__$258, ctx__$251.elem, ctx__$251.elemMods || ctx__$251.mods);
-                var __$r__$273;
-                var __$l5__$274 = $$mode;
+            if (isBEM__$273) {
+                __$ctx._str += BEM_INTERNAL__$271.buildClasses(vBlock__$279, ctx__$272.elem, ctx__$272.elemMods || ctx__$272.mods);
+                var __$r__$294;
+                var __$l5__$295 = $$mode;
                 $$mode = "mix";
-                __$r__$273 = applyc(__$ctx, __$ref);
-                $$mode = __$l5__$274;
-                var mix__$272 = __$r__$273;
-                ctx__$251.mix && (mix__$272 = mix__$272 ? [].concat(mix__$272, ctx__$251.mix) : ctx__$251.mix);
-                if (mix__$272) {
-                    var visited__$275 = {}, visitedKey__$276 = function(block, elem) {
+                __$r__$294 = applyc(__$ctx, __$ref);
+                $$mode = __$l5__$295;
+                var mix__$293 = __$r__$294;
+                ctx__$272.mix && (mix__$293 = mix__$293 ? [].concat(mix__$293, ctx__$272.mix) : ctx__$272.mix);
+                if (mix__$293) {
+                    var visited__$296 = {}, visitedKey__$297 = function(block, elem) {
                         return (block || "") + "__" + (elem || "");
                     };
-                    visited__$275[visitedKey__$276(vBlock__$258, $$elem)] = true;
-                    __$ctx.isArray(mix__$272) || (mix__$272 = [ mix__$272 ]);
-                    for (var i__$277 = 0; i__$277 < mix__$272.length; i__$277++) {
-                        var mixItem__$278 = mix__$272[i__$277], hasItem__$279 = mixItem__$278.block && (vBlock__$258 !== ctx__$251.block || mixItem__$278.block !== vBlock__$258) || mixItem__$278.elem, mixBlock__$280 = mixItem__$278.block || mixItem__$278._block || $$block, mixElem__$281 = mixItem__$278.elem || mixItem__$278._elem || $$elem;
-                        hasItem__$279 && (__$ctx._str += " ");
-                        __$ctx._str += BEM_INTERNAL__$250[hasItem__$279 ? "buildClasses" : "buildModsClasses"](mixBlock__$280, mixItem__$278.elem || mixItem__$278._elem || (mixItem__$278.block ? undefined : $$elem), mixItem__$278.elemMods || mixItem__$278.mods);
-                        if (mixItem__$278.js) {
-                            (jsParams__$262 || (jsParams__$262 = {}))[BEM_INTERNAL__$250.buildClass(mixBlock__$280, mixItem__$278.elem)] = mixItem__$278.js === true ? {} : mixItem__$278.js;
-                            addJSInitClass__$271 || (addJSInitClass__$271 = mixBlock__$280 && !mixItem__$278.elem);
+                    visited__$296[visitedKey__$297(vBlock__$279, $$elem)] = true;
+                    __$ctx.isArray(mix__$293) || (mix__$293 = [ mix__$293 ]);
+                    for (var i__$298 = 0; i__$298 < mix__$293.length; i__$298++) {
+                        var mixItem__$299 = mix__$293[i__$298];
+                        typeof mixItem__$299 === "string" && (mixItem__$299 = {
+                            block: mixItem__$299
+                        });
+                        var hasItem__$300 = mixItem__$299.block && (vBlock__$279 !== ctx__$272.block || mixItem__$299.block !== vBlock__$279) || mixItem__$299.elem, mixBlock__$301 = mixItem__$299.block || mixItem__$299._block || $$block, mixElem__$302 = mixItem__$299.elem || mixItem__$299._elem || $$elem;
+                        hasItem__$300 && (__$ctx._str += " ");
+                        __$ctx._str += BEM_INTERNAL__$271[hasItem__$300 ? "buildClasses" : "buildModsClasses"](mixBlock__$301, mixItem__$299.elem || mixItem__$299._elem || (mixItem__$299.block ? undefined : $$elem), mixItem__$299.elemMods || mixItem__$299.mods);
+                        if (mixItem__$299.js) {
+                            (jsParams__$283 || (jsParams__$283 = {}))[BEM_INTERNAL__$271.buildClass(mixBlock__$301, mixItem__$299.elem)] = mixItem__$299.js === true ? {} : mixItem__$299.js;
+                            addJSInitClass__$292 || (addJSInitClass__$292 = mixBlock__$301 && !mixItem__$299.elem);
                         }
-                        if (hasItem__$279 && !visited__$275[visitedKey__$276(mixBlock__$280, mixElem__$281)]) {
-                            visited__$275[visitedKey__$276(mixBlock__$280, mixElem__$281)] = true;
-                            var __$r__$283;
-                            var __$l6__$284 = $$mode;
+                        if (hasItem__$300 && !visited__$296[visitedKey__$297(mixBlock__$301, mixElem__$302)]) {
+                            visited__$296[visitedKey__$297(mixBlock__$301, mixElem__$302)] = true;
+                            var __$r__$304;
+                            var __$l6__$305 = $$mode;
                             $$mode = "mix";
-                            var __$l7__$285 = $$block;
-                            $$block = mixBlock__$280;
-                            var __$l8__$286 = $$elem;
-                            $$elem = mixElem__$281;
-                            __$r__$283 = applyc(__$ctx, __$ref);
-                            $$mode = __$l6__$284;
-                            $$block = __$l7__$285;
-                            $$elem = __$l8__$286;
-                            var nestedMix__$282 = __$r__$283;
-                            if (nestedMix__$282) {
-                                for (var j__$287 = 0; j__$287 < nestedMix__$282.length; j__$287++) {
-                                    var nestedItem__$288 = nestedMix__$282[j__$287];
-                                    if (!nestedItem__$288.block && !nestedItem__$288.elem || !visited__$275[visitedKey__$276(nestedItem__$288.block, nestedItem__$288.elem)]) {
-                                        nestedItem__$288._block = mixBlock__$280;
-                                        nestedItem__$288._elem = mixElem__$281;
-                                        mix__$272.splice(i__$277 + 1, 0, nestedItem__$288);
+                            var __$l7__$306 = $$block;
+                            $$block = mixBlock__$301;
+                            var __$l8__$307 = $$elem;
+                            $$elem = mixElem__$302;
+                            __$r__$304 = applyc(__$ctx, __$ref);
+                            $$mode = __$l6__$305;
+                            $$block = __$l7__$306;
+                            $$elem = __$l8__$307;
+                            var nestedMix__$303 = __$r__$304;
+                            if (nestedMix__$303) {
+                                Array.isArray(nestedMix__$303) || (nestedMix__$303 = [ nestedMix__$303 ]);
+                                for (var j__$308 = 0; j__$308 < nestedMix__$303.length; j__$308++) {
+                                    var nestedItem__$309 = nestedMix__$303[j__$308];
+                                    if (!nestedItem__$309.block && !nestedItem__$309.elem || !visited__$296[visitedKey__$297(nestedItem__$309.block, nestedItem__$309.elem)]) {
+                                        nestedItem__$309._block = mixBlock__$301;
+                                        nestedItem__$309._elem = mixElem__$302;
+                                        mix__$293.splice(i__$298 + 1, 0, nestedItem__$309);
                                     }
                                 }
                             }
@@ -13357,144 +13378,145 @@ function __$b149(__$ctx, __$ref) {
                     }
                 }
             }
-            cls__$268 && (__$ctx._str += isBEM__$252 ? " " + cls__$268 : cls__$268);
-            __$ctx._str += addJSInitClass__$271 ? ' i-bem"' : '"';
+            cls__$289 && (__$ctx._str += isBEM__$273 ? " " + cls__$289 : cls__$289);
+            __$ctx._str += addJSInitClass__$292 ? ' i-bem"' : '"';
         }
-        if (isBEM__$252 && jsParams__$262) {
-            __$ctx._str += ' data-bem="' + __$ctx.attrEscape(JSON.stringify(jsParams__$262)) + '"';
+        if (isBEM__$273 && jsParams__$283) {
+            __$ctx._str += " data-bem='" + __$ctx.jsAttrEscape(JSON.stringify(jsParams__$283)) + "'";
         }
-        var __$r__$290;
-        var __$l9__$291 = $$mode;
+        var __$r__$311;
+        var __$l9__$312 = $$mode;
         $$mode = "attrs";
-        __$r__$290 = applyc(__$ctx, __$ref);
-        $$mode = __$l9__$291;
-        var attrs__$289 = __$r__$290;
-        attrs__$289 = __$ctx.extend(attrs__$289, ctx__$251.attrs);
-        if (attrs__$289) {
-            var name__$292, attr__$293;
-            for (name__$292 in attrs__$289) {
-                attr__$293 = attrs__$289[name__$292];
-                if (typeof attr__$293 === "undefined") continue;
-                __$ctx._str += " " + name__$292 + '="' + __$ctx.attrEscape(__$ctx.isSimple(attr__$293) ? attr__$293 : __$ctx.reapply(attr__$293)) + '"';
+        __$r__$311 = applyc(__$ctx, __$ref);
+        $$mode = __$l9__$312;
+        var attrs__$310 = __$r__$311;
+        attrs__$310 = __$ctx.extend(attrs__$310, ctx__$272.attrs);
+        if (attrs__$310) {
+            var name__$313, attr__$314;
+            for (name__$313 in attrs__$310) {
+                attr__$314 = attrs__$310[name__$313];
+                if (typeof attr__$314 === "undefined") continue;
+                __$ctx._str += " " + name__$313 + '="' + __$ctx.attrEscape(__$ctx.isSimple(attr__$314) ? attr__$314 : __$ctx.reapply(attr__$314)) + '"';
             }
         }
     }
-    if (__$ctx.isShortTag(tag__$253)) {
+    if (__$ctx.isShortTag(tag__$274)) {
         __$ctx._str += "/>";
     } else {
-        tag__$253 && (__$ctx._str += ">");
-        var __$r__$295;
-        var __$l10__$296 = $$mode;
+        tag__$274 && (__$ctx._str += ">");
+        var __$r__$316;
+        var __$l10__$317 = $$mode;
         $$mode = "content";
-        __$r__$295 = applyc(__$ctx, __$ref);
-        $$mode = __$l10__$296;
-        var content__$294 = __$r__$295;
-        if (content__$294 || content__$294 === 0) {
-            isBEM__$252 = vBlock__$258 || $$elem;
-            var __$r__$297;
-            var __$l11__$298 = $$mode;
+        __$r__$316 = applyc(__$ctx, __$ref);
+        $$mode = __$l10__$317;
+        var content__$315 = __$r__$316;
+        if (content__$315 || content__$315 === 0) {
+            __$ctx._resetApplyNext(__$wrapThis(__$ctx));
+            isBEM__$273 = vBlock__$279 || $$elem;
+            var __$r__$318;
+            var __$l11__$319 = $$mode;
             $$mode = "";
-            var __$l12__$299 = __$ctx._notNewList;
+            var __$l12__$320 = __$ctx._notNewList;
             __$ctx._notNewList = false;
-            var __$l13__$300 = __$ctx.position;
-            __$ctx.position = isBEM__$252 ? 1 : __$ctx.position;
-            var __$l14__$301 = __$ctx._listLength;
-            __$ctx._listLength = isBEM__$252 ? 1 : __$ctx._listLength;
-            var __$l15__$302 = __$ctx.ctx;
-            __$ctx.ctx = content__$294;
-            __$r__$297 = applyc(__$ctx, __$ref);
-            $$mode = __$l11__$298;
-            __$ctx._notNewList = __$l12__$299;
-            __$ctx.position = __$l13__$300;
-            __$ctx._listLength = __$l14__$301;
-            __$ctx.ctx = __$l15__$302;
+            var __$l13__$321 = __$ctx.position;
+            __$ctx.position = isBEM__$273 ? 1 : __$ctx.position;
+            var __$l14__$322 = __$ctx._listLength;
+            __$ctx._listLength = isBEM__$273 ? 1 : __$ctx._listLength;
+            var __$l15__$323 = __$ctx.ctx;
+            __$ctx.ctx = content__$315;
+            __$r__$318 = applyc(__$ctx, __$ref);
+            $$mode = __$l11__$319;
+            __$ctx._notNewList = __$l12__$320;
+            __$ctx.position = __$l13__$321;
+            __$ctx._listLength = __$l14__$322;
+            __$ctx.ctx = __$l15__$323;
         }
-        tag__$253 && (__$ctx._str += "</" + tag__$253 + ">");
+        tag__$274 && (__$ctx._str += "</" + tag__$274 + ">");
     }
-    res__$254 = __$ctx._str;
-    __$r__$256 = undefined;
-    __$ctx._str = __$l0__$257;
-    __$ctx._buf.push(res__$254);
-    return;
-}
-
-function __$b159(__$ctx, __$ref) {
-    var __$r__$304;
-    var __$l0__$305 = $$mode;
-    $$mode = "";
-    var __$l1__$306 = __$ctx.ctx;
-    __$ctx.ctx = __$ctx.ctx._value;
-    var __$r__$308;
-    var __$l2__$309 = __$ctx.__$a1;
-    __$ctx.__$a1 = __$ctx.__$a1 | 64;
-    __$r__$308 = applyc(__$ctx, __$ref);
-    __$ctx.__$a1 = __$l2__$309;
-    __$r__$304 = __$r__$308;
-    $$mode = __$l0__$305;
-    __$ctx.ctx = __$l1__$306;
+    res__$275 = __$ctx._str;
+    __$r__$277 = undefined;
+    __$ctx._str = __$l0__$278;
+    __$ctx._buf.push(res__$275);
     return;
 }
 
 function __$b160(__$ctx, __$ref) {
-    __$ctx._listLength--;
-    var ctx__$310 = __$ctx.ctx;
-    if (ctx__$310 && ctx__$310 !== true || ctx__$310 === 0) {
-        __$ctx._str += ctx__$310 + "";
-    }
+    var __$r__$325;
+    var __$l0__$326 = $$mode;
+    $$mode = "";
+    var __$l1__$327 = __$ctx.ctx;
+    __$ctx.ctx = __$ctx.ctx._value;
+    var __$r__$329;
+    var __$l2__$330 = __$ctx.__$a1;
+    __$ctx.__$a1 = __$ctx.__$a1 | 1024;
+    __$r__$329 = applyc(__$ctx, __$ref);
+    __$ctx.__$a1 = __$l2__$330;
+    __$r__$325 = __$r__$329;
+    $$mode = __$l0__$326;
+    __$ctx.ctx = __$l1__$327;
     return;
 }
 
 function __$b161(__$ctx, __$ref) {
     __$ctx._listLength--;
+    var ctx__$331 = __$ctx.ctx;
+    if (ctx__$331 && ctx__$331 !== true || ctx__$331 === 0) {
+        __$ctx._str += ctx__$331 + "";
+    }
     return;
 }
 
 function __$b162(__$ctx, __$ref) {
-    var ctx__$311 = __$ctx.ctx, len__$312 = ctx__$311.length, i__$313 = 0, prevPos__$314 = __$ctx.position, prevNotNewList__$315 = __$ctx._notNewList;
-    if (prevNotNewList__$315) {
-        __$ctx._listLength += len__$312 - 1;
-    } else {
-        __$ctx.position = 0;
-        __$ctx._listLength = len__$312;
-    }
-    __$ctx._notNewList = true;
-    while (i__$313 < len__$312) (function __$lb__$316() {
-        var __$r__$317;
-        var __$l0__$318 = __$ctx.ctx;
-        __$ctx.ctx = ctx__$311[i__$313++];
-        __$r__$317 = applyc(__$ctx, __$ref);
-        __$ctx.ctx = __$l0__$318;
-        return __$r__$317;
-    })();
-    prevNotNewList__$315 || (__$ctx.position = prevPos__$314);
+    __$ctx._listLength--;
     return;
 }
 
 function __$b163(__$ctx, __$ref) {
+    var ctx__$332 = __$ctx.ctx, len__$333 = ctx__$332.length, i__$334 = 0, prevPos__$335 = __$ctx.position, prevNotNewList__$336 = __$ctx._notNewList;
+    if (prevNotNewList__$336) {
+        __$ctx._listLength += len__$333 - 1;
+    } else {
+        __$ctx.position = 0;
+        __$ctx._listLength = len__$333;
+    }
+    __$ctx._notNewList = true;
+    while (i__$334 < len__$333) (function __$lb__$337() {
+        var __$r__$338;
+        var __$l0__$339 = __$ctx.ctx;
+        __$ctx.ctx = ctx__$332[i__$334++];
+        __$r__$338 = applyc(__$ctx, __$ref);
+        __$ctx.ctx = __$l0__$339;
+        return __$r__$338;
+    })();
+    prevNotNewList__$336 || (__$ctx.position = prevPos__$335);
+    return;
+}
+
+function __$b164(__$ctx, __$ref) {
     __$ctx.ctx || (__$ctx.ctx = {});
-    var vBlock__$319 = __$ctx.ctx.block, vElem__$320 = __$ctx.ctx.elem, block__$321 = __$ctx._currBlock || $$block;
-    var __$r__$323;
-    var __$l0__$324 = $$mode;
+    var vBlock__$340 = __$ctx.ctx.block, vElem__$341 = __$ctx.ctx.elem, block__$342 = __$ctx._currBlock || $$block;
+    var __$r__$344;
+    var __$l0__$345 = $$mode;
     $$mode = "default";
-    var __$l1__$325 = $$block;
-    $$block = vBlock__$319 || (vElem__$320 ? block__$321 : undefined);
-    var __$l2__$326 = __$ctx._currBlock;
-    __$ctx._currBlock = vBlock__$319 || vElem__$320 ? undefined : block__$321;
-    var __$l3__$327 = $$elem;
-    $$elem = vElem__$320;
-    var __$l4__$328 = $$mods;
-    $$mods = vBlock__$319 ? __$ctx.ctx.mods || (__$ctx.ctx.mods = {}) : $$mods;
-    var __$l5__$329 = $$elemMods;
+    var __$l1__$346 = $$block;
+    $$block = vBlock__$340 || (vElem__$341 ? block__$342 : undefined);
+    var __$l2__$347 = __$ctx._currBlock;
+    __$ctx._currBlock = vBlock__$340 || vElem__$341 ? undefined : block__$342;
+    var __$l3__$348 = $$elem;
+    $$elem = vElem__$341;
+    var __$l4__$349 = $$mods;
+    $$mods = vBlock__$340 ? __$ctx.ctx.mods || (__$ctx.ctx.mods = {}) : $$mods;
+    var __$l5__$350 = $$elemMods;
     $$elemMods = __$ctx.ctx.elemMods || {};
     $$block || $$elem ? __$ctx.position = (__$ctx.position || 0) + 1 : __$ctx._listLength--;
     applyc(__$ctx, __$ref);
-    __$r__$323 = undefined;
-    $$mode = __$l0__$324;
-    $$block = __$l1__$325;
-    __$ctx._currBlock = __$l2__$326;
-    $$elem = __$l3__$327;
-    $$mods = __$l4__$328;
-    $$elemMods = __$l5__$329;
+    __$r__$344 = undefined;
+    $$mode = __$l0__$345;
+    $$block = __$l1__$346;
+    __$ctx._currBlock = __$l2__$347;
+    $$elem = __$l3__$348;
+    $$mods = __$l4__$349;
+    $$elemMods = __$l5__$350;
     return;
 }
 
@@ -13621,17 +13643,17 @@ function __$g0(__$ctx, __$ref) {
     } else if (__$t === "button") {
         var __$t = !$$elem;
         if (__$t) {
-            if (__$ctx._attach && (__$ctx.__$a0 & 134217728) === 0) {
+            if (__$ctx._attach && (__$ctx.__$a0 & 536870912) === 0) {
                 return [ {
                     block: "attach",
                     elem: "control"
-                }, function __$lb__$181() {
-                    var __$r__$182;
-                    var __$l0__$183 = __$ctx.__$a0;
-                    __$ctx.__$a0 = __$ctx.__$a0 | 134217728;
-                    __$r__$182 = applyc(__$ctx, __$ref);
-                    __$ctx.__$a0 = __$l0__$183;
-                    return __$r__$182;
+                }, function __$lb__$187() {
+                    var __$r__$188;
+                    var __$l0__$189 = __$ctx.__$a0;
+                    __$ctx.__$a0 = __$ctx.__$a0 | 536870912;
+                    __$r__$188 = applyc(__$ctx, __$ref);
+                    __$ctx.__$a0 = __$l0__$189;
+                    return __$r__$188;
                 }() ];
             }
             if (typeof __$ctx.ctx.content !== "undefined") {
@@ -13641,17 +13663,17 @@ function __$g0(__$ctx, __$ref) {
             if (__$r !== __$ref) return __$r;
         }
     } else if (__$t === "menu") {
-        if ($$elem === "group" && typeof __$ctx.ctx.title !== "undefined" && (__$ctx.__$a0 & 16384) === 0) {
+        if ($$elem === "group" && typeof __$ctx.ctx.title !== "undefined" && (__$ctx.__$a0 & 65536) === 0) {
             return [ {
                 elem: "group-title",
                 content: __$ctx.ctx.title
-            }, function __$lb__$91() {
-                var __$r__$92;
-                var __$l0__$93 = __$ctx.__$a0;
-                __$ctx.__$a0 = __$ctx.__$a0 | 16384;
-                __$r__$92 = applyc(__$ctx, __$ref);
-                __$ctx.__$a0 = __$l0__$93;
-                return __$r__$92;
+            }, function __$lb__$97() {
+                var __$r__$98;
+                var __$l0__$99 = __$ctx.__$a0;
+                __$ctx.__$a0 = __$ctx.__$a0 | 65536;
+                __$r__$98 = applyc(__$ctx, __$ref);
+                __$ctx.__$a0 = __$l0__$99;
+                return __$r__$98;
             }() ];
         }
     } else if (__$t === "radio-group") {
@@ -13733,29 +13755,29 @@ function __$g0(__$ctx, __$ref) {
             if (__$r !== __$ref) return __$r;
         }
     } else if (__$t === "page") {
-        if ($$elem === "conditional-comment" && (__$ctx.__$a1 & 2) === 0) {
+        if ($$elem === "conditional-comment" && (__$ctx.__$a1 & 16) === 0) {
             var __$r = __$b29(__$ctx, __$ref);
             if (__$r !== __$ref) return __$r;
         }
-        if (!$$elem && (__$ctx.__$a1 & 16) === 0) {
-            return [ function __$lb__$235() {
-                var __$r__$236;
-                var __$l0__$237 = __$ctx.__$a1;
-                __$ctx.__$a1 = __$ctx.__$a1 | 16;
-                __$r__$236 = applyc(__$ctx, __$ref);
-                __$ctx.__$a1 = __$l0__$237;
-                return __$r__$236;
+        if (!$$elem && (__$ctx.__$a1 & 256) === 0) {
+            return [ function __$lb__$253() {
+                var __$r__$254;
+                var __$l0__$255 = __$ctx.__$a1;
+                __$ctx.__$a1 = __$ctx.__$a1 | 256;
+                __$r__$254 = applyc(__$ctx, __$ref);
+                __$ctx.__$a1 = __$l0__$255;
+                return __$r__$254;
             }(), __$ctx.ctx.scripts ];
         }
     } else if (__$t === "ua") {
-        if (!$$elem && (__$ctx.__$a1 & 4) === 0) {
-            return [ function __$lb__$215() {
-                var __$r__$216;
-                var __$l0__$217 = __$ctx.__$a1;
-                __$ctx.__$a1 = __$ctx.__$a1 | 4;
-                __$r__$216 = applyc(__$ctx, __$ref);
-                __$ctx.__$a1 = __$l0__$217;
-                return __$r__$216;
+        if (!$$elem && (__$ctx.__$a1 & 32) === 0) {
+            return [ function __$lb__$232() {
+                var __$r__$233;
+                var __$l0__$234 = __$ctx.__$a1;
+                __$ctx.__$a1 = __$ctx.__$a1 | 32;
+                __$r__$233 = applyc(__$ctx, __$ref);
+                __$ctx.__$a1 = __$l0__$234;
+                return __$r__$233;
             }(), "(function(d,n){", "d.documentElement.className+=", '" ua_svg_"+(d[n]&&d[n]("http://www.w3.org/2000/svg","svg").createSVGRect?"yes":"no");', '})(document,"createElementNS");' ];
         }
     }
@@ -13790,11 +13812,11 @@ function __$g1(__$ctx, __$ref) {
     } else if (__$t === "button") {
         var __$t = !$$elem;
         if (__$t) {
-            if ($$mods && $$mods["type"] === "link" && (__$ctx.__$a0 & 67108864) === 0) {
+            if ($$mods && $$mods["type"] === "link" && (__$ctx.__$a0 & 268435456) === 0) {
                 var __$r = __$b37(__$ctx, __$ref);
                 if (__$r !== __$ref) return __$r;
             }
-            if ((!$$mods.type || $$mods.type === "submit") && (__$ctx.__$a0 & 536870912) === 0) {
+            if (__$ctx._isRealButton && (__$ctx.__$a1 & 2) === 0) {
                 var __$r = __$b38(__$ctx, __$ref);
                 if (__$r !== __$ref) return __$r;
             }
@@ -13808,14 +13830,14 @@ function __$g1(__$ctx, __$ref) {
                 role: "presentation"
             };
         } else if (__$t === "group") {
-            if (typeof __$ctx.ctx.title !== "undefined" && (__$ctx.__$a0 & 32768) === 0) {
-                var __$r = __$ctx.extend(function __$lb__$94() {
-                    var __$r__$95;
-                    var __$l0__$96 = __$ctx.__$a0;
-                    __$ctx.__$a0 = __$ctx.__$a0 | 32768;
-                    __$r__$95 = applyc(__$ctx, __$ref);
-                    __$ctx.__$a0 = __$l0__$96;
-                    return __$r__$95;
+            if (typeof __$ctx.ctx.title !== "undefined" && (__$ctx.__$a0 & 131072) === 0) {
+                var __$r = __$ctx.extend(function __$lb__$100() {
+                    var __$r__$101;
+                    var __$l0__$102 = __$ctx.__$a0;
+                    __$ctx.__$a0 = __$ctx.__$a0 | 131072;
+                    __$r__$101 = applyc(__$ctx, __$ref);
+                    __$ctx.__$a0 = __$l0__$102;
+                    return __$r__$101;
                 }(), {
                     "aria-label": __$ctx.ctx.title
                 });
@@ -13847,28 +13869,28 @@ function __$g1(__$ctx, __$ref) {
             if (__$t) {
                 var __$t = $$mods["type"];
                 if (__$t === "search") {
-                    if ((__$ctx.__$a0 & 524288) === 0) {
-                        var __$r = __$ctx.extend(function __$lb__$122() {
-                            var __$r__$123;
-                            var __$l0__$124 = __$ctx.__$a0;
-                            __$ctx.__$a0 = __$ctx.__$a0 | 524288;
-                            __$r__$123 = applyc(__$ctx, __$ref);
-                            __$ctx.__$a0 = __$l0__$124;
-                            return __$r__$123;
+                    if ((__$ctx.__$a0 & 2097152) === 0) {
+                        var __$r = __$ctx.extend(function __$lb__$128() {
+                            var __$r__$129;
+                            var __$l0__$130 = __$ctx.__$a0;
+                            __$ctx.__$a0 = __$ctx.__$a0 | 2097152;
+                            __$r__$129 = applyc(__$ctx, __$ref);
+                            __$ctx.__$a0 = __$l0__$130;
+                            return __$r__$129;
                         }(), {
                             type: "search"
                         });
                         if (__$r !== __$ref) return __$r;
                     }
                 } else if (__$t === "password") {
-                    if ((__$ctx.__$a0 & 1048576) === 0) {
-                        var __$r = __$ctx.extend(function __$lb__$125() {
-                            var __$r__$126;
-                            var __$l0__$127 = __$ctx.__$a0;
-                            __$ctx.__$a0 = __$ctx.__$a0 | 1048576;
-                            __$r__$126 = applyc(__$ctx, __$ref);
-                            __$ctx.__$a0 = __$l0__$127;
-                            return __$r__$126;
+                    if ((__$ctx.__$a0 & 4194304) === 0) {
+                        var __$r = __$ctx.extend(function __$lb__$131() {
+                            var __$r__$132;
+                            var __$l0__$133 = __$ctx.__$a0;
+                            __$ctx.__$a0 = __$ctx.__$a0 | 4194304;
+                            __$r__$132 = applyc(__$ctx, __$ref);
+                            __$ctx.__$a0 = __$l0__$133;
+                            return __$r__$132;
                         }(), {
                             type: "password"
                         });
@@ -13882,7 +13904,7 @@ function __$g1(__$ctx, __$ref) {
     } else if (__$t === "image") {
         var __$t = !$$elem;
         if (__$t) {
-            if (typeof __$ctx.ctx.content === "undefined" && (__$ctx.__$a0 & 4194304) === 0) {
+            if (typeof __$ctx.ctx.content === "undefined" && (__$ctx.__$a0 & 16777216) === 0) {
                 var __$r = __$b49(__$ctx, __$ref);
                 if (__$r !== __$ref) return __$r;
             }
@@ -14142,27 +14164,27 @@ function __$g3(__$ctx, __$ref) {
         if (__$t) {
             var __$t = $$mods;
             if (__$t) {
-                if ($$mods && $$mods["type"] === "link" && $$mods["disabled"] === true && (__$ctx.__$a0 & 33554432) === 0) {
-                    var __$r = __$ctx.extend(function __$lb__$171() {
-                        var __$r__$172;
-                        var __$l0__$173 = __$ctx.__$a0;
-                        __$ctx.__$a0 = __$ctx.__$a0 | 33554432;
-                        __$r__$172 = applyc(__$ctx, __$ref);
-                        __$ctx.__$a0 = __$l0__$173;
-                        return __$r__$172;
+                if ($$mods && $$mods["type"] === "link" && $$mods["disabled"] === true && (__$ctx.__$a0 & 134217728) === 0) {
+                    var __$r = __$ctx.extend(function __$lb__$177() {
+                        var __$r__$178;
+                        var __$l0__$179 = __$ctx.__$a0;
+                        __$ctx.__$a0 = __$ctx.__$a0 | 134217728;
+                        __$r__$178 = applyc(__$ctx, __$ref);
+                        __$ctx.__$a0 = __$l0__$179;
+                        return __$r__$178;
                     }(), {
                         url: __$ctx.ctx.url
                     });
                     if (__$r !== __$ref) return __$r;
                 }
-                if ($$mods["focused"] === true && (__$ctx.__$a0 & 268435456) === 0) {
-                    var __$r = __$ctx.extend(function __$lb__$186() {
-                        var __$r__$187;
-                        var __$l0__$188 = __$ctx.__$a0;
-                        __$ctx.__$a0 = __$ctx.__$a0 | 268435456;
-                        __$r__$187 = applyc(__$ctx, __$ref);
-                        __$ctx.__$a0 = __$l0__$188;
-                        return __$r__$187;
+                if ($$mods["focused"] === true && (__$ctx.__$a1 & 1) === 0) {
+                    var __$r = __$ctx.extend(function __$lb__$192() {
+                        var __$r__$193;
+                        var __$l0__$194 = __$ctx.__$a1;
+                        __$ctx.__$a1 = __$ctx.__$a1 | 1;
+                        __$r__$193 = applyc(__$ctx, __$ref);
+                        __$ctx.__$a1 = __$l0__$194;
+                        return __$r__$193;
                     }(), {
                         live: false
                     });
@@ -14174,14 +14196,14 @@ function __$g3(__$ctx, __$ref) {
     } else if (__$t === "menu") {
         var __$t = !$$elem;
         if (__$t) {
-            if ($$mods && $$mods["focused"] === true && (__$ctx.__$a0 & 65536) === 0) {
-                var __$r = __$ctx.extend(function __$lb__$97() {
-                    var __$r__$98;
-                    var __$l0__$99 = __$ctx.__$a0;
-                    __$ctx.__$a0 = __$ctx.__$a0 | 65536;
-                    __$r__$98 = applyc(__$ctx, __$ref);
-                    __$ctx.__$a0 = __$l0__$99;
-                    return __$r__$98;
+            if ($$mods && $$mods["focused"] === true && (__$ctx.__$a0 & 262144) === 0) {
+                var __$r = __$ctx.extend(function __$lb__$103() {
+                    var __$r__$104;
+                    var __$l0__$105 = __$ctx.__$a0;
+                    __$ctx.__$a0 = __$ctx.__$a0 | 262144;
+                    __$r__$104 = applyc(__$ctx, __$ref);
+                    __$ctx.__$a0 = __$l0__$105;
+                    return __$r__$104;
                 }(), {
                     live: false
                 });
@@ -14200,14 +14222,14 @@ function __$g3(__$ctx, __$ref) {
     } else if (__$t === "link") {
         var __$t = !$$elem;
         if (__$t) {
-            if ($$mods && $$mods["disabled"] === true && (__$ctx.__$a0 & 8388608) === 0) {
-                var __$r = __$ctx.extend(function __$lb__$140() {
-                    var __$r__$141;
-                    var __$l0__$142 = __$ctx.__$a0;
-                    __$ctx.__$a0 = __$ctx.__$a0 | 8388608;
-                    __$r__$141 = applyc(__$ctx, __$ref);
-                    __$ctx.__$a0 = __$l0__$142;
-                    return __$r__$141;
+            if ($$mods && $$mods["disabled"] === true && (__$ctx.__$a0 & 33554432) === 0) {
+                var __$r = __$ctx.extend(function __$lb__$146() {
+                    var __$r__$147;
+                    var __$l0__$148 = __$ctx.__$a0;
+                    __$ctx.__$a0 = __$ctx.__$a0 | 33554432;
+                    __$r__$147 = applyc(__$ctx, __$ref);
+                    __$ctx.__$a0 = __$l0__$148;
+                    return __$r__$147;
                 }(), {
                     url: __$ctx.ctx.url
                 });
@@ -14274,87 +14296,132 @@ function __$g4(__$ctx, __$ref) {
             var __$r = __$b135(__$ctx, __$ref);
             if (__$r !== __$ref) return __$r;
         }
+    } else if (__$t === "button") {
+        if (!$$elem && (__$ctx.__$a1 & 4) === 0) {
+            var __$r = __$b136(__$ctx, __$ref);
+            if (__$r !== __$ref) return __$r;
+        }
     } else if (__$t === "menu") {
         var __$t = !$$elem;
         if (__$t) {
-            if ($$mods && $$mods["mode"] === "radio" && __$ctx._firstItem && __$ctx._checkedItems && !__$ctx._checkedItems.length && (__$ctx.__$a0 & 8192) === 0) {
-                var __$r = __$b136(__$ctx, __$ref);
+            if ($$mods && $$mods["mode"] === "radio" && __$ctx._firstItem && __$ctx._checkedItems && !__$ctx._checkedItems.length && (__$ctx.__$a0 & 32768) === 0) {
+                var __$r = __$b137(__$ctx, __$ref);
                 if (__$r !== __$ref) return __$r;
             }
-            if ((__$ctx.__$a0 & 262144) === 0) {
-                var __$r = __$b137(__$ctx, __$ref);
+            if ((__$ctx.__$a0 & 1048576) === 0) {
+                var __$r = __$b138(__$ctx, __$ref);
                 if (__$r !== __$ref) return __$r;
             }
         }
     } else if (__$t === "radio-group") {
         if (!$$elem && $$mods && $$mods["mode"] === "radio-check" && (__$ctx.__$a0 & 2048) === 0) {
-            var __$r = __$b138(__$ctx, __$ref);
+            var __$r = __$b139(__$ctx, __$ref);
             if (__$r !== __$ref) return __$r;
         }
     } else if (__$t === "link") {
         var __$t = !$$elem;
         if (__$t) {
-            if (__$ctx._menuItemDisabled) {
-                var __$r = __$b139(__$ctx, __$ref);
+            if (__$ctx._menuItemDisabled && (__$ctx.__$a0 & 8192) === 0) {
+                var __$r = __$b140(__$ctx, __$ref);
                 if (__$r !== __$ref) return __$r;
             }
-            if ((__$ctx.__$a0 & 16777216) === 0) {
-                var __$r = __$b140(__$ctx, __$ref);
+            if ((__$ctx.__$a0 & 67108864) === 0) {
+                var __$r = __$b141(__$ctx, __$ref);
                 if (__$r !== __$ref) return __$r;
             }
         }
     } else if (__$t === "menu-item") {
         var __$t = !$$elem;
         if (__$t) {
-            if ($$mods && $$mods && $$mods["type"] === "link" && $$mods["disabled"] === true && !__$ctx._menuItemDisabled) {
-                var __$r = __$b141(__$ctx, __$ref);
+            if ($$mods && $$mods && $$mods["type"] === "link" && $$mods["disabled"] === true && !__$ctx._menuItemDisabled && (__$ctx.__$a0 & 16384) === 0) {
+                var __$r__$89;
+                var __$l0__$90 = __$ctx._menuItemDisabled;
+                __$ctx._menuItemDisabled = true;
+                var __$r__$92;
+                var __$l1__$93 = __$ctx.__$a0;
+                __$ctx.__$a0 = __$ctx.__$a0 | 16384;
+                __$r__$92 = applyc(__$ctx, __$ref);
+                __$ctx.__$a0 = __$l1__$93;
+                __$r__$89 = __$r__$92;
+                __$ctx._menuItemDisabled = __$l0__$90;
+                var __$r = __$r__$89;
                 if (__$r !== __$ref) return __$r;
             }
-            if (__$ctx._menuMods && (__$ctx.__$a0 & 131072) === 0) {
-                var __$r = __$b142(__$ctx, __$ref);
+            if (__$ctx._menuMods && (__$ctx.__$a0 & 524288) === 0) {
+                var __$r = __$b143(__$ctx, __$ref);
                 if (__$r !== __$ref) return __$r;
             }
         }
     } else if (__$t === "input") {
-        if (!$$elem && (__$ctx.__$a0 & 2097152) === 0) {
-            var __$r = __$b143(__$ctx, __$ref);
+        if (!$$elem && (__$ctx.__$a0 & 8388608) === 0) {
+            var __$r__$137;
+            var __$l0__$138 = __$ctx._input;
+            __$ctx._input = __$ctx.ctx;
+            var __$r__$140;
+            var __$l1__$141 = __$ctx.__$a0;
+            __$ctx.__$a0 = __$ctx.__$a0 | 8388608;
+            __$r__$140 = applyc(__$ctx, __$ref);
+            __$ctx.__$a0 = __$l1__$141;
+            __$r__$137 = __$r__$140;
+            __$ctx._input = __$l0__$138;
+            var __$r = __$r__$137;
             if (__$r !== __$ref) return __$r;
         }
     } else if (__$t === "attach") {
-        if (!$$elem && (__$ctx.__$a1 & 1) === 0) {
-            var __$r = __$b144(__$ctx, __$ref);
+        if (!$$elem && (__$ctx.__$a1 & 8) === 0) {
+            var __$r__$219;
+            var __$l0__$220 = __$ctx._attach;
+            __$ctx._attach = __$ctx.ctx;
+            var __$r__$222;
+            var __$l1__$223 = __$ctx.__$a1;
+            __$ctx.__$a1 = __$ctx.__$a1 | 8;
+            __$r__$222 = applyc(__$ctx, __$ref);
+            __$ctx.__$a1 = __$l1__$223;
+            __$r__$219 = __$r__$222;
+            __$ctx._attach = __$l0__$220;
+            var __$r = __$r__$219;
             if (__$r !== __$ref) return __$r;
         }
     } else if (__$t === "page") {
         var __$t = $$elem;
         if (__$t === "css") {
-            var __$t = !__$ctx.ctx._ieCommented;
+            var __$t = __$ctx.ctx.hasOwnProperty("ie");
             if (__$t) {
-                var __$t = __$ctx.ctx.hasOwnProperty("ie");
-                if (__$t) {
-                    if (__$ctx.ctx.ie === true && (__$ctx.__$a1 & 8) === 0) {
-                        var __$r = __$b145(__$ctx, __$ref);
-                        if (__$r !== __$ref) return __$r;
-                    }
+                if (__$ctx.ctx.ie === true && (__$ctx.__$a1 & 64) === 0) {
                     var __$r = __$b146(__$ctx, __$ref);
+                    if (__$r !== __$ref) return __$r;
+                }
+                if ((__$ctx.__$a1 & 128) === 0) {
+                    var __$r = __$b147(__$ctx, __$ref);
                     if (__$r !== __$ref) return __$r;
                 }
             }
         }
-        if (!$$elem && (__$ctx.__$a1 & 32) === 0) {
-            var __$r = __$b147(__$ctx, __$ref);
+        if (!$$elem && !__$ctx._pageInit && (__$ctx.__$a1 & 512) === 0) {
+            var __$r = __$b148(__$ctx, __$ref);
             if (__$r !== __$ref) return __$r;
         }
     } else if (__$t === "i-bem") {
         if ($$elem === "i18n") {
-            var __$r = __$b148(__$ctx, __$ref);
+            var __$r = __$b149(__$ctx, __$ref);
             if (__$r !== __$ref) return __$r;
         }
     }
-    var __$r = __$b149(__$ctx, __$ref);
+    var __$r = __$b150(__$ctx, __$ref);
     if (__$r !== __$ref) return __$r;
     return __$ref;
-};
+}
+
+function __$wrapThis(ctx) {
+    ctx._mode = $$mode;
+    ctx.block = $$block;
+    ctx.elem = $$elem;
+    ctx.elemMods = $$elemMods;
+    ctx.mods = $$mods;
+    return ctx;
+}
+
+;
      return exports;
   }
   var defineAsGlobal = true;
