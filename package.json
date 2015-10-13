@@ -1,0 +1,20 @@
+{
+  "name": "bem-components-dist",
+  "version": "2.3.0",
+  "description": "BEM Components Library",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bem/bem-components-dist.git"
+  },
+  "keywords": [
+    "bem",
+    "бэм",
+    "components",
+    "css",
+    "js",
+    "front-end",
+    "framework",
+    "web"
+  ],
+  "license": "MPL-2.0"
+}
