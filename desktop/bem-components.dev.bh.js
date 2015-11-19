@@ -436,12 +436,10 @@ function BH() {
          * @returns {Boolean|Object|Ctx}
          */
         js: function(js, force) {
-            if (js === undefined) {
-                return this.ctx.js;
-            }
-            this.ctx.js = force ?
-                (js === true ? {} : js) :
-                js ? this.extend(this.ctx.js, js) : this.ctx.js;
+            var ctx = this.ctx;
+            if (js === undefined) return ctx.js;
+            if (force || ctx.js === undefined) ctx.js = js;
+            else if (ctx.js !== false) ctx.js = this.extend(ctx.js, js);
             return this;
         },
         /**
@@ -1155,14 +1153,7 @@ if (typeof module !== 'undefined') {
 }
 
 var bh = new BH();
-bh.setOptions({
-    jsAttrName: "data-bem",
-    jsAttrScheme: "json",
-    jsCls: "i-bem",
-    jsElem: true,
-    escapeContent: false,
-    clsNobaseMods: false
-});
+bh.setOptions({"jsAttrName":"data-bem","jsAttrScheme":"json"});
 var init = function (global, BH) {
 (function () {
 // begin: ../../libs/bem-core/common.blocks/ua/ua.bh.js
@@ -1489,11 +1480,11 @@ var init = function (global, BH) {
 // begin: ../../common.blocks/icon/icon.bh.js
 
     bh.match('icon', function(ctx, json) {
-        var attrs = { 'aria-hidden' : 'true' },
+        var attrs = {},
             url = json.url;
         if(url) attrs.style = 'background-image:url(' + url + ')';
         ctx
-            .tag('i')
+            .tag('span')
             .attrs(attrs);
     });
 
@@ -1573,17 +1564,28 @@ var init = function (global, BH) {
 // begin: ../../common.blocks/attach/__clear/attach__clear.bh.js
 
     bh.match('attach__clear', function(ctx) {
-        ctx.tag('i');
+        ctx.tag('span');
     });
 
 // end: ../../common.blocks/attach/__clear/attach__clear.bh.js
+}());
+(function () {
+// begin: ../../common.blocks/button/_togglable/button_togglable.bh.js
+
+    bh.match(['button_togglable_check', 'button_togglable_radio'], function(ctx) {
+        ctx.attr('aria-pressed', String(!!ctx.mod('checked')));
+    });
+
+// end: ../../common.blocks/button/_togglable/button_togglable.bh.js
 }());
 (function () {
 // begin: ../../common.blocks/button/_type/button_type_link.bh.js
 
 
     bh.match('button_type_link', function(ctx, json) {
-        ctx.tag('a');
+        ctx
+            .tag('a')
+            .attr('role', 'link');
 
         json.target && ctx.attr('target', json.target);
         ctx.mod('disabled')?
@@ -1614,7 +1616,10 @@ var init = function (global, BH) {
                         val : json.val
                     }
                 },
-                json.text
+                json.text && {
+                    elem : 'text',
+                    content : json.text
+                }
             ]);
     });
 
@@ -1652,6 +1657,17 @@ var init = function (global, BH) {
 // end: ../../common.blocks/checkbox/__control/checkbox__control.bh.js
 }());
 (function () {
+// begin: ../../common.blocks/checkbox/__text/checkbox__text.bh.js
+
+    bh.match('checkbox__text', function(ctx) {
+        ctx
+            .tag('span')
+            .attrs({ role : 'presentation' });
+    });
+
+// end: ../../common.blocks/checkbox/__text/checkbox__text.bh.js
+}());
+(function () {
 // begin: ../../common.blocks/checkbox/_type/checkbox_type_button.bh.js
 
 
@@ -1666,6 +1682,11 @@ var init = function (global, BH) {
                 disabled : mods.disabled,
                 theme : mods.theme,
                 size : mods.size
+            },
+            attrs : {
+                role : 'checkbox',
+                'aria-pressed' : null,
+                'aria-checked' : String(!!mods.checked)
             },
             title : json.title,
             content : [
@@ -1694,6 +1715,7 @@ var init = function (global, BH) {
     bh.match('checkbox-group', function(ctx, json) {
         ctx
             .tag('span')
+            .attrs({ role : 'group' })
             .js(true)
             .mix({ block : 'control-group' });
 
@@ -1729,53 +1751,81 @@ var init = function (global, BH) {
 // end: ../../common.blocks/checkbox-group/checkbox-group.bh.js
 }());
 (function () {
+// begin: ../../common.blocks/control-group/control-group.bh.js
+
+    bh.match('control-group', function(ctx) {
+        ctx.attrs({ role : 'group' });
+    });
+
+// end: ../../common.blocks/control-group/control-group.bh.js
+}());
+(function () {
 // begin: ../../common.blocks/dropdown/dropdown.bh.js
 
 
-    bh.match('dropdown', function(ctx, json) {
-        ctx.js(true);
+    bh.match({
+        'dropdown' : function(ctx) {
+            var dropdown = ctx.json();
 
-        var popup = json.popup;
+            ctx
+                .js(ctx.extend({ id : ctx.generateId() }, ctx.js()))
+                .tParam('dropdown', dropdown)
+                .tParam('popupId', ctx.generateId())
+                .tParam('theme', ctx.mod('theme'))
+                .tParam('mix', [dropdown].concat(
+                    dropdown.switcher.mix || [],
+                    dropdown.mix || []));
 
-        if(ctx.isSimple(popup) || popup.block !== 'popup') {
-            popup = { block : 'popup', content : popup };
+            return [{ elem : 'switcher' }, { elem : 'popup' }];
+        },
+
+        'dropdown__popup' : function(ctx) {
+            var dropdown = ctx.tParam('dropdown'),
+                popup = dropdown.popup;
+
+            if(ctx.isSimple(popup) || popup.block !== 'popup') {
+                popup = { block : 'popup', content : popup };
+            }
+
+            var popupMods = popup.mods || (popup.mods = {}),
+                popupAttrs = popup.attrs || (popup.attrs = {});
+            popupMods.theme || (popupMods.theme = ctx.tParam('theme'));
+            popupMods.hasOwnProperty('autoclosable') || (popupMods.autoclosable = true);
+
+            popupMods.target = 'anchor';
+            popupAttrs.id = ctx.tParam('popupId');
+
+            popup.mix = [dropdown].concat(popup.mix || []);
+
+            return popup;
+        },
+
+        'dropdown__switcher' : function(ctx) {
+            var dropdown = ctx.tParam('dropdown'),
+                switcher = dropdown.switcher;
+
+            switcher.block && (switcher.mix = ctx.tParam('mix'));
+
+            return switcher;
         }
-
-        var popupMods = popup.mods || (popup.mods = {});
-        popupMods.theme || (popupMods.theme = ctx.mod('theme'));
-        popupMods.hasOwnProperty('autoclosable') || (popupMods.autoclosable = true);
-
-        popupMods.target = 'anchor';
-
-        ctx.content([
-           { elem : 'switcher', content : json.switcher },
-           popup
-        ], true);
     });
 
 
 // end: ../../common.blocks/dropdown/dropdown.bh.js
 }());
 (function () {
-// begin: ../../common.blocks/dropdown/__switcher/dropdown__switcher.bh.js
-
-    bh.match('dropdown__switcher', function(ctx) {
-        ctx.tag(false);
-    });
-
-// end: ../../common.blocks/dropdown/__switcher/dropdown__switcher.bh.js
-}());
-(function () {
 // begin: ../../common.blocks/popup/popup.bh.js
 
     bh.match('popup', function(ctx, json) {
-        ctx.js({
-            mainOffset : json.mainOffset,
-            secondaryOffset : json.secondaryOffset,
-            viewportOffset : json.viewportOffset,
-            directions : json.directions,
-            zIndexGroupLevel : json.zIndexGroupLevel
-        });
+        ctx
+            .js({
+                mainOffset : json.mainOffset,
+                secondaryOffset : json.secondaryOffset,
+                viewportOffset : json.viewportOffset,
+                directions : json.directions,
+                zIndexGroupLevel : json.zIndexGroupLevel
+            })
+            .attrs({ 'aria-hidden' : 'true' });
     });
 
 // end: ../../common.blocks/popup/popup.bh.js
@@ -1785,19 +1835,28 @@ var init = function (global, BH) {
 
 
     bh.match('dropdown_switcher_button__switcher', function(ctx, json) {
-        var content = ctx.content();
-        if(Array.isArray(content)) return content;
+        var dropdown = ctx.tParam('dropdown'),
+            switcher = dropdown.switcher;
 
-        var res = ctx.isSimple(content)?
-            { block : 'button', text : content } :
-            content;
+        if(Array.isArray(switcher)) return switcher;
+
+        var res = ctx.isSimple(switcher)?
+            { block : 'button', text : switcher } :
+            switcher;
 
         if(res.block === 'button') {
             var resMods = res.mods || (res.mods = {}),
+                resAttrs = res.attrs || (res.attrs = {}),
                 dropdownMods = json.blockMods || json.mods;
             resMods.size || (resMods.size = dropdownMods.size);
             resMods.theme || (resMods.theme = dropdownMods.theme);
             resMods.disabled = dropdownMods.disabled;
+
+            resAttrs['aria-haspopup'] = 'true';
+            resAttrs['aria-controls'] = ctx.tParam('popupId');
+            resAttrs['aria-expanded'] = 'false';
+
+            res.mix = ctx.tParam('mix');
         }
 
         return res;
@@ -1811,18 +1870,27 @@ var init = function (global, BH) {
 
 
     bh.match('dropdown_switcher_link__switcher', function(ctx, json) {
-        var content = ctx.content();
-        if(Array.isArray(content)) return content;
+        var dropdown = ctx.tParam('dropdown'),
+            switcher = dropdown.switcher;
 
-        var res = ctx.isSimple(content)?
-            { block : 'link', mods : { pseudo : true }, content : content } :
-            content;
+        if(Array.isArray(switcher)) return switcher;
+
+        var res = ctx.isSimple(switcher)?
+            { block : 'link', mods : { pseudo : true }, content : switcher } :
+            switcher;
 
         if(res.block === 'link') {
             var resMods = res.mods || (res.mods = {}),
+                resAttrs = res.attrs || (res.attrs = {}),
                 dropdownMods = json.blockMods || json.mods;
             resMods.theme || (resMods.theme = dropdownMods.theme);
             resMods.disabled = dropdownMods.disabled;
+
+            resAttrs['aria-haspopup'] = 'true';
+            resAttrs['aria-controls'] = ctx.tParam('popupId');
+            resAttrs['aria-expanded'] = 'false';
+
+            res.mix = ctx.tParam('mix');
         }
 
         return res;
@@ -1843,7 +1911,7 @@ var init = function (global, BH) {
         var url = typeof json.url === 'object'? // url could contain bemjson
                 bh.apply(json.url) :
                 json.url,
-            attrs = {},
+            attrs = { role : 'link' },
             tabIndex;
 
         if(!ctx.mod('disabled')) {
@@ -1856,6 +1924,7 @@ var init = function (global, BH) {
             ctx.js(true);
         } else {
             ctx.js(url? { url : url } : true);
+            attrs['aria-disabled'] = 'true';
         }
 
         typeof tabIndex === 'undefined' || (attrs.tabindex = tabIndex);
@@ -1873,7 +1942,7 @@ var init = function (global, BH) {
 // begin: ../../common.blocks/link/_pseudo/link_pseudo.bh.js
 
     bh.match('link_pseudo', function(ctx, json) {
-        json.url || ctx.tag('span');
+        json.url || ctx.tag('span').attr('role', 'button');
     });
 
 // end: ../../common.blocks/link/_pseudo/link_pseudo.bh.js
@@ -1890,12 +1959,13 @@ var init = function (global, BH) {
             ctx
                 .tag('img')
                 .attrs({
+                    role : null,
                     src : json.url,
                     width : json.width,
                     height : json.height,
                     alt : json.alt,
                     title : json.title
-                });
+                }, true);
         }
     });
 
@@ -1967,7 +2037,7 @@ var init = function (global, BH) {
 // begin: ../../common.blocks/input/__clear/input__clear.bh.js
 
     bh.match('input__clear', function(ctx) {
-        ctx.tag('i');
+        ctx.tag('span');
     });
 
 // end: ../../common.blocks/input/__clear/input__clear.bh.js
@@ -1995,18 +2065,18 @@ var init = function (global, BH) {
 
 
     bh.match('menu', function(ctx, json) {
-        var menuMods = {
-            theme : ctx.mod('theme'),
-            disabled : ctx.mod('disabled')
-        };
+        var mods = ctx.mods(),
+            attrs = { role : 'menu' };
 
         ctx
             .js(true)
-            .tParam('menuMods', menuMods)
+            .tParam('menuMods', mods)
             .mix({ elem : 'control' });
 
-        var attrs = { role : 'menu' };
-        ctx.mod('disabled') || (attrs.tabindex = 0);
+        mods.disabled?
+            attrs['aria-disabled'] = 'true' :
+            attrs.tabindex = 0;
+
         ctx.attrs(attrs);
 
         var firstItem,
@@ -2052,7 +2122,11 @@ var init = function (global, BH) {
 // begin: ../../common.blocks/menu-item/menu-item.bh.js
 
     bh.match('menu-item', function(ctx, json) {
-        var menuMods = ctx.tParam('menuMods');
+        var menuMods = ctx.tParam('menuMods'),
+            menuMode = menuMods && menuMods.mode,
+            role = menuMode?
+                        (menuMode === 'check'? 'menuitemcheckbox' : 'menuitemradio') :
+                        'menuitem';
 
         menuMods && ctx.mods({
             theme : menuMods.theme,
@@ -2061,7 +2135,12 @@ var init = function (global, BH) {
 
         ctx
             .js({ val : json.val })
-            .attr('role', 'menuitem');
+            .attrs({
+                role : role,
+                id : ctx.generateId(),
+                'aria-disabled' : ctx.mod('disabled') && 'true',
+                'aria-checked' : menuMode && String(!!ctx.mod('checked'))
+            });
     });
 
 // end: ../../common.blocks/menu-item/menu-item.bh.js
@@ -2081,14 +2160,23 @@ var init = function (global, BH) {
 
 
     bh.match('menu__group', function(ctx, json) {
+        var title = json.title;
+
         ctx.attr('role', 'group');
 
-        var title = json.title;
         if(typeof title !== 'undefined') {
+            var titleId = ctx.generateId();
             ctx
-                .attr('aria-label', title, true)
+                .attr('aria-labelledby', titleId)
                 .content([
-                    { elem : 'group-title', content : title },
+                    {
+                        elem : 'group-title',
+                        attrs : {
+                            role : 'presentation',
+                            id : titleId
+                        },
+                        content : title
+                    },
                     ctx.content()
                 ], true);
         }
@@ -2096,15 +2184,6 @@ var init = function (global, BH) {
 
 
 // end: ../../common.blocks/menu/__group/menu__group.bh.js
-}());
-(function () {
-// begin: ../../common.blocks/menu/__group-title/menu__group-title.bh.js
-
-    bh.match('menu__group-title', function(ctx) {
-        ctx.attr('role', 'presentation');
-    });
-
-// end: ../../common.blocks/menu/__group-title/menu__group-title.bh.js
 }());
 (function () {
 // begin: ../../common.blocks/menu/_mode/menu_mode_radio.bh.js
@@ -2148,6 +2227,10 @@ var init = function (global, BH) {
                 js : { zIndexGroupLevel : json.zIndexGroupLevel || 20 },
                 mods : { autoclosable : ctx.mod('autoclosable') }
             })
+            .attrs({
+                role : 'dialog',
+                'aria-hidden' : 'true'
+            })
             .content({
                 elem : 'table',
                 content : {
@@ -2172,6 +2255,10 @@ var init = function (global, BH) {
 
         ctx
             .js({ val : val })
+            .attrs({
+                role : 'progressbar',
+                'aria-valuenow' : val + '%'  // NOTE: JAWS doesn't add 'percent' automatically
+            })
             .content({
                 elem : 'bar',
                 attrs : { style : 'width:' + val + '%' }
@@ -2199,7 +2286,10 @@ var init = function (global, BH) {
                         val : json.val
                     }
                 },
-                json.text
+                json.text && {
+                    elem : 'text',
+                    content : json.text
+                }
             ]);
     });
 
@@ -2238,6 +2328,17 @@ var init = function (global, BH) {
 
 
 // end: ../../common.blocks/radio/__control/radio__control.bh.js
+}());
+(function () {
+// begin: ../../common.blocks/radio/__text/radio__text.bh.js
+
+    bh.match('radio__text', function(ctx) {
+        ctx
+            .tag('span')
+            .attrs({ role : 'presentation' });
+    });
+
+// end: ../../common.blocks/radio/__text/radio__text.bh.js
 }());
 (function () {
 // begin: ../../common.blocks/radio/_type/radio_type_button.bh.js
@@ -2284,6 +2385,7 @@ var init = function (global, BH) {
     bh.match('radio-group', function(ctx, json) {
         ctx
             .tag('span')
+            .attrs({ role : 'radiogroup' })
             .js(true)
             .mix({ block : 'control-group' });
 
@@ -2349,6 +2451,7 @@ var init = function (global, BH) {
                     iterateOptions(option.group);
                 } else {
                     firstOption || (firstOption = option);
+                    optionIds.push(option.id = ctx.generateId());
                     if(containsVal(option.val)) {
                         option.checked = true;
                         checkedOptions.push(option);
@@ -2359,7 +2462,8 @@ var init = function (global, BH) {
 
         var isValDef = typeof json.val !== 'undefined',
             isModeCheck = ctx.mod('mode') === 'check',
-            firstOption, checkedOptions = [];
+            firstOption, checkedOptions = [],
+            optionIds = [];
 
         iterateOptions(json.options);
 
@@ -2371,6 +2475,7 @@ var init = function (global, BH) {
             .tParam('select', json)
             .tParam('firstOption', firstOption)
             .tParam('checkedOptions', checkedOptions)
+            .tParam('optionIds', optionIds)
             .content([
                 { elem : 'button' },
                 {
@@ -2424,7 +2529,10 @@ var init = function (global, BH) {
     bh.match('select__button', function(ctx, json) {
         var mods = json.blockMods || json.mods,
             select = ctx.tParam('select'),
-            checkedOptions = ctx.tParam('checkedOptions');
+            checkedOptions = ctx.tParam('checkedOptions'),
+            selectTextId = ctx.generateId();
+
+        ctx.tParam('selectTextId', selectTextId);
 
         return {
             block : 'button',
@@ -2438,12 +2546,24 @@ var init = function (global, BH) {
                 checked : mods.mode !== 'radio' && !!checkedOptions.length
             },
             id : select.id,
+            attrs : {
+                role : 'listbox',
+                'aria-owns' : ctx.tParam('optionIds').join(' '),
+                'aria-multiselectable' : mods.mode === 'check'? 'true' : null,
+                'aria-labelledby' : selectTextId
+            },
             tabIndex : select.tabIndex,
             content : [
                 ctx.content(),
                 { block : 'icon', mix : { block : 'select', elem : 'tick' } }
             ]
         };
+    });
+
+    bh.match('button__text', function(ctx) {
+        if(ctx.tParam('select')) {
+            ctx.attr('id', ctx.tParam('selectTextId'));
+        }
     });
 
 
@@ -2460,6 +2580,8 @@ var init = function (global, BH) {
                 var res = {
                         block : 'menu-item',
                         mods : { disabled : mods.disabled || option.disabled },
+                        attrs : { role : 'option' },
+                        id : option.id,
                         val : option.val,
                         js : { checkedText : option.checkedText },
                         content : option.text
@@ -2486,7 +2608,7 @@ var init = function (global, BH) {
                 mode : mods.mode
             },
             val : select.val,
-            attrs : { tabindex : null },
+            attrs : { role : null, tabindex : null },
             content : select.options.map(function(optionOrGroup) {
                 return optionOrGroup.group?
                     {
@@ -2673,6 +2795,7 @@ var init = function (global, BH) {
 // end: ../../design/common.blocks/progressbar/_theme/progressbar_theme_simple.bh.js
 }());
 };
+
 var defineAsGlobal = true;
 if (typeof modules === "object") {
     modules.define("BH", [], function(provide) {
@@ -2695,7 +2818,6 @@ init();
     });
     defineAsGlobal = false;
 } else if (typeof exports === "object") {
-
     init();
     bh["bh"] = bh;
     bh["BEMHTML"] = bh;

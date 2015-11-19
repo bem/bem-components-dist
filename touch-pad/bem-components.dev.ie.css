@@ -23,7 +23,7 @@
 }
 .icon > img,
 .icon > svg {
-  margin: -5.15em 0 -5em; /* 0.15 — magic number, empirically found */
+  margin: -5.15em 0 -5em;
   vertical-align: middle;
 }
 /* ../../common.blocks/icon/icon.styl:end */
@@ -203,7 +203,6 @@
   text-align: center;
   white-space: nowrap;
   -webkit-tap-highlight-color: rgba(0,0,0,0);
-/* Decorative element (inner background) */
 }
 .button_theme_islands::-moz-focus-inner {
   padding: 0;
@@ -301,7 +300,7 @@
   box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
 }
 .button_theme_islands.button_view_pseudo.button_focused-hard:before {
-  box-shadow: 0 0 0 1px rgba(178,142,0,0.6);
+  box-shadow: none;
 }
 .button_theme_islands.button_view_pseudo.button_pressed:before {
   background: rgba(0,0,0,0.05);
@@ -379,6 +378,7 @@
 .button_theme_islands .button__text:not(:last-child) {
   margin-right: 0;
 }
+.control-group .button_checked + .button_theme_islands:before,
 .control-group .radio_checked + .radio .button_theme_islands:before,
 .control-group .checkbox_checked + .checkbox .button_theme_islands:before {
   left: 0;
@@ -713,11 +713,6 @@ _:future,
   border-bottom-right-radius: 3px;
 }
 /* ../../design/common.blocks/checkbox-group/_theme/checkbox-group_theme_simple.styl:end */
-/* ../../design/common.blocks/dropdown/_theme/dropdown_theme_islands.styl:begin */
-.dropdown_theme_islands {
-  display: inline-block;
-}
-/* ../../design/common.blocks/dropdown/_theme/dropdown_theme_islands.styl:end */
 /* ../../design/common.blocks/popup/_theme/popup_theme_islands.styl:begin */
 .popup_theme_islands {
   display: none;
@@ -728,7 +723,6 @@ _:future,
   background: #fff;
   box-shadow: 0 0 0 1px rgba(0,0,0,0.1), 0 10px 20px -5px rgba(0,0,0,0.4);
   animation-fill-mode: forwards;
-/* Divided into two parts for better optimization */
 }
 .popup_theme_islands.popup_js_inited {
   display: block;
@@ -1275,11 +1269,6 @@ _:future,
   -webkit-tap-highlight-color: rgba(0,0,0,0);
 }
 /* ../../design/common.blocks/link/_theme/link_theme_islands.styl:end */
-/* ../../design/common.blocks/dropdown/_theme/dropdown_theme_simple.styl:begin */
-.dropdown_theme_simple {
-  display: inline-block;
-}
-/* ../../design/common.blocks/dropdown/_theme/dropdown_theme_simple.styl:end */
 /* ../../design/common.blocks/popup/_theme/popup_theme_simple.styl:begin */
 .popup_theme_simple {
   display: none;
@@ -1313,7 +1302,6 @@ _:future,
   display: inline-block;
   background: rgba(0,0,0,0.2);
   -webkit-tap-highlight-color: rgba(0,0,0,0);
-/* Decorative element (inner background) */
 }
 .input_theme_islands:before {
   position: absolute;
@@ -1342,8 +1330,6 @@ _:future,
   outline: none;
   background: none;
   -webkit-appearance: none;
-/* лишние отступы у текста */
-/* нативный крестик */
 }
 .input_theme_islands .input__control::-webkit-search-decoration {
   -webkit-appearance: none;
@@ -1692,7 +1678,6 @@ _:future,
   text-decoration: none;
   color: inherit;
   outline: none;
-/* Fit clickable area to `menu-item` size */
 }
 .menu-item_theme_islands.menu-item_type_link .link:after {
   position: absolute;
@@ -2293,9 +2278,8 @@ html {
   visibility: visible;
   animation: spin_theme_islands 1s infinite linear;
   background: 0 0 no-repeat url("data:image/gif;base64,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");
-/* `1deg` is needed to prevent FF bug after minification (`0deg` => `0`) */
   background: linear-gradient(1deg, rgba(0,0,0,0), rgba(0,0,0,0));
-  backface-visibility: hidden; /* Accelerate animation */
+  backface-visibility: hidden;
 }
 .spin_theme_islands.spin_size_xs {
   line-height: 16px;

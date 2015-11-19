@@ -649,12 +649,12 @@ provide(
     /**
      * @exports
      * @param {String} path resource link
-     * @param {Function} success to be called if the script succeeds
-     * @param {Function} error to be called if the script fails
+     * @param {Function} [success] to be called if the script succeeds
+     * @param {Function} [error] to be called if the script fails
      */
     function(path, success, error) {
         if(loaded[path]) {
-            success();
+            success && success();
             return;
         }
 
@@ -711,7 +711,7 @@ provide(/** @exports */{
      * URL for loading jQuery if it does not exist
      * @type {String}
      */
-    url : '//yastatic.net/jquery/2.1.4/jquery.min.js'
+    url : 'https://yastatic.net/jquery/2.1.4/jquery.min.js'
 });
 
 });
@@ -1838,7 +1838,7 @@ var BEM = inherit(events.Emitter, /** @lends BEM.prototype */ {
      * If the condition parameter is not passed: modVal1 is set if modVal2 was set, or vice versa.
      * @param {Object} [elem] Nested element
      * @param {String} modName Modifier name
-     * @param {String} modVal1 First modifier value
+     * @param {String} [modVal1=true] First modifier value, optional for boolean modifiers
      * @param {String} [modVal2] Second modifier value
      * @param {Boolean} [condition] Condition
      * @returns {BEM} this
@@ -7091,7 +7091,7 @@ tick.start();
 /**
  * @module vow
  * @author Filatov Dmitry <dfilatov@yandex-team.ru>
- * @version 0.4.8
+ * @version 0.4.10
  * @license
  * Dual licensed under the MIT and GPL licenses:
  *   * http://www.opensource.org/licenses/mit-license.php
@@ -7126,7 +7126,19 @@ var undef,
             };
         }
 
-        if(global.postMessage) { // modern browsers
+        var MutationObserver = global.MutationObserver || global.WebKitMutationObserver; // modern browsers
+        if(MutationObserver) {
+            var num = 1,
+                node = document.createTextNode('');
+
+            new MutationObserver(callFns).observe(node, { characterData : true });
+
+            return function(fn) {
+                enqueueFn(fn) && (node.data = (num *= -1));
+            };
+        }
+
+        if(global.postMessage) {
             var isPostMessageAsync = true;
             if(global.attachEvent) {
                 var checkAsync = function() {
@@ -7243,7 +7255,7 @@ var Deferred = function() {
 
 Deferred.prototype = /** @lends Deferred.prototype */{
     /**
-     * Returns corresponding promise.
+     * Returns the corresponding promise.
      *
      * @returns {vow:Promise}
      */
@@ -7252,7 +7264,7 @@ Deferred.prototype = /** @lends Deferred.prototype */{
     },
 
     /**
-     * Resolves corresponding promise with given `value`.
+     * Resolves the corresponding promise with the given `value`.
      *
      * @param {*} value
      *
@@ -7273,7 +7285,7 @@ Deferred.prototype = /** @lends Deferred.prototype */{
     },
 
     /**
-     * Rejects corresponding promise with given `reason`.
+     * Rejects the corresponding promise with the given `reason`.
      *
      * @param {*} reason
      *
@@ -7308,7 +7320,7 @@ Deferred.prototype = /** @lends Deferred.prototype */{
     },
 
     /**
-     * Notifies corresponding promise with given `value`.
+     * Notifies the corresponding promise with the given `value`.
      *
      * @param {*} value
      *
@@ -7402,7 +7414,7 @@ var Promise = function(resolver) {
 
 Promise.prototype = /** @lends Promise.prototype */ {
     /**
-     * Returns value of fulfilled promise or reason in case of rejection.
+     * Returns the value of the fulfilled promise or the reason in case of rejection.
      *
      * @returns {*}
      */
@@ -7411,7 +7423,7 @@ Promise.prototype = /** @lends Promise.prototype */ {
     },
 
     /**
-     * Returns `true` if promise is resolved.
+     * Returns `true` if the promise is resolved.
      *
      * @returns {Boolean}
      */
@@ -7420,7 +7432,7 @@ Promise.prototype = /** @lends Promise.prototype */ {
     },
 
     /**
-     * Returns `true` if promise is fulfilled.
+     * Returns `true` if the promise is fulfilled.
      *
      * @returns {Boolean}
      */
@@ -7429,7 +7441,7 @@ Promise.prototype = /** @lends Promise.prototype */ {
     },
 
     /**
-     * Returns `true` if promise is rejected.
+     * Returns `true` if the promise is rejected.
      *
      * @returns {Boolean}
      */
@@ -7438,12 +7450,12 @@ Promise.prototype = /** @lends Promise.prototype */ {
     },
 
     /**
-     * Adds reactions to promise.
+     * Adds reactions to the promise.
      *
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
-     * @param {Object} [ctx] Context of callbacks execution
+     * @param {Function} [onFulfilled] Callback that will be invoked with a provided value after the promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will be invoked with a provided reason after the promise has been rejected
+     * @param {Function} [onProgress] Callback that will be invoked with a provided value after the promise has been notified
+     * @param {Object} [ctx] Context of the callbacks execution
      * @returns {vow:Promise} A new promise, see https://github.com/promises-aplus/promises-spec for details
      */
     then : function(onFulfilled, onRejected, onProgress, ctx) {
@@ -7453,10 +7465,10 @@ Promise.prototype = /** @lends Promise.prototype */ {
     },
 
     /**
-     * Adds rejection reaction only. It is shortcut for `promise.then(undefined, onRejected)`.
+     * Adds only a rejection reaction. This method is a shorthand for `promise.then(undefined, onRejected)`.
      *
-     * @param {Function} onRejected Callback to be called with the value after promise has been rejected
-     * @param {Object} [ctx] Context of callback execution
+     * @param {Function} onRejected Callback that will be called with a provided 'reason' as argument after the promise has been rejected
+     * @param {Object} [ctx] Context of the callback execution
      * @returns {vow:Promise}
      */
     'catch' : function(onRejected, ctx) {
@@ -7464,10 +7476,10 @@ Promise.prototype = /** @lends Promise.prototype */ {
     },
 
     /**
-     * Adds rejection reaction only. It is shortcut for `promise.then(null, onRejected)`. It's alias for `catch`.
+     * Adds only a rejection reaction. This method is a shorthand for `promise.then(null, onRejected)`. It's also an alias for `catch`.
      *
      * @param {Function} onRejected Callback to be called with the value after promise has been rejected
-     * @param {Object} [ctx] Context of callback execution
+     * @param {Object} [ctx] Context of the callback execution
      * @returns {vow:Promise}
      */
     fail : function(onRejected, ctx) {
@@ -7475,10 +7487,10 @@ Promise.prototype = /** @lends Promise.prototype */ {
     },
 
     /**
-     * Adds resolving reaction (to fulfillment and rejection both).
+     * Adds a resolving reaction (for both fulfillment and rejection).
      *
-     * @param {Function} onResolved Callback that to be called with the value after promise has been rejected
-     * @param {Object} [ctx] Context of callback execution
+     * @param {Function} onResolved Callback that will be invoked with the promise as an argument, after the promise has been resolved.
+     * @param {Object} [ctx] Context of the callback execution
      * @returns {vow:Promise}
      */
     always : function(onResolved, ctx) {
@@ -7491,10 +7503,10 @@ Promise.prototype = /** @lends Promise.prototype */ {
     },
 
     /**
-     * Adds progress reaction.
+     * Adds a progress reaction.
      *
-     * @param {Function} onProgress Callback to be called with the value when promise has been notified
-     * @param {Object} [ctx] Context of callback execution
+     * @param {Function} onProgress Callback that will be called with a provided value when the promise has been notified
+     * @param {Object} [ctx] Context of the callback execution
      * @returns {vow:Promise}
      */
     progress : function(onProgress, ctx) {
@@ -7503,11 +7515,11 @@ Promise.prototype = /** @lends Promise.prototype */ {
 
     /**
      * Like `promise.then`, but "spreads" the array into a variadic value handler.
-     * It is useful with `vow.all` and `vow.allResolved` methods.
+     * It is useful with the `vow.all` and the `vow.allResolved` methods.
      *
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Object} [ctx] Context of callbacks execution
+     * @param {Function} [onFulfilled] Callback that will be invoked with a provided value after the promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will be invoked with a provided reason after the promise has been rejected
+     * @param {Object} [ctx] Context of the callbacks execution
      * @returns {vow:Promise}
      *
      * @example
@@ -7534,12 +7546,12 @@ Promise.prototype = /** @lends Promise.prototype */ {
 
     /**
      * Like `then`, but terminates a chain of promises.
-     * If the promise has been rejected, throws it as an exception in a future turn of the event loop.
+     * If the promise has been rejected, this method throws it's "reason" as an exception in a future turn of the event loop.
      *
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
-     * @param {Object} [ctx] Context of callbacks execution
+     * @param {Function} [onFulfilled] Callback that will be invoked with a provided value after the promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will be invoked with a provided reason after the promise has been rejected
+     * @param {Function} [onProgress] Callback that will be invoked with a provided value after the promise has been notified
+     * @param {Object} [ctx] Context of the callbacks execution
      *
      * @example
      * ```js
@@ -7556,7 +7568,7 @@ Promise.prototype = /** @lends Promise.prototype */ {
 
     /**
      * Returns a new promise that will be fulfilled in `delay` milliseconds if the promise is fulfilled,
-     * or immediately rejected if promise is rejected.
+     * or immediately rejected if the promise is rejected.
      *
      * @param {Number} delay
      * @returns {vow:Promise}
@@ -7812,7 +7824,7 @@ Promise.prototype = /** @lends Promise.prototype */ {
 /** @lends Promise */
 var staticMethods = {
     /**
-     * Coerces given `value` to a promise, or returns the `value` if it's already a promise.
+     * Coerces the given `value` to a promise, or returns the `value` if it's already a promise.
      *
      * @param {*} value
      * @returns {vow:Promise}
@@ -7822,8 +7834,8 @@ var staticMethods = {
     },
 
     /**
-     * Returns a promise to be fulfilled only after all the items in `iterable` are fulfilled,
-     * or to be rejected when any of the `iterable` is rejected.
+     * Returns a promise, that will be fulfilled only after all the items in `iterable` are fulfilled.
+     * If any of the `iterable` items gets rejected, then the returned promise will be rejected.
      *
      * @param {Array|Object} iterable
      * @returns {vow:Promise}
@@ -7833,8 +7845,8 @@ var staticMethods = {
     },
 
     /**
-     * Returns a promise to be fulfilled only when any of the items in `iterable` are fulfilled,
-     * or to be rejected when the first item is rejected.
+     * Returns a promise, that will be fulfilled only when any of the items in `iterable` are fulfilled.
+     * If any of the `iterable` items gets rejected, then the returned promise will be rejected.
      *
      * @param {Array} iterable
      * @returns {vow:Promise}
@@ -7845,7 +7857,7 @@ var staticMethods = {
 
     /**
      * Returns a promise that has already been resolved with the given `value`.
-     * If `value` is a promise, returned promise will be adopted with the state of given promise.
+     * If `value` is a promise, the returned promise will have `value`'s state.
      *
      * @param {*} value
      * @returns {vow:Promise}
@@ -7887,13 +7899,13 @@ var vow = /** @exports vow */ {
 
     /**
      * Static equivalent to `promise.then`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
-     * @param {Object} [ctx] Context of callbacks execution
+     * @param {Function} [onFulfilled] Callback that will be invoked with a provided value after the promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will be invoked with a provided reason after the promise has been rejected
+     * @param {Function} [onProgress] Callback that will be invoked with a provided value after the promise has been notified
+     * @param {Object} [ctx] Context of the callbacks execution
      * @returns {vow:Promise}
      */
     when : function(value, onFulfilled, onRejected, onProgress, ctx) {
@@ -7902,11 +7914,11 @@ var vow = /** @exports vow */ {
 
     /**
      * Static equivalent to `promise.fail`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
-     * @param {Function} onRejected Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Object} [ctx] Context of callback execution
+     * @param {Function} onRejected Callback that will be invoked with a provided reason after the promise has been rejected
+     * @param {Object} [ctx] Context of the callback execution
      * @returns {vow:Promise}
      */
     fail : function(value, onRejected, ctx) {
@@ -7915,11 +7927,11 @@ var vow = /** @exports vow */ {
 
     /**
      * Static equivalent to `promise.always`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
-     * @param {Function} onResolved Callback that will to be invoked with the reason after promise has been resolved
-     * @param {Object} [ctx] Context of callback execution
+     * @param {Function} onResolved Callback that will be invoked with the promise as an argument, after the promise has been resolved.
+     * @param {Object} [ctx] Context of the callback execution
      * @returns {vow:Promise}
      */
     always : function(value, onResolved, ctx) {
@@ -7928,11 +7940,11 @@ var vow = /** @exports vow */ {
 
     /**
      * Static equivalent to `promise.progress`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
-     * @param {Function} onProgress Callback that will to be invoked with the reason after promise has been notified
-     * @param {Object} [ctx] Context of callback execution
+     * @param {Function} onProgress Callback that will be invoked with a provided value after the promise has been notified
+     * @param {Object} [ctx] Context of the callback execution
      * @returns {vow:Promise}
      */
     progress : function(value, onProgress, ctx) {
@@ -7941,12 +7953,12 @@ var vow = /** @exports vow */ {
 
     /**
      * Static equivalent to `promise.spread`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Object} [ctx] Context of callbacks execution
+     * @param {Function} [onFulfilled] Callback that will be invoked with a provided value after the promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will be invoked with a provided reason after the promise has been rejected
+     * @param {Object} [ctx] Context of the callbacks execution
      * @returns {vow:Promise}
      */
     spread : function(value, onFulfilled, onRejected, ctx) {
@@ -7955,13 +7967,13 @@ var vow = /** @exports vow */ {
 
     /**
      * Static equivalent to `promise.done`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
-     * @param {Function} [onFulfilled] Callback that will to be invoked with the value after promise has been fulfilled
-     * @param {Function} [onRejected] Callback that will to be invoked with the reason after promise has been rejected
-     * @param {Function} [onProgress] Callback that will to be invoked with the value after promise has been notified
-     * @param {Object} [ctx] Context of callbacks execution
+     * @param {Function} [onFulfilled] Callback that will be invoked with a provided value after the promise has been fulfilled
+     * @param {Function} [onRejected] Callback that will be invoked with a provided reason after the promise has been rejected
+     * @param {Function} [onProgress] Callback that will be invoked with a provided value after the promise has been notified
+     * @param {Object} [ctx] Context of the callbacks execution
      */
     done : function(value, onFulfilled, onRejected, onProgress, ctx) {
         vow.when(value).done(onFulfilled, onRejected, onProgress, ctx);
@@ -7985,20 +7997,20 @@ var vow = /** @exports vow */ {
     },
 
     /**
-     * Coerces given `value` to a promise, or returns the `value` if it's already a promise.
+     * Coerces the given `value` to a promise, or returns the `value` if it's already a promise.
      *
      * @param {*} value
      * @returns {vow:Promise}
      */
     cast : function(value) {
-        return vow.isPromise(value)?
+        return value && !!value._vow?
             value :
             vow.resolve(value);
     },
 
     /**
      * Static equivalent to `promise.valueOf`.
-     * If given `value` is not an instance of `vow.Promise`, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
      * @returns {*}
@@ -8009,7 +8021,7 @@ var vow = /** @exports vow */ {
 
     /**
      * Static equivalent to `promise.isFulfilled`.
-     * If given `value` is not an instance of `vow.Promise`, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
      * @returns {Boolean}
@@ -8020,7 +8032,7 @@ var vow = /** @exports vow */ {
 
     /**
      * Static equivalent to `promise.isRejected`.
-     * If given `value` is not an instance of `vow.Promise`, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
      * @returns {Boolean}
@@ -8031,7 +8043,7 @@ var vow = /** @exports vow */ {
 
     /**
      * Static equivalent to `promise.isResolved`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
      * @returns {Boolean}
@@ -8042,7 +8054,7 @@ var vow = /** @exports vow */ {
 
     /**
      * Returns a promise that has already been resolved with the given `value`.
-     * If `value` is a promise, returned promise will be adopted with the state of given promise.
+     * If `value` is a promise, the returned promise will have `value`'s state.
      *
      * @param {*} value
      * @returns {vow:Promise}
@@ -8055,7 +8067,7 @@ var vow = /** @exports vow */ {
 
     /**
      * Returns a promise that has already been fulfilled with the given `value`.
-     * If `value` is a promise, returned promise will be fulfilled with fulfill/rejection value of given promise.
+     * If `value` is a promise, the returned promise will be fulfilled with the fulfill/rejection value of `value`.
      *
      * @param {*} value
      * @returns {vow:Promise}
@@ -8075,7 +8087,7 @@ var vow = /** @exports vow */ {
 
     /**
      * Returns a promise that has already been rejected with the given `reason`.
-     * If `reason` is a promise, returned promise will be rejected with fulfill/rejection value of given promise.
+     * If `reason` is a promise, the returned promise will be rejected with the fulfill/rejection value of `reason`.
      *
      * @param {*} reason
      * @returns {vow:Promise}
@@ -8087,7 +8099,7 @@ var vow = /** @exports vow */ {
     },
 
     /**
-     * Invokes a given function `fn` with arguments `args`
+     * Invokes the given function `fn` with arguments `args`
      *
      * @param {Function} fn
      * @param {...*} [args]
@@ -8130,8 +8142,8 @@ var vow = /** @exports vow */ {
     },
 
     /**
-     * Returns a promise to be fulfilled only after all the items in `iterable` are fulfilled,
-     * or to be rejected when any of the `iterable` is rejected.
+     * Returns a promise, that will be fulfilled only after all the items in `iterable` are fulfilled.
+     * If any of the `iterable` items gets rejected, the promise will be rejected.
      *
      * @param {Array|Object} iterable
      * @returns {vow:Promise}
@@ -8198,7 +8210,7 @@ var vow = /** @exports vow */ {
     },
 
     /**
-     * Returns a promise to be fulfilled only after all the items in `iterable` are resolved.
+     * Returns a promise, that will be fulfilled only after all the items in `iterable` are resolved.
      *
      * @param {Array|Object} iterable
      * @returns {vow:Promise}
@@ -8284,8 +8296,8 @@ var vow = /** @exports vow */ {
     },
 
     /**
-     * Returns a promise to be fulfilled only when any of the items in `iterable` is fulfilled,
-     * or to be rejected when all the items are rejected (with the reason of the first rejected item).
+     * Returns a promise, that will be fulfilled if any of the items in `iterable` is fulfilled.
+     * If all of the `iterable` items get rejected, the promise will be rejected (with the reason of the first rejected item).
      *
      * @param {Array} iterable
      * @returns {vow:Promise}
@@ -8314,8 +8326,8 @@ var vow = /** @exports vow */ {
     },
 
     /**
-     * Returns a promise to be fulfilled only when any of the items in `iterable` is fulfilled,
-     * or to be rejected when the first item is rejected.
+     * Returns a promise, that will be fulfilled only when any of the items in `iterable` is fulfilled.
+     * If any of the `iterable` items gets rejected, the promise will be rejected.
      *
      * @param {Array} iterable
      * @returns {vow:Promise}
@@ -8341,7 +8353,7 @@ var vow = /** @exports vow */ {
 
     /**
      * Static equivalent to `promise.delay`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
      * @param {Number} delay
@@ -8353,7 +8365,7 @@ var vow = /** @exports vow */ {
 
     /**
      * Static equivalent to `promise.timeout`.
-     * If given `value` is not a promise, then `value` is equivalent to fulfilled promise.
+     * If `value` is not a promise, then `value` is treated as a fulfilled promise.
      *
      * @param {*} value
      * @param {Number} timeout
@@ -8494,7 +8506,7 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends attac
                     this.__self.buildClass('text') + '">' +
                     escape.html(fileName) +
                 '</span>' +
-                '<i class="' + this.__self.buildClass('clear') + '"/>' +
+                '<span class="' + this.__self.buildClass('clear') + '"/>' +
             '</span>');
 
         return this.dropElemCache('file');
@@ -8573,17 +8585,15 @@ provide(BEMDOM.decl(this.name, /** @lends control.prototype */{
         },
 
         'disabled' : {
-            '*' : function(modName, modVal) {
-                this.elem('control').prop(modName, !!modVal);
-            },
-
             'true' : function() {
+                this.elem('control').attr('disabled', true);
                 this.delMod('focused');
                 typeof this._tabIndex !== 'undefined' &&
                     this.elem('control').removeAttr('tabindex');
             },
 
             '' : function() {
+                this.elem('control').removeAttr('disabled');
                 typeof this._tabIndex !== 'undefined' &&
                     this.elem('control').attr('tabindex', this._tabIndex);
             }
@@ -8696,6 +8706,11 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends butto
             'true' : function() {
                 this.__base.apply(this, arguments);
                 this.hasMod('togglable') || this.delMod('pressed');
+                this.domElem.attr('aria-disabled', true);
+            },
+            '' : function() {
+                this.__base.apply(this, arguments);
+                this.domElem.removeAttr('aria-disabled');
             }
         },
 
@@ -8815,6 +8830,31 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends butto
 
 /* ../../common.blocks/button/button.js end */
 
+/* ../../common.blocks/button/_togglable/button_togglable.js begin */
+/**
+ * @module button
+ */
+
+modules.define('button', function(provide, Button) {
+
+/**
+ * @exports
+ * @class button
+ * @bem
+ */
+provide(Button.decl({ modName : 'togglable' }, /** @lends button.prototype */{
+    onSetMod : {
+        'checked' : function(_, modVal) {
+            this.__base.apply(this, arguments);
+            this.domElem.attr('aria-pressed', !!modVal);
+        }
+    }
+}));
+
+});
+
+/* ../../common.blocks/button/_togglable/button_togglable.js end */
+
 /* ../../common.blocks/button/_type/button_type_link.js begin */
 /**
  * @module button
@@ -8841,12 +8881,16 @@ provide(Button.decl({ modName : 'type', modVal : 'link' }, /** @lends button.pro
         'disabled' : {
             'true' : function() {
                 this.__base.apply(this, arguments);
-                this.domElem.removeAttr('href');
+                this.domElem
+                    .removeAttr('href')
+                    .attr('aria-disabled', true);
             },
 
             '' : function() {
                 this.__base.apply(this, arguments);
-                this.domElem.attr('href', this._url);
+                this.domElem
+                    .attr('href', this._url)
+                    .removeAttr('aria-disabled');
             }
         }
     },
@@ -8894,8 +8938,13 @@ modules.define('checkbox', ['i-bem__dom', 'control'], function(provide, BEMDOM, 
  */
 provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends checkbox.prototype */{
     onSetMod : {
-        'checked' : function(modName, modVal) {
-            this.elem('control').prop(modName, modVal);
+        'checked' : {
+            'true' : function() {
+                this.elem('control').attr('checked', true);
+            },
+            '' : function() {
+                this.elem('control').removeAttr('checked');
+            }
         }
     },
 
@@ -8942,7 +8991,12 @@ provide(Checkbox.decl({ modName : 'type', modVal : 'button' }, /** @lends checkb
             }
         },
 
-        'checked' : proxyModToButton,
+        'checked' : function(_, checked) {
+            proxyModToButton.apply(this, arguments);
+            this._button.domElem
+                .removeAttr('aria-pressed') // checkbox accepts aria-checked instead of aria-pressed
+                .attr('aria-checked', !!checked);
+        },
         'disabled' : proxyModToButton,
         'focused' : function(modName, modVal) {
             proxyModToButton.call(this, modName, modVal, false);
@@ -9171,6 +9225,7 @@ provide(BEMDOM.decl(this.name, /** @lends dropdown.prototype */{
 
         'opened' : function(_, modVal) {
             this.getPopup().setMod('visible', modVal);
+            this._switcher.domElem.attr('aria-expanded', !!modVal);
         },
 
         'disabled' : {
@@ -9190,7 +9245,7 @@ provide(BEMDOM.decl(this.name, /** @lends dropdown.prototype */{
      */
     getPopup : function() {
         return this._popup ||
-            (this._popup = this.findBlockInside('popup')
+            (this._popup = this.findBlockOn('popup')
                 .setAnchor(this.getSwitcher())
                 .on({ modName : 'visible', modVal : '*' }, this._onPopupVisibilityChange, this));
     },
@@ -9201,7 +9256,7 @@ provide(BEMDOM.decl(this.name, /** @lends dropdown.prototype */{
      */
     getSwitcher : function() {
         return this._switcher ||
-            (this._switcher = this.findBlockInside(this.getMod('switcher')));
+            (this._switcher = this.findBlockOn(this.getMod('switcher')));
     },
 
     _onPopupVisibilityChange : function(_, data) {
@@ -9273,14 +9328,16 @@ provide(BEMDOM.decl(this.name, /** @lends popup.prototype */{
                 this
                     ._captureZIndex()
                     ._bindToParentPopup()
-                    .bindTo('pointerpress pointerclick', this._setPreventHideByClick);
+                    .bindTo('pointerpress pointerclick', this._setPreventHideByClick)
+                    .domElem.removeAttr('aria-hidden');
             },
 
             '' : function() {
                 this
                     ._releaseZIndex()
                     ._unbindFromParentPopup()
-                    .unbindFrom('pointerpress pointerclick', this._setPreventHideByClick);
+                    .unbindFrom('pointerpress pointerclick', this._setPreventHideByClick)
+                    .domElem.attr('aria-hidden', true);
             }
         }
     },
@@ -10034,7 +10091,7 @@ provide(Dropdown.decl({ modName : 'switcher', modVal : 'button' }, /** @lends dr
     }
 }, /** @lends dropdown */{
     live : function() {
-        this.liveInitOnBlockInsideEvent('click', 'button', this.onSwitcherClick);
+        this.liveInitOnBlockEvent('click', 'button', this.onSwitcherClick);
         return this.__base.apply(this, arguments);
     }
 }));
@@ -10057,7 +10114,7 @@ modules.define('dropdown', ['link'], function(provide, _, Dropdown) {
  */
 provide(Dropdown.decl({ modName : 'switcher', modVal : 'link' }, null, /** @lends dropdown */{
     live : function() {
-        this.liveInitOnBlockInsideEvent('click', 'link', this.onSwitcherClick);
+        this.liveInitOnBlockEvent('click', 'link', this.onSwitcherClick);
         return this.__base.apply(this, arguments);
     }
 }));
@@ -10095,12 +10152,16 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends link.
         'disabled' : {
             'true' : function() {
                 this.__base.apply(this, arguments);
-                this.domElem.removeAttr('href');
+                this.domElem
+                    .removeAttr('href')
+                    .attr('aria-disabled', true);
             },
 
             '' : function() {
                 this.__base.apply(this, arguments);
-                this.domElem.attr('href', this._url);
+                this.domElem
+                    .attr('href', this._url)
+                    .removeAttr('aria-disabled');
             }
         }
     },
@@ -10361,10 +10422,21 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends menu.
             }
         },
 
-        'disabled' : function(modName, modVal) {
-            this.getItems().forEach(function(menuItem){
-                menuItem.setMod(modName, modVal);
-            });
+        'disabled' : {
+            '*' : function(modName, modVal) {
+                this.__base.apply(this, arguments);
+                this.getItems().forEach(function(menuItem){
+                    menuItem.setMod(modName, modVal);
+                });
+            },
+            'true' : function() {
+                this.__base.apply(this, arguments);
+                this.domElem.attr('aria-disabled', true);
+            },
+            '' : function() {
+                this.__base.apply(this, arguments);
+                this.domElem.removeAttr('aria-disabled');
+            }
         }
     },
 
@@ -10465,9 +10537,12 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends menu.
         if(item.hasMod('hovered')) {
             this._hoveredItem && this._hoveredItem.delMod('hovered');
             this._scrollToItem(this._hoveredItem = item);
+            this.domElem.attr('aria-activedescendant', item.domElem.attr('id'));
         } else if(this._hoveredItem === item) {
             this._hoveredItem = null;
+            this.domElem.removeAttr('aria-activedescendant');
         }
+        this.emit('item-hover', { item : item });
     },
 
     /**
@@ -10596,8 +10671,18 @@ provide(BEMDOM.decl(this.name, /** @lends menu-item.prototype */{
 
         'disabled' : {
             'true' : function() {
-                this.__base.apply(this, arguments);
-                this.delMod('hovered');
+                this
+                    .delMod('hovered')
+                    .domElem.attr('aria-disabled', true);
+            },
+            '' : function() {
+                this.domElem.removeAttr('aria-disabled');
+            }
+        },
+
+        'checked' : {
+            '*' : function(_, modVal) {
+                this.domElem.attr('aria-checked', !!modVal);
             }
         }
     },
@@ -11216,7 +11301,8 @@ provide(BEMDOM.decl(this.name, /** @lends progressbar.prototype */{
      * @returns {progressbar} this
      */
     setVal : function(val) {
-        this.elem('bar').css('width', (this._val = val) + '%');
+        this.domElem.attr('aria-valuenow', (this._val = val) + '%');
+        this.elem('bar').css('width', val + '%');
         return this;
     },
 
@@ -11254,8 +11340,13 @@ modules.define(
  */
 provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends radio.prototype */{
     onSetMod : {
-        'checked' : function(modName, modVal) {
-            this.elem('control').prop(modName, modVal);
+        'checked' : {
+            'true' : function() {
+                this.elem('control').attr('checked', true);
+            },
+            '' : function() {
+                this.elem('control').removeAttr('checked');
+            }
         }
     },
 
@@ -11546,8 +11637,8 @@ provide(RadioGroup.decl({ modName : 'mode', modVal : 'radio-check' }, /** @lends
 
 modules.define(
     'select',
-    ['i-bem__dom', 'popup', 'menu', 'button', 'jquery', 'dom', 'keyboard__codes', 'strings__escape'],
-    function(provide, BEMDOM, Popup, Menu, Button, $, dom, keyCodes, escape) {
+    ['i-bem__dom', 'popup', 'menu', 'menu-item', 'button', 'jquery', 'dom', 'keyboard__codes', 'strings__escape'],
+    function(provide, BEMDOM, Popup, Menu, MenuItem, Button, $, dom, keyCodes, escape) {
 
 /**
  * @exports
@@ -11584,7 +11675,8 @@ provide(BEMDOM.decl(this.name, /** @lends select.prototype */{
                 this._menu = this._popup.findBlockInside('menu')
                     .on({
                         'change' : this._onMenuChange,
-                        'item-click' : this._onMenuItemClick
+                        'item-click' : this._onMenuItemClick,
+                        'item-hover' : this._onMenuItemHover
                     }, this);
 
                 this._isPointerPressInProgress = false;
@@ -11631,11 +11723,15 @@ provide(BEMDOM.decl(this.name, /** @lends select.prototype */{
             '*' : function(modName, modVal) {
                 this._button.setMod(modName, modVal);
                 this._menu.setMod(modName, modVal);
-                this.elem('control').prop('disabled', modVal);
             },
 
             'true' : function() {
+                this.elem('control').attr('disabled', true);
                 this._popup.delMod('visible');
+            },
+
+            '' : function() {
+                this.elem('control').removeAttr('disabled');
             }
         }
     },
@@ -11759,6 +11855,13 @@ provide(BEMDOM.decl(this.name, /** @lends select.prototype */{
     },
 
     _onMenuItemClick : function() {},
+
+    _onMenuItemHover : function(e, data) {
+        var item = data.item;
+        item.hasMod('hovered')?
+            this._button.domElem.attr('aria-activedescendant', item.domElem.attr('id')) :
+            this._button.domElem.removeAttr('aria-activedescendant');
+    },
 
     _updateControl : function() {},
 
@@ -12499,12 +12602,10 @@ function BH() {
          * @returns {Boolean|Object|Ctx}
          */
         js: function(js, force) {
-            if (js === undefined) {
-                return this.ctx.js;
-            }
-            this.ctx.js = force ?
-                (js === true ? {} : js) :
-                js ? this.extend(this.ctx.js, js) : this.ctx.js;
+            var ctx = this.ctx;
+            if (js === undefined) return ctx.js;
+            if (force || ctx.js === undefined) ctx.js = js;
+            else if (ctx.js !== false) ctx.js = this.extend(ctx.js, js);
             return this;
         },
         /**
@@ -13218,14 +13319,7 @@ if (typeof module !== 'undefined') {
 }
 
 var bh = new BH();
-bh.setOptions({
-    jsAttrName: "data-bem",
-    jsAttrScheme: "json",
-    jsCls: "i-bem",
-    jsElem: true,
-    escapeContent: false,
-    clsNobaseMods: false
-});
+bh.setOptions({"jsAttrName":"data-bem","jsAttrScheme":"json"});
 var init = function (global, BH) {
 (function () {
 // begin: ../../libs/bem-core/common.blocks/i-bem/__i18n/i-bem__i18n.bh.js
@@ -13569,11 +13663,11 @@ var init = function (global, BH) {
 // begin: ../../common.blocks/icon/icon.bh.js
 
     bh.match('icon', function(ctx, json) {
-        var attrs = { 'aria-hidden' : 'true' },
+        var attrs = {},
             url = json.url;
         if(url) attrs.style = 'background-image:url(' + url + ')';
         ctx
-            .tag('i')
+            .tag('span')
             .attrs(attrs);
     });
 
@@ -13653,17 +13747,28 @@ var init = function (global, BH) {
 // begin: ../../common.blocks/attach/__clear/attach__clear.bh.js
 
     bh.match('attach__clear', function(ctx) {
-        ctx.tag('i');
+        ctx.tag('span');
     });
 
 // end: ../../common.blocks/attach/__clear/attach__clear.bh.js
+}());
+(function () {
+// begin: ../../common.blocks/button/_togglable/button_togglable.bh.js
+
+    bh.match(['button_togglable_check', 'button_togglable_radio'], function(ctx) {
+        ctx.attr('aria-pressed', String(!!ctx.mod('checked')));
+    });
+
+// end: ../../common.blocks/button/_togglable/button_togglable.bh.js
 }());
 (function () {
 // begin: ../../common.blocks/button/_type/button_type_link.bh.js
 
 
     bh.match('button_type_link', function(ctx, json) {
-        ctx.tag('a');
+        ctx
+            .tag('a')
+            .attr('role', 'link');
 
         json.target && ctx.attr('target', json.target);
         ctx.mod('disabled')?
@@ -13694,7 +13799,10 @@ var init = function (global, BH) {
                         val : json.val
                     }
                 },
-                json.text
+                json.text && {
+                    elem : 'text',
+                    content : json.text
+                }
             ]);
     });
 
@@ -13732,6 +13840,17 @@ var init = function (global, BH) {
 // end: ../../common.blocks/checkbox/__control/checkbox__control.bh.js
 }());
 (function () {
+// begin: ../../common.blocks/checkbox/__text/checkbox__text.bh.js
+
+    bh.match('checkbox__text', function(ctx) {
+        ctx
+            .tag('span')
+            .attrs({ role : 'presentation' });
+    });
+
+// end: ../../common.blocks/checkbox/__text/checkbox__text.bh.js
+}());
+(function () {
 // begin: ../../common.blocks/checkbox/_type/checkbox_type_button.bh.js
 
 
@@ -13746,6 +13865,11 @@ var init = function (global, BH) {
                 disabled : mods.disabled,
                 theme : mods.theme,
                 size : mods.size
+            },
+            attrs : {
+                role : 'checkbox',
+                'aria-pressed' : null,
+                'aria-checked' : String(!!mods.checked)
             },
             title : json.title,
             content : [
@@ -13774,6 +13898,7 @@ var init = function (global, BH) {
     bh.match('checkbox-group', function(ctx, json) {
         ctx
             .tag('span')
+            .attrs({ role : 'group' })
             .js(true)
             .mix({ block : 'control-group' });
 
@@ -13809,53 +13934,81 @@ var init = function (global, BH) {
 // end: ../../common.blocks/checkbox-group/checkbox-group.bh.js
 }());
 (function () {
+// begin: ../../common.blocks/control-group/control-group.bh.js
+
+    bh.match('control-group', function(ctx) {
+        ctx.attrs({ role : 'group' });
+    });
+
+// end: ../../common.blocks/control-group/control-group.bh.js
+}());
+(function () {
 // begin: ../../common.blocks/dropdown/dropdown.bh.js
 
 
-    bh.match('dropdown', function(ctx, json) {
-        ctx.js(true);
+    bh.match({
+        'dropdown' : function(ctx) {
+            var dropdown = ctx.json();
 
-        var popup = json.popup;
+            ctx
+                .js(ctx.extend({ id : ctx.generateId() }, ctx.js()))
+                .tParam('dropdown', dropdown)
+                .tParam('popupId', ctx.generateId())
+                .tParam('theme', ctx.mod('theme'))
+                .tParam('mix', [dropdown].concat(
+                    dropdown.switcher.mix || [],
+                    dropdown.mix || []));
 
-        if(ctx.isSimple(popup) || popup.block !== 'popup') {
-            popup = { block : 'popup', content : popup };
+            return [{ elem : 'switcher' }, { elem : 'popup' }];
+        },
+
+        'dropdown__popup' : function(ctx) {
+            var dropdown = ctx.tParam('dropdown'),
+                popup = dropdown.popup;
+
+            if(ctx.isSimple(popup) || popup.block !== 'popup') {
+                popup = { block : 'popup', content : popup };
+            }
+
+            var popupMods = popup.mods || (popup.mods = {}),
+                popupAttrs = popup.attrs || (popup.attrs = {});
+            popupMods.theme || (popupMods.theme = ctx.tParam('theme'));
+            popupMods.hasOwnProperty('autoclosable') || (popupMods.autoclosable = true);
+
+            popupMods.target = 'anchor';
+            popupAttrs.id = ctx.tParam('popupId');
+
+            popup.mix = [dropdown].concat(popup.mix || []);
+
+            return popup;
+        },
+
+        'dropdown__switcher' : function(ctx) {
+            var dropdown = ctx.tParam('dropdown'),
+                switcher = dropdown.switcher;
+
+            switcher.block && (switcher.mix = ctx.tParam('mix'));
+
+            return switcher;
         }
-
-        var popupMods = popup.mods || (popup.mods = {});
-        popupMods.theme || (popupMods.theme = ctx.mod('theme'));
-        popupMods.hasOwnProperty('autoclosable') || (popupMods.autoclosable = true);
-
-        popupMods.target = 'anchor';
-
-        ctx.content([
-           { elem : 'switcher', content : json.switcher },
-           popup
-        ], true);
     });
 
 
 // end: ../../common.blocks/dropdown/dropdown.bh.js
 }());
 (function () {
-// begin: ../../common.blocks/dropdown/__switcher/dropdown__switcher.bh.js
-
-    bh.match('dropdown__switcher', function(ctx) {
-        ctx.tag(false);
-    });
-
-// end: ../../common.blocks/dropdown/__switcher/dropdown__switcher.bh.js
-}());
-(function () {
 // begin: ../../common.blocks/popup/popup.bh.js
 
     bh.match('popup', function(ctx, json) {
-        ctx.js({
-            mainOffset : json.mainOffset,
-            secondaryOffset : json.secondaryOffset,
-            viewportOffset : json.viewportOffset,
-            directions : json.directions,
-            zIndexGroupLevel : json.zIndexGroupLevel
-        });
+        ctx
+            .js({
+                mainOffset : json.mainOffset,
+                secondaryOffset : json.secondaryOffset,
+                viewportOffset : json.viewportOffset,
+                directions : json.directions,
+                zIndexGroupLevel : json.zIndexGroupLevel
+            })
+            .attrs({ 'aria-hidden' : 'true' });
     });
 
 // end: ../../common.blocks/popup/popup.bh.js
@@ -13865,19 +14018,28 @@ var init = function (global, BH) {
 
 
     bh.match('dropdown_switcher_button__switcher', function(ctx, json) {
-        var content = ctx.content();
-        if(Array.isArray(content)) return content;
+        var dropdown = ctx.tParam('dropdown'),
+            switcher = dropdown.switcher;
 
-        var res = ctx.isSimple(content)?
-            { block : 'button', text : content } :
-            content;
+        if(Array.isArray(switcher)) return switcher;
+
+        var res = ctx.isSimple(switcher)?
+            { block : 'button', text : switcher } :
+            switcher;
 
         if(res.block === 'button') {
             var resMods = res.mods || (res.mods = {}),
+                resAttrs = res.attrs || (res.attrs = {}),
                 dropdownMods = json.blockMods || json.mods;
             resMods.size || (resMods.size = dropdownMods.size);
             resMods.theme || (resMods.theme = dropdownMods.theme);
             resMods.disabled = dropdownMods.disabled;
+
+            resAttrs['aria-haspopup'] = 'true';
+            resAttrs['aria-controls'] = ctx.tParam('popupId');
+            resAttrs['aria-expanded'] = 'false';
+
+            res.mix = ctx.tParam('mix');
         }
 
         return res;
@@ -13891,18 +14053,27 @@ var init = function (global, BH) {
 
 
     bh.match('dropdown_switcher_link__switcher', function(ctx, json) {
-        var content = ctx.content();
-        if(Array.isArray(content)) return content;
+        var dropdown = ctx.tParam('dropdown'),
+            switcher = dropdown.switcher;
 
-        var res = ctx.isSimple(content)?
-            { block : 'link', mods : { pseudo : true }, content : content } :
-            content;
+        if(Array.isArray(switcher)) return switcher;
+
+        var res = ctx.isSimple(switcher)?
+            { block : 'link', mods : { pseudo : true }, content : switcher } :
+            switcher;
 
         if(res.block === 'link') {
             var resMods = res.mods || (res.mods = {}),
+                resAttrs = res.attrs || (res.attrs = {}),
                 dropdownMods = json.blockMods || json.mods;
             resMods.theme || (resMods.theme = dropdownMods.theme);
             resMods.disabled = dropdownMods.disabled;
+
+            resAttrs['aria-haspopup'] = 'true';
+            resAttrs['aria-controls'] = ctx.tParam('popupId');
+            resAttrs['aria-expanded'] = 'false';
+
+            res.mix = ctx.tParam('mix');
         }
 
         return res;
@@ -13923,7 +14094,7 @@ var init = function (global, BH) {
         var url = typeof json.url === 'object'? // url could contain bemjson
                 bh.apply(json.url) :
                 json.url,
-            attrs = {},
+            attrs = { role : 'link' },
             tabIndex;
 
         if(!ctx.mod('disabled')) {
@@ -13936,6 +14107,7 @@ var init = function (global, BH) {
             ctx.js(true);
         } else {
             ctx.js(url? { url : url } : true);
+            attrs['aria-disabled'] = 'true';
         }
 
         typeof tabIndex === 'undefined' || (attrs.tabindex = tabIndex);
@@ -13953,7 +14125,7 @@ var init = function (global, BH) {
 // begin: ../../common.blocks/link/_pseudo/link_pseudo.bh.js
 
     bh.match('link_pseudo', function(ctx, json) {
-        json.url || ctx.tag('span');
+        json.url || ctx.tag('span').attr('role', 'button');
     });
 
 // end: ../../common.blocks/link/_pseudo/link_pseudo.bh.js
@@ -13970,12 +14142,13 @@ var init = function (global, BH) {
             ctx
                 .tag('img')
                 .attrs({
+                    role : null,
                     src : json.url,
                     width : json.width,
                     height : json.height,
                     alt : json.alt,
                     title : json.title
-                });
+                }, true);
         }
     });
 
@@ -14063,7 +14236,7 @@ var init = function (global, BH) {
 // begin: ../../common.blocks/input/__clear/input__clear.bh.js
 
     bh.match('input__clear', function(ctx) {
-        ctx.tag('i');
+        ctx.tag('span');
     });
 
 // end: ../../common.blocks/input/__clear/input__clear.bh.js
@@ -14091,18 +14264,18 @@ var init = function (global, BH) {
 
 
     bh.match('menu', function(ctx, json) {
-        var menuMods = {
-            theme : ctx.mod('theme'),
-            disabled : ctx.mod('disabled')
-        };
+        var mods = ctx.mods(),
+            attrs = { role : 'menu' };
 
         ctx
             .js(true)
-            .tParam('menuMods', menuMods)
+            .tParam('menuMods', mods)
             .mix({ elem : 'control' });
 
-        var attrs = { role : 'menu' };
-        ctx.mod('disabled') || (attrs.tabindex = 0);
+        mods.disabled?
+            attrs['aria-disabled'] = 'true' :
+            attrs.tabindex = 0;
+
         ctx.attrs(attrs);
 
         var firstItem,
@@ -14148,7 +14321,11 @@ var init = function (global, BH) {
 // begin: ../../common.blocks/menu-item/menu-item.bh.js
 
     bh.match('menu-item', function(ctx, json) {
-        var menuMods = ctx.tParam('menuMods');
+        var menuMods = ctx.tParam('menuMods'),
+            menuMode = menuMods && menuMods.mode,
+            role = menuMode?
+                        (menuMode === 'check'? 'menuitemcheckbox' : 'menuitemradio') :
+                        'menuitem';
 
         menuMods && ctx.mods({
             theme : menuMods.theme,
@@ -14157,7 +14334,12 @@ var init = function (global, BH) {
 
         ctx
             .js({ val : json.val })
-            .attr('role', 'menuitem');
+            .attrs({
+                role : role,
+                id : ctx.generateId(),
+                'aria-disabled' : ctx.mod('disabled') && 'true',
+                'aria-checked' : menuMode && String(!!ctx.mod('checked'))
+            });
     });
 
 // end: ../../common.blocks/menu-item/menu-item.bh.js
@@ -14177,14 +14359,23 @@ var init = function (global, BH) {
 
 
     bh.match('menu__group', function(ctx, json) {
+        var title = json.title;
+
         ctx.attr('role', 'group');
 
-        var title = json.title;
         if(typeof title !== 'undefined') {
+            var titleId = ctx.generateId();
             ctx
-                .attr('aria-label', title, true)
+                .attr('aria-labelledby', titleId)
                 .content([
-                    { elem : 'group-title', content : title },
+                    {
+                        elem : 'group-title',
+                        attrs : {
+                            role : 'presentation',
+                            id : titleId
+                        },
+                        content : title
+                    },
                     ctx.content()
                 ], true);
         }
@@ -14192,15 +14383,6 @@ var init = function (global, BH) {
 
 
 // end: ../../common.blocks/menu/__group/menu__group.bh.js
-}());
-(function () {
-// begin: ../../common.blocks/menu/__group-title/menu__group-title.bh.js
-
-    bh.match('menu__group-title', function(ctx) {
-        ctx.attr('role', 'presentation');
-    });
-
-// end: ../../common.blocks/menu/__group-title/menu__group-title.bh.js
 }());
 (function () {
 // begin: ../../common.blocks/menu/_mode/menu_mode_radio.bh.js
@@ -14244,6 +14426,10 @@ var init = function (global, BH) {
                 js : { zIndexGroupLevel : json.zIndexGroupLevel || 20 },
                 mods : { autoclosable : ctx.mod('autoclosable') }
             })
+            .attrs({
+                role : 'dialog',
+                'aria-hidden' : 'true'
+            })
             .content({
                 elem : 'table',
                 content : {
@@ -14268,6 +14454,10 @@ var init = function (global, BH) {
 
         ctx
             .js({ val : val })
+            .attrs({
+                role : 'progressbar',
+                'aria-valuenow' : val + '%'  // NOTE: JAWS doesn't add 'percent' automatically
+            })
             .content({
                 elem : 'bar',
                 attrs : { style : 'width:' + val + '%' }
@@ -14295,7 +14485,10 @@ var init = function (global, BH) {
                         val : json.val
                     }
                 },
-                json.text
+                json.text && {
+                    elem : 'text',
+                    content : json.text
+                }
             ]);
     });
 
@@ -14334,6 +14527,17 @@ var init = function (global, BH) {
 
 
 // end: ../../common.blocks/radio/__control/radio__control.bh.js
+}());
+(function () {
+// begin: ../../common.blocks/radio/__text/radio__text.bh.js
+
+    bh.match('radio__text', function(ctx) {
+        ctx
+            .tag('span')
+            .attrs({ role : 'presentation' });
+    });
+
+// end: ../../common.blocks/radio/__text/radio__text.bh.js
 }());
 (function () {
 // begin: ../../common.blocks/radio/_type/radio_type_button.bh.js
@@ -14380,6 +14584,7 @@ var init = function (global, BH) {
     bh.match('radio-group', function(ctx, json) {
         ctx
             .tag('span')
+            .attrs({ role : 'radiogroup' })
             .js(true)
             .mix({ block : 'control-group' });
 
@@ -14445,6 +14650,7 @@ var init = function (global, BH) {
                     iterateOptions(option.group);
                 } else {
                     firstOption || (firstOption = option);
+                    optionIds.push(option.id = ctx.generateId());
                     if(containsVal(option.val)) {
                         option.checked = true;
                         checkedOptions.push(option);
@@ -14455,7 +14661,8 @@ var init = function (global, BH) {
 
         var isValDef = typeof json.val !== 'undefined',
             isModeCheck = ctx.mod('mode') === 'check',
-            firstOption, checkedOptions = [];
+            firstOption, checkedOptions = [],
+            optionIds = [];
 
         iterateOptions(json.options);
 
@@ -14467,6 +14674,7 @@ var init = function (global, BH) {
             .tParam('select', json)
             .tParam('firstOption', firstOption)
             .tParam('checkedOptions', checkedOptions)
+            .tParam('optionIds', optionIds)
             .content([
                 { elem : 'button' },
                 {
@@ -14520,7 +14728,10 @@ var init = function (global, BH) {
     bh.match('select__button', function(ctx, json) {
         var mods = json.blockMods || json.mods,
             select = ctx.tParam('select'),
-            checkedOptions = ctx.tParam('checkedOptions');
+            checkedOptions = ctx.tParam('checkedOptions'),
+            selectTextId = ctx.generateId();
+
+        ctx.tParam('selectTextId', selectTextId);
 
         return {
             block : 'button',
@@ -14534,12 +14745,24 @@ var init = function (global, BH) {
                 checked : mods.mode !== 'radio' && !!checkedOptions.length
             },
             id : select.id,
+            attrs : {
+                role : 'listbox',
+                'aria-owns' : ctx.tParam('optionIds').join(' '),
+                'aria-multiselectable' : mods.mode === 'check'? 'true' : null,
+                'aria-labelledby' : selectTextId
+            },
             tabIndex : select.tabIndex,
             content : [
                 ctx.content(),
                 { block : 'icon', mix : { block : 'select', elem : 'tick' } }
             ]
         };
+    });
+
+    bh.match('button__text', function(ctx) {
+        if(ctx.tParam('select')) {
+            ctx.attr('id', ctx.tParam('selectTextId'));
+        }
     });
 
 
@@ -14556,6 +14779,8 @@ var init = function (global, BH) {
                 var res = {
                         block : 'menu-item',
                         mods : { disabled : mods.disabled || option.disabled },
+                        attrs : { role : 'option' },
+                        id : option.id,
                         val : option.val,
                         js : { checkedText : option.checkedText },
                         content : option.text
@@ -14582,7 +14807,7 @@ var init = function (global, BH) {
                 mode : mods.mode
             },
             val : select.val,
-            attrs : { tabindex : null },
+            attrs : { role : null, tabindex : null },
             content : select.options.map(function(optionOrGroup) {
                 return optionOrGroup.group?
                     {
@@ -14769,6 +14994,7 @@ var init = function (global, BH) {
 // end: ../../design/common.blocks/progressbar/_theme/progressbar_theme_simple.bh.js
 }());
 };
+
 var defineAsGlobal = true;
 if (typeof modules === "object") {
     modules.define("BH", [], function(provide) {
@@ -14791,7 +15017,6 @@ init();
     });
     defineAsGlobal = false;
 } else if (typeof exports === "object") {
-
     init();
     bh["bh"] = bh;
     bh["BEMHTML"] = bh;
