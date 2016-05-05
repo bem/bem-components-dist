@@ -8419,7 +8419,10 @@ provide(BEMDOM.decl(this.name, /** @lends control.prototype */{
                     // if block already has focused mod, we need to focus control
                     this.hasMod('focused') && this._focus();
 
-                this._tabIndex = this.elem('control').attr('tabindex');
+                this._tabIndex = typeof this.params.tabIndex !== 'undefined'?
+                    this.params.tabIndex :
+                    this.elem('control').attr('tabindex');
+
                 if(this.hasMod('disabled') && this._tabIndex !== 'undefined')
                     this.elem('control').removeAttr('tabindex');
             }
@@ -14973,7 +14976,11 @@ block('menu')(
         return attrs;
     }),
     js()(true),
-    mix()([{ elem : 'control' }])
+    mix()({ elem : 'control' }),
+    mod('disabled', true)
+        .js()(function() {
+            return this.extend(applyNext(), { tabIndex : 0 });
+        })
 );
 
 /* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/menu.bemhtml */

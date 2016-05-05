@@ -2069,13 +2069,16 @@ var init = function (global, BH) {
             attrs = { role : 'menu' };
 
         ctx
-            .js(true)
             .tParam('menuMods', mods)
             .mix({ elem : 'control' });
 
-        mods.disabled?
-            attrs['aria-disabled'] = 'true' :
+        if(mods.disabled) {
+            attrs['aria-disabled'] = 'true';
+            ctx.js({ tabIndex : 0 });
+        } else {
             attrs.tabindex = 0;
+            ctx.js(true);
+        }
 
         ctx.attrs(attrs);
 

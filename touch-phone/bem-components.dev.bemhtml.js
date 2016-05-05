@@ -1989,7 +1989,7 @@ block('page')(
                     content : 'width=device-width,' +
                         (this._zoom?
                             'initial-scale=1' :
-                            'maximum-scale=1,initial-scale=1,user-scalable=0')
+                            'maximum-scale=1,initial-scale=1,user-scalable=no')
                 }
             },
             { elem : 'meta', attrs : { name : 'format-detection', content : 'telephone=no' } },
@@ -2781,7 +2781,11 @@ block('menu')(
         return attrs;
     }),
     js()(true),
-    mix()([{ elem : 'control' }])
+    mix()({ elem : 'control' }),
+    mod('disabled', true)
+        .js()(function() {
+            return this.extend(applyNext(), { tabIndex : 0 });
+        })
 );
 
 /* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/menu.bemhtml */

@@ -2749,7 +2749,11 @@ block('menu')(
         return attrs;
     }),
     js()(true),
-    mix()([{ elem : 'control' }])
+    mix()({ elem : 'control' }),
+    mod('disabled', true)
+        .js()(function() {
+            return this.extend(applyNext(), { tabIndex : 0 });
+        })
 );
 
 /* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/menu.bemhtml */
