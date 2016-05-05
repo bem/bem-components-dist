@@ -711,7 +711,7 @@ provide(/** @exports */{
      * URL for loading jQuery if it does not exist
      * @type {String}
      */
-    url : 'https://yastatic.net/jquery/2.1.4/jquery.min.js'
+    url : 'https://yastatic.net/jquery/2.2.0/jquery.min.js'
 });
 
 });
@@ -3143,7 +3143,7 @@ DOM = BEM.decl('i-bem__dom',/** @lends BEMDOM.prototype */{
      * Sets a modifier for a block/nested element
      * @param {jQuery} [elem] Nested element
      * @param {String} modName Modifier name
-     * @param {String} modVal Modifier value
+     * @param {String|Boolean} [modVal=true] Modifier value
      * @returns {BEMDOM} this
      */
     setMod : function(elem, modName, modVal) {
@@ -4050,7 +4050,7 @@ DOM = BEM.decl('i-bem__dom',/** @lends BEMDOM.prototype */{
 /**
  * Returns a block on a DOM element and initializes it if necessary
  * @param {String} blockName Block name
- * @param {Object} params Block parameters
+ * @param {Object} [params] Block parameters
  * @returns {BEMDOM}
  */
 $.fn.bem = function(blockName, params) {
@@ -6347,20 +6347,17 @@ modules.define('jquery', function(provide, $) {
 $.each({
     pointerpress : 'pointerdown',
     pointerrelease : 'pointerup pointercancel'
-}, function(spec, origEvent) {
+}, function(fix, origEvent) {
     function eventHandler(e) {
-        var res, origType = e.handleObj.origType;
-
         if(e.which === 1) {
-            e.type = spec;
-            res = $.event.dispatch.apply(this, arguments);
-            e.type = origType;
+            var fixedEvent = cloneEvent(e);
+            fixedEvent.type = fix;
+            fixedEvent.originalEvent = e;
+            return $.event.dispatch.call(this, fixedEvent);
         }
-
-        return res;
     }
 
-    $.event.special[spec] = {
+    $.event.special[fix] = {
         setup : function() {
             $(this).on(origEvent, eventHandler);
             return false;
@@ -6371,6 +6368,16 @@ $.each({
         }
     };
 });
+
+function cloneEvent(event) {
+    var eventCopy = $.extend(new $.Event(), event);
+    if(event.preventDefault) {
+        eventCopy.preventDefault = function() {
+            event.preventDefault();
+        };
+    }
+    return eventCopy;
+}
 
 provide($);
 
@@ -8771,7 +8778,7 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends butto
         this._isPointerPressInProgress = false;
         this.unbindFromDoc('pointerrelease', this._onPointerRelease);
 
-        if(dom.contains(this.elem('control'), $(e.target))) {
+        if(e.originalEvent.type === 'pointerup' && dom.contains(this.elem('control'), $(e.target))) {
             this._focusedByPointer = true;
             this._focus();
             this._focusedByPointer = false;
@@ -8940,10 +8947,14 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends check
     onSetMod : {
         'checked' : {
             'true' : function() {
-                this.elem('control').attr('checked', true);
+                this.elem('control')
+                    .attr('checked', true)
+                    .prop('checked', true);
             },
             '' : function() {
-                this.elem('control').removeAttr('checked');
+                this.elem('control')
+                    .removeAttr('checked')
+                    .prop('checked', false);
             }
         }
     },
@@ -11342,10 +11353,14 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends radio
     onSetMod : {
         'checked' : {
             'true' : function() {
-                this.elem('control').attr('checked', true);
+                this.elem('control')
+                    .attr('checked', true)
+                    .prop('checked', true);
             },
             '' : function() {
-                this.elem('control').removeAttr('checked');
+                this.elem('control')
+                    .removeAttr('checked')
+                    .prop('checked', false);
             }
         }
     },

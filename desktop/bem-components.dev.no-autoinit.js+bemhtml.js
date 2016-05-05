@@ -718,6 +718,139 @@ provide(/** @exports */{
 
 /* ../../libs/bem-core/common.blocks/jquery/__config/jquery__config.js end */
 
+/* ../../libs/bem-core/desktop.blocks/jquery/__config/jquery__config.js begin */
+/**
+ * @module jquery__config
+ * @description Configuration for jQuery
+ */
+
+modules.define(
+    'jquery__config',
+    ['ua', 'objects'],
+    function(provide, ua, objects, base) {
+
+provide(
+    ua.msie && parseInt(ua.version, 10) < 9?
+        objects.extend(
+            base,
+            {
+                url : 'https://yastatic.net/jquery/1.12.0/jquery.min.js'
+            }) :
+        base);
+
+});
+
+/* ../../libs/bem-core/desktop.blocks/jquery/__config/jquery__config.js end */
+
+/* ../../libs/bem-core/desktop.blocks/ua/ua.js begin */
+/**
+ * @module ua
+ * @description Detect some user agent features (works like jQuery.browser in jQuery 1.8)
+ * @see http://code.jquery.com/jquery-migrate-1.1.1.js
+ */
+
+modules.define('ua', function(provide) {
+
+var ua = navigator.userAgent.toLowerCase(),
+    match = /(chrome)[ \/]([\w.]+)/.exec(ua) ||
+        /(webkit)[ \/]([\w.]+)/.exec(ua) ||
+        /(opera)(?:.*version|)[ \/]([\w.]+)/.exec(ua) ||
+        /(msie) ([\w.]+)/.exec(ua) ||
+        ua.indexOf('compatible') < 0 && /(mozilla)(?:.*? rv:([\w.]+)|)/.exec(ua) ||
+        [],
+    matched = {
+        browser : match[1] || '',
+        version : match[2] || '0'
+    },
+    browser = {};
+
+if(matched.browser) {
+    browser[matched.browser] = true;
+    browser.version = matched.version;
+}
+
+if(browser.chrome) {
+    browser.webkit = true;
+} else if(browser.webkit) {
+    browser.safari = true;
+}
+
+/**
+ * @exports
+ * @type Object
+ */
+provide(browser);
+
+});
+
+/* ../../libs/bem-core/desktop.blocks/ua/ua.js end */
+
+/* ../../libs/bem-core/common.blocks/objects/objects.vanilla.js begin */
+/**
+ * @module objects
+ * @description A set of helpers to work with JavaScript objects
+ */
+
+modules.define('objects', function(provide) {
+
+var hasOwnProp = Object.prototype.hasOwnProperty;
+
+provide(/** @exports */{
+    /**
+     * Extends a given target by
+     * @param {Object} target object to extend
+     * @param {Object} source
+     * @returns {Object}
+     */
+    extend : function(target, source) {
+        (typeof target !== 'object' || target === null) && (target = {});
+
+        for(var i = 1, len = arguments.length; i < len; i++) {
+            var obj = arguments[i];
+            if(obj) {
+                for(var key in obj) {
+                    hasOwnProp.call(obj, key) && (target[key] = obj[key]);
+                }
+            }
+        }
+
+        return target;
+    },
+
+    /**
+     * Check whether a given object is empty (contains no enumerable properties)
+     * @param {Object} obj
+     * @returns {Boolean}
+     */
+    isEmpty : function(obj) {
+        for(var key in obj) {
+            if(hasOwnProp.call(obj, key)) {
+                return false;
+            }
+        }
+
+        return true;
+    },
+
+    /**
+     * Generic iterator function over object
+     * @param {Object} obj object to iterate
+     * @param {Function} fn callback
+     * @param {Object} [ctx] callbacks's context
+     */
+    each : function(obj, fn, ctx) {
+        for(var key in obj) {
+            if(hasOwnProp.call(obj, key)) {
+                ctx? fn.call(ctx, obj[key], key) : fn(obj[key], key);
+            }
+        }
+    }
+});
+
+});
+
+/* ../../libs/bem-core/common.blocks/objects/objects.vanilla.js end */
+
 /* ../../libs/bem-core/common.blocks/events/events.vanilla.js begin */
 /**
  * @module events
@@ -2381,72 +2514,6 @@ var global = this.global,
 });
 
 /* ../../libs/bem-core/common.blocks/next-tick/next-tick.vanilla.js end */
-
-/* ../../libs/bem-core/common.blocks/objects/objects.vanilla.js begin */
-/**
- * @module objects
- * @description A set of helpers to work with JavaScript objects
- */
-
-modules.define('objects', function(provide) {
-
-var hasOwnProp = Object.prototype.hasOwnProperty;
-
-provide(/** @exports */{
-    /**
-     * Extends a given target by
-     * @param {Object} target object to extend
-     * @param {Object} source
-     * @returns {Object}
-     */
-    extend : function(target, source) {
-        (typeof target !== 'object' || target === null) && (target = {});
-
-        for(var i = 1, len = arguments.length; i < len; i++) {
-            var obj = arguments[i];
-            if(obj) {
-                for(var key in obj) {
-                    hasOwnProp.call(obj, key) && (target[key] = obj[key]);
-                }
-            }
-        }
-
-        return target;
-    },
-
-    /**
-     * Check whether a given object is empty (contains no enumerable properties)
-     * @param {Object} obj
-     * @returns {Boolean}
-     */
-    isEmpty : function(obj) {
-        for(var key in obj) {
-            if(hasOwnProp.call(obj, key)) {
-                return false;
-            }
-        }
-
-        return true;
-    },
-
-    /**
-     * Generic iterator function over object
-     * @param {Object} obj object to iterate
-     * @param {Function} fn callback
-     * @param {Object} [ctx] callbacks's context
-     */
-    each : function(obj, fn, ctx) {
-        for(var key in obj) {
-            if(hasOwnProp.call(obj, key)) {
-                ctx? fn.call(ctx, obj[key], key) : fn(obj[key], key);
-            }
-        }
-    }
-});
-
-});
-
-/* ../../libs/bem-core/common.blocks/objects/objects.vanilla.js end */
 
 /* ../../libs/bem-core/common.blocks/i-bem/_elem-instances/i-bem_elem-instances.js begin */
 /**
@@ -4573,23 +4640,6 @@ provide(BEMDOM.decl(/** @lends BEMDOM.prototype */{
 
 /* ../../libs/bem-core/common.blocks/i-bem/__dom/_elem-instances/i-bem__dom_elem-instances.js end */
 
-/* ../../libs/bem-core/common.blocks/i-bem/__dom/_init/i-bem__dom_init_auto.js begin */
-/**
- * Auto initialization on DOM ready
- */
-
-modules.require(
-    ['i-bem__dom_init', 'jquery', 'next-tick'],
-    function(init, $, nextTick) {
-
-$(function() {
-    nextTick(init);
-});
-
-});
-
-/* ../../libs/bem-core/common.blocks/i-bem/__dom/_init/i-bem__dom_init_auto.js end */
-
 /* ../../libs/bem-core/common.blocks/idle/idle.js begin */
 /**
  * @module idle
@@ -6551,264 +6601,6 @@ provide(load);
 
 /* ../../libs/bem-core/common.blocks/loader/_type/loader_type_bundle.js end */
 
-/* ../../libs/bem-core/touch.blocks/ua/ua.js begin */
-/**
- * @module ua
- * @description Detect some user agent features
- */
-
-modules.define('ua', ['jquery'], function(provide, $) {
-
-var win = window,
-    doc = document,
-    ua = navigator.userAgent,
-    platform = {},
-    device = {},
-    match;
-
-if(match = ua.match(/Android\s+([\d.]+)/)) {
-    platform.android = match[1];
-} else if(ua.match(/\sHTC[\s_].*AppleWebKit/)) {
-    // фэйковый десктопный UA по умолчанию у некоторых HTC (например, HTC Sensation)
-    platform.android = '2.3';
-} else if(match = ua.match(/iPhone\sOS\s([\d_]+)/)) {
-    platform.ios = match[1].replace(/_/g, '.');
-    device.iphone = true;
-} else if(match = ua.match(/iPad.*OS\s([\d_]+)/)) {
-    platform.ios = match[1].replace(/_/g, '.');
-    device.ipad = true;
-} else if(match = ua.match(/Bada\/([\d.]+)/)) {
-    platform.bada = match[1];
-} else if(match = ua.match(/Windows\sPhone.*\s([\d.]+)/)) {
-    platform.wp = match[1];
-} else {
-    platform.other = true;
-}
-
-var browser = {};
-if(win.opera) {
-    browser.opera = win.opera.version();
-} else if(match = ua.match(/\sCrMo\/([\d.]+)/)) {
-    browser.chrome = match[1];
-}
-
-var support = {},
-    connection = navigator.connection;
-
-if(connection) {
-    var connections = {};
-    connections[connection.ETHERNET] = connections[connection.WIFI] = 'wifi';
-    connections[connection.CELL_3G] = '3g';
-    connections[connection.CELL_2G] = '2g';
-    support.connection = connections[connection.type];
-}
-
-var videoElem = doc.createElement('video');
-support.video = !!(videoElem.canPlayType && videoElem.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"').replace(/no/, ''));
-
-support.svg = !!(doc.createElementNS && doc.createElementNS('http://www.w3.org/2000/svg', 'svg').createSVGRect);
-
-var plugins = navigator.plugins,
-    i = plugins.length;
-if(plugins && i) {
-    var plugin;
-    while(plugin = plugins[--i])
-        if(plugin.name === 'Shockwave Flash' && (match = plugin.description.match(/Flash ([\d.]+)/))) {
-            support.flash = match[1];
-            break;
-        }
-}
-
-// http://stackoverflow.com/a/6603537
-var lastOrient = win.innerWidth > win.innerHeight,
-    lastWidth = win.innerWidth,
-    $win = $(win).bind('resize', function() {
-        var width = win.innerWidth,
-            height = win.innerHeight,
-            landscape = width > height;
-
-        // http://alxgbsn.co.uk/2012/08/27/trouble-with-web-browser-orientation/
-        // check previous device width to disallow Android shrink page and change orientation on opening software keyboard
-        if(landscape !== lastOrient && width !== lastWidth) {
-            $win.trigger('orientchange', {
-                landscape : landscape,
-                width : width,
-                height : height
-            });
-
-            lastOrient = landscape;
-            lastWidth = width;
-        }
-    });
-
-provide(/** @exports */{
-    /**
-     * User agent
-     * @type String
-     */
-    ua : ua,
-
-    /**
-     * iOS version
-     * @type String|undefined
-     */
-    ios : platform.ios,
-
-    /**
-     * Is iPhone
-     * @type Boolean|undefined
-     */
-    iphone : device.iphone,
-
-    /**
-     * Is iPad
-     * @type Boolean|undefined
-     */
-    ipad : device.ipad,
-
-    /**
-     * Android version
-     * @type String|undefined
-     */
-    android : platform.android,
-
-    /**
-     * Bada version
-     * @type String|undefined
-     */
-    bada : platform.bada,
-
-    /**
-     * Windows Phone version
-     * @type String|undefined
-     */
-    wp : platform.wp,
-
-    /**
-     * Undetected platform
-     * @type Boolean|undefined
-     */
-    other : platform.other,
-
-    /**
-     * Opera version
-     * @type String|undefined
-     */
-    opera : browser.opera,
-
-    /**
-     * Chrome version
-     * @type String|undefined
-     */
-    chrome : browser.chrome,
-
-    /**
-     * Screen size, one of: large, normal, small
-     * @type String
-     */
-    screenSize : screen.width > 320? 'large' : screen.width < 320? 'small' : 'normal',
-
-    /**
-     * Device pixel ratio
-     * @type Number
-     */
-    dpr : win.devicePixelRatio || 1,
-
-    /**
-     * Connection type, one of: wifi, 3g, 2g
-     * @type String
-     */
-    connection : support.connection,
-
-    /**
-     * Flash version
-     * @type String|undefined
-     */
-    flash : support.flash,
-
-    /**
-     * Is video supported?
-     * @type Boolean
-     */
-    video : support.video,
-
-    /**
-     * Is SVG supported?
-     * @type Boolean
-     */
-    svg : support.svg,
-
-    /**
-     * Viewport width
-     * @type Number
-     */
-    width : win.innerWidth,
-
-    /**
-     * Viewport height
-     * @type Number
-     */
-    height : win.innerHeight,
-
-    /**
-     * Is landscape oriented?
-     * @type Boolean
-     */
-    landscape : lastOrient
-});
-
-});
-
-/* ../../libs/bem-core/touch.blocks/ua/ua.js end */
-
-/* ../../libs/bem-core/touch.blocks/ua/__dom/ua__dom.js begin */
-/**
- * @module ua
- * @description Use ua module to provide user agent features by modifiers and update some on orient change
- */
-modules.define('ua', ['i-bem__dom'], function(provide, BEMDOM, ua) {
-
-provide(/** @exports */BEMDOM.decl(this.name,
-    {
-        onSetMod : {
-            'js' : {
-                'inited' : function() {
-                    this
-                        .setMod('platform',
-                            ua.ios? 'ios' :
-                                ua.android? 'android' :
-                                    ua.bada? 'bada' :
-                                        ua.wp? 'wp' :
-                                            ua.opera? 'opera' :
-                                                'other')
-                        .setMod('browser',
-                            ua.opera? 'opera' :
-                                ua.chrome? 'chrome' :
-                                    '')
-                        .setMod('ios', ua.ios? ua.ios.charAt(0) : '')
-                        .setMod('android', ua.android? ua.android.charAt(0) : '')
-                        .setMod('ios-subversion', ua.ios? ua.ios.match(/(\d\.\d)/)[1].replace('.', '') : '')
-                        .setMod('screen-size', ua.screenSize)
-                        .setMod('svg', ua.svg? 'yes' : 'no')
-                        .setMod('orient', ua.landscape? 'landscape' : 'portrait')
-                        .bindToWin(
-                            'orientchange',
-                            function(e, data) {
-                                ua.width = data.width;
-                                ua.height = data.height;
-                                ua.landscape = data.landscape;
-                                this.setMod('orient', data.landscape? 'landscape' : 'portrait');
-                            });
-                }
-            }
-        }
-    },
-    ua));
-
-});
-
-/* ../../libs/bem-core/touch.blocks/ua/__dom/ua__dom.js end */
-
 /* ../../libs/bem-core/common.blocks/querystring/querystring.vanilla.js begin */
 /**
  * @module querystring
@@ -8426,6 +8218,41 @@ defineAsGlobal && (global.vow = vow);
 
 /* ../../libs/bem-core/common.blocks/vow/vow.vanilla.js end */
 
+/* ../../libs/bem-core/desktop.blocks/jquery/__event/_type/jquery__event_type_winresize.js begin */
+/**
+ * @module jquery
+ */
+
+modules.define('jquery', ['ua'], function(provide, ua, $) {
+
+// IE8 and below, https://msdn.microsoft.com/en-us/library/ie/ms536959%28v=vs.85%29.aspx
+if(ua.msie && document.documentMode < 9) {
+    var win = window,
+        $win = $(window),
+        winWidth = $win.width(),
+        winHeight = $win.height();
+
+    ($.event.special.resize || ($.event.special.resize = {})).preDispatch = function(e) {
+        if(e.target === win) {
+            var curWinWidth = $win.width(),
+                curWinHeight = $win.height();
+
+            if(curWinWidth === winWidth && curWinHeight === winHeight) {
+                return false;
+            } else {
+                winWidth = curWinWidth;
+                winHeight = curWinHeight;
+            }
+        }
+    };
+}
+
+provide($);
+
+});
+
+/* ../../libs/bem-core/desktop.blocks/jquery/__event/_type/jquery__event_type_winresize.js end */
+
 /* ../../common.blocks/attach/attach.js begin */
 /**
  * @module attach
@@ -8668,6 +8495,60 @@ provide(BEMDOM.decl(this.name, /** @lends control.prototype */{
 });
 
 /* ../../common.blocks/control/control.js end */
+
+/* ../../desktop.blocks/control/control.js begin */
+/** @module control */
+
+modules.define(
+    'control',
+    function(provide, Control) {
+
+provide(Control.decl({
+    beforeSetMod : {
+        'hovered' : {
+            'true' : function() {
+                return !this.hasMod('disabled');
+            }
+        }
+    },
+
+    onSetMod : {
+        'disabled' : {
+            'true' : function() {
+                this.__base.apply(this, arguments);
+                this.delMod('hovered');
+            }
+        },
+
+        'hovered' : {
+            'true' : function() {
+                this.bindTo('mouseleave', this._onMouseLeave);
+            },
+
+            '' : function() {
+                this.unbindFrom('mouseleave', this._onMouseLeave);
+            }
+        }
+    },
+
+    _onMouseOver : function() {
+        this.setMod('hovered');
+    },
+
+    _onMouseLeave : function() {
+        this.delMod('hovered');
+    }
+}, {
+    live : function() {
+        return this
+            .liveBindTo('mouseover', this.prototype._onMouseOver)
+            .__base.apply(this, arguments);
+    }
+}));
+
+});
+
+/* ../../desktop.blocks/control/control.js end */
 
 /* ../../common.blocks/button/button.js begin */
 /**
@@ -10322,12 +10203,37 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends input
 
 /* ../../common.blocks/input/input.js end */
 
-/* ../../touch.blocks/input/input.js begin */
+/* ../../desktop.blocks/input/input.js begin */
 /**
  * @module input
  */
 
-modules.define('input', function(provide, Input) {
+modules.define('input', ['tick', 'idle'], function(provide, tick, idle, Input) {
+
+var instances = [],
+    boundToTick,
+    bindToTick = function() {
+        boundToTick = true;
+        tick
+            .on('tick', update)
+            .start();
+        idle
+            .on({
+                idle : function() {
+                    tick.un('tick', update);
+                },
+                wakeup : function() {
+                    tick.on('tick', update);
+                }
+            })
+            .start();
+    },
+    update = function() {
+        var instance, i = 0;
+        while(instance = instances[i++]) {
+            instance.setVal(instance.elem('control').val());
+        }
+    };
 
 /**
  * @exports
@@ -10335,19 +10241,49 @@ modules.define('input', function(provide, Input) {
  * @bem
  */
 provide(Input.decl(/** @lends input.prototype */{
-    _onInputChanged : function() {
-        this.setVal(this.elem('control').val());
-    }
-}, /** @lends input */{
-    live : function() {
-        this.liveBindTo('control', 'input', this.prototype._onInputChanged);
-        return this.__base.apply(this, arguments);
+    onSetMod : {
+        'js' : {
+            'inited' : function() {
+                this.__base.apply(this, arguments);
+
+                boundToTick || bindToTick();
+
+                // сохраняем индекс в массиве инстансов чтобы потом быстро из него удалять
+                this._instanceIndex = instances.push(this) - 1;
+            },
+
+            '' : function() {
+                this.__base.apply(this, arguments);
+
+                // удаляем из общего массива instances
+                instances.splice(this._instanceIndex, 1);
+                // понижаем _instanceIndex всем тем кто был добавлен в instances после нас
+                var i = this._instanceIndex, instance;
+                while(instance = instances[i++]) --instance._instanceIndex;
+            }
+        }
+    },
+
+    /**
+     * Нормализация установки фокуса для IE
+     * @private
+     * @override
+     */
+    _focus : function() {
+        var input = this.elem('control')[0];
+        if(input.createTextRange && !input.selectionStart) {
+            var range = input.createTextRange();
+            range.move('character', input.value.length);
+            range.select();
+        } else {
+            input.focus();
+        }
     }
 }));
 
 });
 
-/* ../../touch.blocks/input/input.js end */
+/* ../../desktop.blocks/input/input.js end */
 
 /* ../../common.blocks/input/_has-clear/input_has-clear.js begin */
 /**
@@ -10396,6 +10332,27 @@ provide(Input.decl({ modName : 'has-clear', modVal : true }, /** @lends input.pr
 });
 
 /* ../../common.blocks/input/_has-clear/input_has-clear.js end */
+
+/* ../../desktop.blocks/input/_has-clear/input_has-clear.js begin */
+modules.define('input', function(provide, Input) {
+
+provide(Input.decl({ modName : 'has-clear', modVal : true }, {
+    _onBoxClick : function() {
+        this.hasMod(this.elem('clear'), 'visible') || this.setMod('focused');
+    }
+}, {
+    live : function() {
+        this.liveBindTo('box', 'pointerclick', function() {
+            this._onBoxClick();
+        });
+
+        return this.__base.apply(this, arguments);
+    }
+}));
+
+});
+
+/* ../../desktop.blocks/input/_has-clear/input_has-clear.js end */
 
 /* ../../common.blocks/menu/menu.js begin */
 /**
@@ -12098,6 +12055,75 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Input }));
 });
 
 /* ../../common.blocks/textarea/textarea.js end */
+
+/* ../../desktop.blocks/input/_autofocus/input_autofocus.js begin */
+modules.define('input', ['dom'], function(provide, dom, Input) {
+
+provide(Input.decl({ modName : 'autofocus', modVal : true }, {
+    onSetMod : {
+        'js' : {
+            'inited' : function() {
+                this.__base.apply(this, arguments);
+                this.bindToDoc('keydown', this._onDocKeyDown);
+            }
+        },
+
+        'focused' : {
+            'true' : function() {
+                this.__base.apply(this, arguments);
+                this
+                    .unbindFromDoc('keydown')
+                    .delMod('autofocus');
+            }
+        }
+    },
+
+    _onDocKeyDown : function(e) {
+        if(this.hasMod('focused')) return;
+
+        if(isTextKey(e) && !dom.isEditable(dom.getFocused())) {
+            // ставим курсор в конец строки и добавляем пробел
+            // пробел нужен для того чтобы мы начинали набирать после автофокуса новое слово
+            var inputDomNode = this.elem('control')[0],
+                val = this.getVal();
+
+            if(val.length && val.substr(val.length - 1, 1) !== ' ') {
+                val += ' ';
+                this.setVal(val);
+            }
+
+            if(inputDomNode.createTextRange) { // IE
+                var r = inputDomNode.createTextRange();
+                r.collapse(false);
+                r.select();
+            } else if(inputDomNode.selectionStart) { // браузеры
+                inputDomNode.setSelectionRange(val.length, val.length);
+            }
+
+            this.setMod('focused');
+        }
+    }
+}));
+
+/**
+ * Хелпер для определения типа нажатой клавиши
+ * возвращает true в случае, если нажатая клавиша вводит текст
+ */
+function isTextKey(e) {
+    var keyCode = e.charCode || e.keyCode || e.which || 0;
+    // TODO: проверку можно сделать проще, если проверять обратное -- что нажата системная клавиша
+    if(!e.ctrlKey && !e.altKey && !e.metaKey && (
+            (keyCode >= 48 && keyCode <= 57) ||     // isDigit
+            (keyCode >= 96 && keyCode <= 105) ||    // isNumpad
+            (keyCode >= 65 && keyCode <= 90) ||     // isLetter
+            (keyCode >= 1025 && keyCode <= 1071) || // isLetter (кирилица в Opera)
+            keyCode === 0))                         // isLetter (кирилица в FF)
+        return true;
+}
+
+});
+
+/* ../../desktop.blocks/input/_autofocus/input_autofocus.js end */
 
 /* ../../design/common.blocks/popup/_theme/popup_theme_islands.js begin */
 modules.define('popup', ['objects'], function(provide, objects, Popup) {
@@ -14026,6 +14052,18 @@ var api = new BEMHTML({"wrap":false});
 /// ------ BEM-XJST User-code Start -----
 /// -------------------------------------
 api.compile(function(match, once, wrap, elemMatch, block, elem, mode, mod, elemMod, def, tag, attrs, cls, js, jsAttr, bem, mix, content, replace, extend, oninit, xjstOptions, local, applyCtx, applyNext, apply) {
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/ua.bemhtml */
+block('ua')(
+    tag()('script'),
+    bem()(false),
+    content()([
+        '(function(e,c){',
+            'e[c]=e[c].replace(/(ua_js_)no/g,"$1yes");',
+        '})(document.documentElement,"className");'
+    ])
+);
+
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/ua.bemhtml */
 /* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/i-bem/__i18n/_dummy/i-bem__i18n_dummy_yes.bemhtml */
 /*global oninit, BEM, exports */
 
@@ -14153,56 +14191,6 @@ block('page')(
 );
 
 /* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/page.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/page/page.bemhtml */
-block('page')(
-
-    def()(function() {
-        return applyNext({ _zoom : this.ctx.zoom });
-    }),
-
-    elem('head').content()(function() {
-        return [
-            applyNext(),
-            {
-                elem : 'meta',
-                attrs : {
-                    name : 'viewport',
-                    content : 'width=device-width,' +
-                        (this._zoom?
-                            'initial-scale=1' :
-                            'maximum-scale=1,initial-scale=1,user-scalable=0')
-                }
-            },
-            { elem : 'meta', attrs : { name : 'format-detection', content : 'telephone=no' } },
-            { elem : 'link', attrs : { name : 'apple-mobile-web-app-capable', content : 'yes' } }
-        ];
-    }),
-
-    mix()(function() {
-        var mix = applyNext(),
-            uaMix = [{ block : 'ua', attrs : { nonce : this._nonceCsp }, js : true }];
-
-        return mix? uaMix.concat(mix) : uaMix;
-    })
-);
-
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/page/page.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/ua.bemhtml */
-block('ua')(
-    tag()('script'),
-    bem()(false),
-    content()([
-        '(function(e,c){',
-            'e[c]=e[c].replace(/(ua_js_)no/g,"$1yes");',
-        '})(document.documentElement,"className");'
-    ])
-);
-
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/ua.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/ua/ua.bemhtml */
-block('ua').js()(true);
-
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/ua/ua.bemhtml */
 /* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/__css/page__css.bemhtml */
 block('page').elem('css')(
     bem()(false),
@@ -14214,6 +14202,33 @@ block('page').elem('css')(
 );
 
 /* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/__css/page__css.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/desktop.blocks/page/__css/page__css.bemhtml */
+block('page').elem('css').match(function() {
+    return this.ctx.hasOwnProperty('ie');
+})(
+    wrap()(function() {
+        var ie = this.ctx.ie,
+            hideRule = !ie?
+                ['gt IE 9', '<!-->', '<!--'] :
+                ie === '!IE'?
+                    [ie, '<!-->', '<!--'] :
+                    [ie, '', ''];
+
+        return [
+            '<!--[if ' + hideRule[0] + ']>' + hideRule[1],
+            this.ctx,
+            hideRule[2] + '<![endif]-->'
+        ];
+    }),
+    def().match(function() { return this.ctx.ie === true; })(function() {
+        var url = this.ctx.url;
+        return applyCtx([6, 7, 8, 9].map(function(v) {
+            return { elem : 'css', url : url + '.ie' + v + '.css', ie : 'IE ' + v };
+        }));
+    })
+);
+
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/desktop.blocks/page/__css/page__css.bemhtml */
 /* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/__js/page__js.bemhtml */
 block('page').elem('js')(
     bem()(false),
@@ -14243,38 +14258,32 @@ block('ua').content()(function() {
 });
 
 /* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/page/__icon/page__icon.bemhtml */
-block('page').elem('icon').def()(function() {
-    var ctx = this.ctx;
-    return applyCtx([
-        ctx.src16 && {
-            elem : 'link',
-            attrs : { rel : 'shortcut icon', href : ctx.src16 }
-        },
-        ctx.src114 && {
-            elem : 'link',
-            attrs : {
-                rel : 'apple-touch-icon-precomposed',
-                sizes : '114x114',
-                href : ctx.src114
-            }
-        },
-        ctx.src72 && {
-            elem : 'link',
-            attrs : {
-                rel : 'apple-touch-icon-precomposed',
-                sizes : '72x72',
-                href : ctx.src72
-            }
-        },
-        ctx.src57 && {
-            elem : 'link',
-            attrs : { rel : 'apple-touch-icon-precomposed', href : ctx.src57 }
-        }
-    ]);
-});
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/desktop.blocks/page/__conditional-comment/page__conditional-comment.bemhtml */
+block('page').elem('conditional-comment')(
+    tag()(false),
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/page/__icon/page__icon.bemhtml */
+    content()(function() {
+        var ctx = this.ctx,
+            cond = ctx.condition
+                .replace('<', 'lt')
+                .replace('>', 'gt')
+                .replace('=', 'e'),
+            hasNegation = cond.indexOf('!') > -1,
+            includeOthers = ctx.msieOnly === false,
+            hasNegationOrIncludeOthers = hasNegation || includeOthers;
+
+        return [
+            '<!--[if ' + cond + ']>',
+            includeOthers? '<!' : '',
+            hasNegationOrIncludeOthers? '-->' : '',
+            applyNext(),
+            hasNegationOrIncludeOthers? '<!--' : '',
+            '<![endif]-->'
+        ];
+    })
+);
+
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/desktop.blocks/page/__conditional-comment/page__conditional-comment.bemhtml */
 /* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/attach.bemhtml */
 block('attach')(
     def()(function() { return applyNext({ _attach : this.ctx }); }),
@@ -14872,21 +14881,6 @@ block('input').elem('control')(
 );
 
 /* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__control/input__control.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/touch.blocks/input/__control/input__control.bemhtml */
-block('input').elem('control')(
-
-    attrs()(function() {
-        return this.extend({
-            autocomplete : 'off',
-            autocorrect : 'off',
-            autocapitalize : 'off',
-            spellcheck : 'false'
-        }, applyNext());
-    })
-
-);
-
-/* end: /Users/tadatuta/projects/bem/bem-components-2/touch.blocks/input/__control/input__control.bemhtml */
 /* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_has-clear/input_has-clear.bemhtml */
 block('input').mod('has-clear', true).elem('box')
     .content()(function() {

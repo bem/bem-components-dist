@@ -4573,23 +4573,6 @@ provide(BEMDOM.decl(/** @lends BEMDOM.prototype */{
 
 /* ../../libs/bem-core/common.blocks/i-bem/__dom/_elem-instances/i-bem__dom_elem-instances.js end */
 
-/* ../../libs/bem-core/common.blocks/i-bem/__dom/_init/i-bem__dom_init_auto.js begin */
-/**
- * Auto initialization on DOM ready
- */
-
-modules.require(
-    ['i-bem__dom_init', 'jquery', 'next-tick'],
-    function(init, $, nextTick) {
-
-$(function() {
-    nextTick(init);
-});
-
-});
-
-/* ../../libs/bem-core/common.blocks/i-bem/__dom/_init/i-bem__dom_init_auto.js end */
-
 /* ../../libs/bem-core/common.blocks/idle/idle.js begin */
 /**
  * @module idle

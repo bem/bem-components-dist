@@ -711,7 +711,7 @@ provide(/** @exports */{
      * URL for loading jQuery if it does not exist
      * @type {String}
      */
-    url : 'https://yastatic.net/jquery/2.1.4/jquery.min.js'
+    url : 'https://yastatic.net/jquery/2.2.0/jquery.min.js'
 });
 
 });
@@ -3143,7 +3143,7 @@ DOM = BEM.decl('i-bem__dom',/** @lends BEMDOM.prototype */{
      * Sets a modifier for a block/nested element
      * @param {jQuery} [elem] Nested element
      * @param {String} modName Modifier name
-     * @param {String} modVal Modifier value
+     * @param {String|Boolean} [modVal=true] Modifier value
      * @returns {BEMDOM} this
      */
     setMod : function(elem, modName, modVal) {
@@ -4050,7 +4050,7 @@ DOM = BEM.decl('i-bem__dom',/** @lends BEMDOM.prototype */{
 /**
  * Returns a block on a DOM element and initializes it if necessary
  * @param {String} blockName Block name
- * @param {Object} params Block parameters
+ * @param {Object} [params] Block parameters
  * @returns {BEMDOM}
  */
 $.fn.bem = function(blockName, params) {
@@ -6347,20 +6347,17 @@ modules.define('jquery', function(provide, $) {
 $.each({
     pointerpress : 'pointerdown',
     pointerrelease : 'pointerup pointercancel'
-}, function(spec, origEvent) {
+}, function(fix, origEvent) {
     function eventHandler(e) {
-        var res, origType = e.handleObj.origType;
-
         if(e.which === 1) {
-            e.type = spec;
-            res = $.event.dispatch.apply(this, arguments);
-            e.type = origType;
+            var fixedEvent = cloneEvent(e);
+            fixedEvent.type = fix;
+            fixedEvent.originalEvent = e;
+            return $.event.dispatch.call(this, fixedEvent);
         }
-
-        return res;
     }
 
-    $.event.special[spec] = {
+    $.event.special[fix] = {
         setup : function() {
             $(this).on(origEvent, eventHandler);
             return false;
@@ -6371,6 +6368,16 @@ $.each({
         }
     };
 });
+
+function cloneEvent(event) {
+    var eventCopy = $.extend(new $.Event(), event);
+    if(event.preventDefault) {
+        eventCopy.preventDefault = function() {
+            event.preventDefault();
+        };
+    }
+    return eventCopy;
+}
 
 provide($);
 
@@ -8771,7 +8778,7 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends butto
         this._isPointerPressInProgress = false;
         this.unbindFromDoc('pointerrelease', this._onPointerRelease);
 
-        if(dom.contains(this.elem('control'), $(e.target))) {
+        if(e.originalEvent.type === 'pointerup' && dom.contains(this.elem('control'), $(e.target))) {
             this._focusedByPointer = true;
             this._focus();
             this._focusedByPointer = false;
@@ -8940,10 +8947,14 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends check
     onSetMod : {
         'checked' : {
             'true' : function() {
-                this.elem('control').attr('checked', true);
+                this.elem('control')
+                    .attr('checked', true)
+                    .prop('checked', true);
             },
             '' : function() {
-                this.elem('control').removeAttr('checked');
+                this.elem('control')
+                    .removeAttr('checked')
+                    .prop('checked', false);
             }
         }
     },
@@ -11342,10 +11353,14 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends radio
     onSetMod : {
         'checked' : {
             'true' : function() {
-                this.elem('control').attr('checked', true);
+                this.elem('control')
+                    .attr('checked', true)
+                    .prop('checked', true);
             },
             '' : function() {
-                this.elem('control').removeAttr('checked');
+                this.elem('control')
+                    .removeAttr('checked')
+                    .prop('checked', false);
             }
         }
     },
@@ -12164,9 +12179,13 @@ provide(Progressbar.decl({ modName : 'theme', modVal : 'simple' }, /** @lends pr
 
 /* ../../design/common.blocks/progressbar/_theme/progressbar_theme_simple.js end */
 
+var BEMHTML;
+
 (function(global) {
-var buildBemXjst = function(exports, __bem_xjst_libs__){
-/// -------------------------------------
+    function buildBemXjst(__bem_xjst_libs__) {
+        var exports = {};
+
+        /// -------------------------------------
 /// --------- BEM-XJST Runtime Start ----
 /// -------------------------------------
 var BEMHTML = function(module, exports) {
@@ -12178,7 +12197,7 @@ function ClassBuilder(options) {
 exports.ClassBuilder = ClassBuilder;
 
 ClassBuilder.prototype.build = function build(block, elem) {
-  if (elem === undefined)
+  if (!elem)
     return block;
   else
     return block + this.elemDelim + elem;
@@ -12249,8 +12268,6 @@ Context.prototype.identify = utils.identify;
 Context.prototype.xmlEscape = utils.xmlEscape;
 Context.prototype.attrEscape = utils.attrEscape;
 Context.prototype.jsAttrEscape = utils.jsAttrEscape;
-
-Context.prototype.BEM = {};
 
 Context.prototype.isFirst = function isFirst() {
   return this.position === 1;
@@ -12961,11 +12978,10 @@ BEMHTML.prototype.renderClose = function renderClose(prefix,
       if (attr === undefined)
         continue;
 
-      // TODO(indutny): support `this.reapply()`
       out += ' ' + name + '="' +
         utils.attrEscape(utils.isSimple(attr) ?
                          attr :
-                         this.reapply(attr)) +
+                         this.context.reapply(attr)) +
                          '"';
     }
   }
@@ -13011,7 +13027,7 @@ BEMHTML.prototype.renderMix = function renderMix(entity,
   var out = '';
   for (var i = 0; i < mix.length; i++) {
     var item = mix[i];
-    if (item === undefined)
+    if (!item)
       continue;
     if (typeof item === 'string')
       item = { block: item, elem: undefined };
@@ -13088,8 +13104,10 @@ BEMHTML.prototype.buildModsClasses = function buildModsClasses(block,
   var res = '';
 
   var modName;
+
+  /*jshint -W089 */
   for (modName in mods) {
-    if (!mods.hasOwnProperty(modName))
+    if (!mods.hasOwnProperty(modName) || modName === '')
       continue;
 
     var modVal = mods[modName];
@@ -13328,11 +13346,8 @@ function MatchTemplate(mode, template) {
   }
 
   // Insert late predicates
-  for (var i = postpone.length - 1; i >= 0; i--)
-    this.predicates[i + j] = this.predicates[i];
-  for (var i = 0; i < postpone.length; i++)
-    this.predicates[i] = postpone[i];
-  j += postpone.length;
+  for (var i = 0; i < postpone.length; i++, j++)
+    this.predicates[j] = postpone[i];
 
   if (this.predicates.length !== j)
     this.predicates.length = j;
@@ -13407,7 +13422,7 @@ Match.prototype.exec = function exec(context) {
   for (var i = 0; i < this.count; i++) {
     if ((mask & bit) === 0) {
       template = this.templates[i];
-      for (var j = template.predicates.length - 1; j >= 0; j--) {
+      for (var j = 0; j < template.predicates.length; j++) {
         var pred = template.predicates[j];
 
         /* jshint maxdepth : false */
@@ -13416,7 +13431,7 @@ Match.prototype.exec = function exec(context) {
       }
 
       // All predicates matched!
-      if (j === -1)
+      if (j === template.predicates.length)
         break;
     }
 
@@ -13789,11 +13804,17 @@ Tree.prototype.match = function match() {
 };
 
 Tree.prototype.once = function once() {
+  if (arguments.length) throw new Error('Predicate should not have arguments');
   return this.match(new OnceMatch());
 };
 
+Tree.prototype.applyMode = function applyMode(args, mode) {
+  if (args.length) throw new Error('Predicate should not have arguments');
+  return this.mode(mode);
+};
+
 Tree.prototype.wrap = function wrap() {
-  return this.def().match(new WrapMatch(this.refs));
+  return this.def.apply(this, arguments).match(new WrapMatch(this.refs));
 };
 
 Tree.prototype.xjstOptions = function xjstOptions(options) {
@@ -13827,22 +13848,48 @@ Tree.prototype.elemMod = function elemMod(name, value) {
   return this.match(new PropertyMatch([ 'elemMods', name ], value));
 };
 
-Tree.prototype.def = function def() { return this.mode('default'); };
-Tree.prototype.tag = function tag() { return this.mode('tag'); };
-Tree.prototype.attrs = function attrs() { return this.mode('attrs'); };
-Tree.prototype.cls = function cls() { return this.mode('cls'); };
-Tree.prototype.js = function js() { return this.mode('js'); };
-Tree.prototype.jsAttr = function jsAttr() { return this.mode('jsAttr'); };
-Tree.prototype.bem = function bem() { return this.mode('bem'); };
-Tree.prototype.mix = function mix() { return this.mode('mix'); };
-Tree.prototype.content = function content() { return this.mode('content'); };
+Tree.prototype.def = function def() {
+  return this.applyMode(arguments, 'default');
+};
+
+Tree.prototype.tag = function tag() {
+  return this.applyMode(arguments, 'tag');
+};
+
+Tree.prototype.attrs = function attrs() {
+  return this.applyMode(arguments, 'attrs');
+};
+
+Tree.prototype.cls = function cls() {
+  return this.applyMode(arguments, 'cls');
+};
+
+Tree.prototype.js = function js() {
+  return this.applyMode(arguments, 'js');
+};
+
+Tree.prototype.jsAttr = function jsAttr() {
+  return this.applyMode(arguments, 'jsAttr');
+};
+
+Tree.prototype.bem = function bem() {
+  return this.applyMode(arguments, 'bem');
+};
+
+Tree.prototype.mix = function mix() {
+  return this.applyMode(arguments, 'mix');
+};
+
+Tree.prototype.content = function content() {
+  return this.applyMode(arguments, 'content');
+};
 
 Tree.prototype.replace = function replace() {
-  return this.def().match(new ReplaceMatch(this.refs));
+  return this.def.apply(this, arguments).match(new ReplaceMatch(this.refs));
 };
 
 Tree.prototype.extend = function extend() {
-  return this.def().match(new ExtendMatch(this.refs));
+  return this.def.apply(this, arguments).match(new ExtendMatch(this.refs));
 };
 
 Tree.prototype.oninit = function oninit(fn) {
@@ -13850,14 +13897,6 @@ Tree.prototype.oninit = function oninit(fn) {
 };
 
 },{"inherits":8,"minimalistic-assert":9}],7:[function(require,module,exports){
-/**
- * Pattern for acceptable names of elements and modifiers
- * @const
- * @type String
- */
-/* jshint unused : false */
-var NAME_PATTERN = '[a-zA-Z0-9-]+';
-
 var toString = Object.prototype.toString;
 
 exports.isArray = Array.isArray;
@@ -13987,7 +14026,7 @@ var api = new BEMHTML({"wrap":false});
 /// ------ BEM-XJST User-code Start -----
 /// -------------------------------------
 api.compile(function(match, once, wrap, elemMatch, block, elem, mode, mod, elemMod, def, tag, attrs, cls, js, jsAttr, bem, mix, content, replace, extend, oninit, xjstOptions, local, applyCtx, applyNext, apply) {
-/* begin: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/i-bem/__i18n/_dummy/i-bem__i18n_dummy_yes.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/i-bem/__i18n/_dummy/i-bem__i18n_dummy_yes.bemhtml */
 /*global oninit, BEM, exports */
 
 oninit(function() {
@@ -14014,8 +14053,8 @@ oninit(function() {
     })(this, typeof BEM === 'undefined'? {} : BEM);
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/i-bem/__i18n/_dummy/i-bem__i18n_dummy_yes.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/i-bem/__i18n/i-bem__i18n.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/i-bem/__i18n/_dummy/i-bem__i18n_dummy_yes.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/i-bem/__i18n/i-bem__i18n.bemhtml */
 /* global exports, BEM */
 
 block('i-bem').elem('i18n').def()(function() {
@@ -14040,8 +14079,8 @@ block('i-bem').elem('i18n').def()(function() {
     this._buf.push(BEM.I18N(keyset, key, params));
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/i-bem/__i18n/i-bem__i18n.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/page/page.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/i-bem/__i18n/i-bem__i18n.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/page.bemhtml */
 block('page')(
 
     def().match(function() { return !this._pageInit; })(function() {
@@ -14113,8 +14152,8 @@ block('page')(
 
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/page/page.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/libs/bem-core/touch.blocks/page/page.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/page.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/page/page.bemhtml */
 block('page')(
 
     def()(function() {
@@ -14147,8 +14186,8 @@ block('page')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/libs/bem-core/touch.blocks/page/page.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/ua/ua.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/page/page.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/ua.bemhtml */
 block('ua')(
     tag()('script'),
     bem()(false),
@@ -14159,12 +14198,12 @@ block('ua')(
     ])
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/ua/ua.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/libs/bem-core/touch.blocks/ua/ua.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/ua.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/ua/ua.bemhtml */
 block('ua').js()(true);
 
-/* end: /Users/tadatuta/Sites/bem-components/libs/bem-core/touch.blocks/ua/ua.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/page/__css/page__css.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/ua/ua.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/__css/page__css.bemhtml */
 block('page').elem('css')(
     bem()(false),
     tag()('style'),
@@ -14174,8 +14213,8 @@ block('page').elem('css')(
     )
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/page/__css/page__css.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/page/__js/page__js.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/__css/page__css.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/__js/page__js.bemhtml */
 block('page').elem('js')(
     bem()(false),
     tag()('script'),
@@ -14191,8 +14230,8 @@ block('page').elem('js')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/page/__js/page__js.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/__js/page__js.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml */
 block('ua').content()(function() {
     return [
         applyNext(),
@@ -14203,8 +14242,8 @@ block('ua').content()(function() {
     ];
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/libs/bem-core/touch.blocks/page/__icon/page__icon.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/page/__icon/page__icon.bemhtml */
 block('page').elem('icon').def()(function() {
     var ctx = this.ctx;
     return applyCtx([
@@ -14235,8 +14274,8 @@ block('page').elem('icon').def()(function() {
     ]);
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/libs/bem-core/touch.blocks/page/__icon/page__icon.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/attach/attach.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/touch.blocks/page/__icon/page__icon.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/attach.bemhtml */
 block('attach')(
     def()(function() { return applyNext({ _attach : this.ctx }); }),
 
@@ -14272,8 +14311,8 @@ block('attach')(
     )
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/attach/attach.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/button/button.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/attach.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/button.bemhtml */
 block('button')(
     def()(function() {
         var tag = apply('tag'),
@@ -14303,7 +14342,7 @@ block('button')(
                 };
 
             this.mods.disabled &&
-                !this._isRealButton && (attrs['aria-disabled'] = true);
+                !this._isRealButton && (attrs['aria-disabled'] = 'true');
 
             return attrs;
         },
@@ -14337,18 +14376,18 @@ block('button')(
     )
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/button/button.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/button/__text/button__text.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/button.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/__text/button__text.bemhtml */
 block('button').elem('text').tag()('span');
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/button/__text/button__text.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/button/_focused/button_focused.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/__text/button__text.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_focused/button_focused.bemhtml */
 block('button').mod('focused', true).js()(function() {
     return this.extend(applyNext(), { live : false });
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/button/_focused/button_focused.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/icon/icon.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_focused/button_focused.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/icon/icon.bemhtml */
 block('icon')(
     tag()('span'),
     attrs()(function() {
@@ -14359,8 +14398,8 @@ block('icon')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/icon/icon.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__button/attach__button.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/icon/icon.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__button/attach__button.bemhtml */
 block('button').match(function() { return this._attach; })(
     tag()('span'),
     content()(function() {
@@ -14371,8 +14410,8 @@ block('button').match(function() { return this._attach; })(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__button/attach__button.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__control/attach__control.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__button/attach__button.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__control/attach__control.bemhtml */
 block('attach').elem('control')(
 
     tag()('input'),
@@ -14393,36 +14432,36 @@ block('attach').elem('control')(
 
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__control/attach__control.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__no-file/attach__no-file.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__control/attach__control.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__no-file/attach__no-file.bemhtml */
 block('attach').elem('no-file').tag()('span');
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__no-file/attach__no-file.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__file/attach__file.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__no-file/attach__no-file.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__file/attach__file.bemhtml */
 block('attach').elem('file').tag()('span');
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__file/attach__file.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__text/attach__text.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__file/attach__file.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__text/attach__text.bemhtml */
 block('attach').elem('text').tag()('span');
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__text/attach__text.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__clear/attach__clear.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__text/attach__text.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__clear/attach__clear.bemhtml */
 block('attach').elem('clear').tag()('span');
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/attach/__clear/attach__clear.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/button/_togglable/button_togglable_check.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__clear/attach__clear.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_togglable/button_togglable_check.bemhtml */
 block('button').mod('togglable', 'check').attrs()(function() {
-    return this.extend(applyNext(), { 'aria-pressed' : !!this.mods.checked });
+    return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/button/_togglable/button_togglable_check.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/button/_togglable/button_togglable_radio.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_togglable/button_togglable_check.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_togglable/button_togglable_radio.bemhtml */
 block('button').mod('togglable', 'radio').attrs()(function() {
-    return this.extend(applyNext(), { 'aria-pressed' : !!this.mods.checked });
+    return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/button/_togglable/button_togglable_radio.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/button/_type/button_type_link.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_togglable/button_togglable_radio.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_type/button_type_link.bemhtml */
 block('button').mod('type', 'link')(
     tag()('a'),
 
@@ -14432,7 +14471,7 @@ block('button').mod('type', 'link')(
 
         ctx.target && (attrs.target = ctx.target);
         this.mods.disabled?
-            attrs['aria-disabled'] = true :
+            attrs['aria-disabled'] = 'true' :
             attrs.href = ctx.url;
 
         return this.extend(applyNext(), attrs);
@@ -14444,8 +14483,8 @@ block('button').mod('type', 'link')(
         })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/button/_type/button_type_link.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox/checkbox.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_type/button_type_link.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/checkbox.bemhtml */
 block('checkbox')(
     tag()('label'),
 
@@ -14474,12 +14513,12 @@ block('checkbox')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox/checkbox.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox/__box/checkbox__box.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/checkbox.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__box/checkbox__box.bemhtml */
 block('checkbox').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox/__box/checkbox__box.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox/__control/checkbox__control.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__box/checkbox__box.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__control/checkbox__control.bemhtml */
 block('checkbox').elem('control')(
     tag()('input'),
 
@@ -14497,15 +14536,15 @@ block('checkbox').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox/__control/checkbox__control.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox/__text/checkbox__text.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__control/checkbox__control.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__text/checkbox__text.bemhtml */
 block('checkbox').elem('text')(
     tag()('span'),
     attrs()({ role : 'presentation' })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox/__text/checkbox__text.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox/_type/checkbox_type_button.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__text/checkbox__text.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/_type/checkbox_type_button.bemhtml */
 block('checkbox').mod('type', 'button')(
     content()(function() {
         var ctx = this.ctx,
@@ -14523,7 +14562,7 @@ block('checkbox').mod('type', 'button')(
             attrs : {
                 role : 'checkbox',
                 'aria-pressed' : undefined,
-                'aria-checked' : !!mods.checked
+                'aria-checked' : String(!!mods.checked)
             },
             title : ctx.title,
             content : [
@@ -14543,8 +14582,8 @@ block('checkbox').mod('type', 'button')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox/_type/checkbox_type_button.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox-group/checkbox-group.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/_type/checkbox_type_button.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox-group/checkbox-group.bemhtml */
 block('checkbox-group')(
     tag()('span'),
 
@@ -14585,12 +14624,12 @@ block('checkbox-group')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/checkbox-group/checkbox-group.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/control-group/control-group.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox-group/checkbox-group.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/control-group/control-group.bemhtml */
 block('control-group').attrs()({ role : 'group' });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/control-group/control-group.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/dropdown/dropdown.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/control-group/control-group.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/dropdown.bemhtml */
 block('dropdown')(
     def()(function() {
         return applyCtx([{ elem : 'switcher' }, { elem : 'popup' }]);
@@ -14639,8 +14678,8 @@ block('dropdown')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/dropdown/dropdown.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/popup/popup.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/dropdown.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/popup/popup.bemhtml */
 block('popup')(
     js()(function() {
         var ctx = this.ctx;
@@ -14652,11 +14691,11 @@ block('popup')(
             zIndexGroupLevel : ctx.zIndexGroupLevel
         };
     }),
-    attrs()({ 'aria-hidden' : true })
+    attrs()({ 'aria-hidden' : 'true' })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/popup/popup.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/popup/popup.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml */
 block('dropdown').mod('switcher', 'button').elem('switcher').def()(function() {
     var dropdown = this._dropdown,
         switcher = dropdown.switcher;
@@ -14675,9 +14714,9 @@ block('dropdown').mod('switcher', 'button').elem('switcher').def()(function() {
         resMods.theme || (resMods.theme = dropdownMods.theme);
         resMods.disabled = dropdownMods.disabled;
 
-        resAttrs['aria-haspopup'] = true;
+        resAttrs['aria-haspopup'] = 'true';
         resAttrs['aria-controls'] = this._popupId;
-        resAttrs['aria-expanded'] = false;
+        resAttrs['aria-expanded'] = 'false';
 
         res.mix = apply('mix');
     }
@@ -14685,8 +14724,8 @@ block('dropdown').mod('switcher', 'button').elem('switcher').def()(function() {
     return applyCtx(res);
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml */
 block('dropdown').mod('switcher', 'link').elem('switcher').def()(function() {
     var dropdown = this._dropdown,
         switcher = dropdown.switcher;
@@ -14704,9 +14743,9 @@ block('dropdown').mod('switcher', 'link').elem('switcher').def()(function() {
         resMods.theme || (resMods.theme = dropdownMods.theme);
         resMods.disabled = dropdownMods.disabled;
 
-        resAttrs['aria-haspopup'] = true;
+        resAttrs['aria-haspopup'] = 'true';
         resAttrs['aria-controls'] = this._popupId;
-        resAttrs['aria-expanded'] = false;
+        resAttrs['aria-expanded'] = 'false';
 
         res.mix = apply('mix');
     }
@@ -14714,8 +14753,8 @@ block('dropdown').mod('switcher', 'link').elem('switcher').def()(function() {
     return applyCtx(res);
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/link/link.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/link/link.bemhtml */
 block('link')(
     def()(function() {
         var ctx = this.ctx;
@@ -14744,7 +14783,7 @@ block('link')(
                 tabIndex = ctx.tabIndex || 0;
             }
         } else {
-            attrs['aria-disabled'] = true;
+            attrs['aria-disabled'] = 'true';
         }
 
         typeof tabIndex === 'undefined' || (attrs.tabindex = tabIndex);
@@ -14761,8 +14800,8 @@ block('link')(
         })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/link/link.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/link/_pseudo/link_pseudo.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/link/link.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/link/_pseudo/link_pseudo.bemhtml */
 block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
     tag()('span'),
     attrs()(function() {
@@ -14770,8 +14809,8 @@ block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/link/_pseudo/link_pseudo.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/image/image.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/link/_pseudo/link_pseudo.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/image/image.bemhtml */
 block('image')(
     attrs()({ role : 'img' }),
 
@@ -14794,8 +14833,8 @@ block('image')(
     )
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/image/image.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/input/input.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/image/image.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/input.bemhtml */
 block('input')(
     tag()('span'),
     js()(true),
@@ -14805,12 +14844,12 @@ block('input')(
     content()({ elem : 'box', content : { elem : 'control' } })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/input/input.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/input/__box/input__box.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/input.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__box/input__box.bemhtml */
 block('input').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/input/__box/input__box.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/input/__control/input__control.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__box/input__box.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__control/input__control.bemhtml */
 block('input').elem('control')(
     tag()('input'),
 
@@ -14832,8 +14871,8 @@ block('input').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/input/__control/input__control.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/touch.blocks/input/__control/input__control.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__control/input__control.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/touch.blocks/input/__control/input__control.bemhtml */
 block('input').elem('control')(
 
     attrs()(function() {
@@ -14847,31 +14886,31 @@ block('input').elem('control')(
 
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/touch.blocks/input/__control/input__control.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/input/_has-clear/input_has-clear.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/touch.blocks/input/__control/input__control.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_has-clear/input_has-clear.bemhtml */
 block('input').mod('has-clear', true).elem('box')
     .content()(function() {
         return [this.ctx.content, { elem : 'clear' }];
     });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/input/_has-clear/input_has-clear.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/input/__clear/input__clear.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_has-clear/input_has-clear.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__clear/input__clear.bemhtml */
 block('input').elem('clear').tag()('span');
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/input/__clear/input__clear.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/input/_type/input_type_password.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__clear/input__clear.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_type/input_type_password.bemhtml */
 block('input').mod('type', 'password').elem('control').attrs()(function() {
     return this.extend(applyNext(), { type : 'password' });
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/input/_type/input_type_password.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/input/_type/input_type_search.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_type/input_type_password.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_type/input_type_search.bemhtml */
 block('input').mod('type', 'search').elem('control').attrs()(function() {
     return this.extend(applyNext(), { type : 'search' });
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/input/_type/input_type_search.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/menu/menu.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_type/input_type_search.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/menu.bemhtml */
 block('menu')(
     def()(function() {
         var ctx = this.ctx,
@@ -14917,7 +14956,7 @@ block('menu')(
         var attrs = { role : 'menu' };
 
         this.mods.disabled?
-            attrs['aria-disabled'] = true :
+            attrs['aria-disabled'] = 'true' :
             attrs.tabindex = 0;
 
         return attrs;
@@ -14926,8 +14965,8 @@ block('menu')(
     mix()([{ elem : 'control' }])
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/menu/menu.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/menu-item/menu-item.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/menu.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu-item/menu-item.bemhtml */
 block('menu-item')(
     def().match(function() { return this._menuMods; })(function() {
         var mods = this.mods;
@@ -14946,23 +14985,23 @@ block('menu-item')(
                         'menuitem',
             attrs = {
                 role : role,
-                id : this.generateId(),
-                'aria-disabled' : mods.disabled,
-                'aria-checked' : menuMode && !!mods.checked
+                id : this.ctx.id || this.generateId(),
+                'aria-disabled' : mods.disabled && 'true',
+                'aria-checked' : menuMode && String(!!mods.checked)
             };
 
         return attrs;
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/menu-item/menu-item.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/menu/_focused/menu_focused.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu-item/menu-item.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/_focused/menu_focused.bemhtml */
 block('menu').mod('focused', true).js()(function() {
     return this.extend(applyNext(), { live : false });
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/menu/_focused/menu_focused.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/menu/__group/menu__group.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/_focused/menu_focused.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/__group/menu__group.bemhtml */
 block('menu').elem('group')(
     attrs()({ role : 'group' }),
     match(function() { return typeof this.ctx.title !== 'undefined'; })(
@@ -14988,8 +15027,8 @@ block('menu').elem('group')(
     )
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/menu/__group/menu__group.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/menu/_mode/menu_mode_radio.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/__group/menu__group.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/_mode/menu_mode_radio.bemhtml */
 block('menu')
     .mod('mode', 'radio')
     .match(function() {
@@ -15000,8 +15039,8 @@ block('menu')
         return applyNext();
     });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/menu/_mode/menu_mode_radio.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/menu-item/_type/menu-item_type_link.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/_mode/menu_mode_radio.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu-item/_type/menu-item_type_link.bemhtml */
 block('menu-item').mod('type', 'link').mod('disabled', true).match(function() {
     return !this._menuItemDisabled;
 }).def()(function() {
@@ -15016,8 +15055,8 @@ block('link').match(function() {
     return applyNext();
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/menu-item/_type/menu-item_type_link.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/modal/modal.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu-item/_type/menu-item_type_link.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/modal/modal.bemhtml */
 block('modal')(
     js()(true),
 
@@ -15031,7 +15070,7 @@ block('modal')(
 
     attrs()({
         role : 'dialog',
-        'aria-hidden' : true
+        'aria-hidden' : 'true'
     }),
 
     content()(function() {
@@ -15048,8 +15087,8 @@ block('modal')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/modal/modal.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/progressbar/progressbar.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/modal/modal.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/progressbar/progressbar.bemhtml */
 block('progressbar')(
     def()(function() {
         return applyNext({ _val : this.ctx.val || 0 });
@@ -15079,8 +15118,8 @@ block('progressbar')(
     )
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/progressbar/progressbar.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/radio/radio.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/progressbar/progressbar.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/radio.bemhtml */
 block('radio')(
     tag()('label'),
     js()(true),
@@ -15105,12 +15144,12 @@ block('radio')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/radio/radio.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/radio/__box/radio__box.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/radio.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__box/radio__box.bemhtml */
 block('radio').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/radio/__box/radio__box.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/radio/__control/radio__control.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__box/radio__box.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__control/radio__control.bemhtml */
 block('radio').elem('control')(
     tag()('input'),
 
@@ -15131,8 +15170,8 @@ block('radio').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/radio/__control/radio__control.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/radio/__text/radio__text.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__control/radio__control.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__text/radio__text.bemhtml */
 block('radio').elem('text')(
     tag()('span'),
     attrs()(function() {
@@ -15140,8 +15179,8 @@ block('radio').elem('text')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/radio/__text/radio__text.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/radio/_type/radio_type_button.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__text/radio__text.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/_type/radio_type_button.bemhtml */
 block('radio').mod('type', 'button')(
     content()(function() {
         var ctx = this.ctx,
@@ -15176,8 +15215,8 @@ block('radio').mod('type', 'button')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/radio/_type/radio_type_button.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/radio-group/radio-group.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/_type/radio_type_button.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio-group/radio-group.bemhtml */
 block('radio-group')(
     tag()('span'),
 
@@ -15216,8 +15255,8 @@ block('radio-group')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/radio-group/radio-group.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio-group/radio-group.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml */
 block('radio-group').mod('mode', 'radio-check')(
     def()(function() {
         if(this.mods.type !== 'button')
@@ -15227,8 +15266,8 @@ block('radio-group').mod('mode', 'radio-check')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/select/select.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/select.bemhtml */
 block('select')(
     def().match(function() { return !this._select; })(function() { // TODO: check BEM-XJST for proper applyNext
         if(!this.mods.mode) throw Error('Can\'t build select without mode modifier');
@@ -15252,7 +15291,7 @@ block('select')(
                         iterateOptions(option.group);
                     } else {
                         firstOption || (firstOption = option);
-                        optionIds.push(option.id = _this.generateId());
+                        optionIds.push(option.id = _this.identify(option));
                         if(containsVal(option.val)) {
                             option.checked = true;
                             checkedOptions.push(option);
@@ -15267,7 +15306,7 @@ block('select')(
             _select : ctx,
             _checkedOptions : checkedOptions,
             _firstOption : firstOption,
-            _optionsIds : optionIds
+            _optionIds : optionIds
         });
     }),
 
@@ -15292,14 +15331,14 @@ block('select')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/select/select.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/select/_focused/select_focused.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/select.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_focused/select_focused.bemhtml */
 block('select').mod('focused', true).js()(function() {
     return this.extend(applyNext(), { live : false });
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/select/_focused/select_focused.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/select/__control/select__control.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_focused/select_focused.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__control/select__control.bemhtml */
 block('select').elem('control')(
     tag()('input'),
     attrs()(function() {
@@ -15307,13 +15346,14 @@ block('select').elem('control')(
             type : 'hidden',
             name : this._select.name,
             value : this.ctx.val,
-            disabled : this.mods.disabled? 'disabled' : undefined
+            disabled : this.mods.disabled? 'disabled' : undefined,
+            autocomplete : 'off'
         };
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/select/__control/select__control.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/select/__button/select__button.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__control/select__control.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__button/select__button.bemhtml */
 block('select').elem('button')(
     def()(function() {
         var select = this._select,
@@ -15332,7 +15372,7 @@ block('select').elem('button')(
             },
             attrs : {
                 role : 'listbox',
-                'aria-owns' : this._optionsIds.join(' '),
+                'aria-owns' : this._optionIds.join(' '),
                 'aria-multiselectable' : mods.mode === 'check'? 'true' : undefined,
                 'aria-labelledby' : this._selectTextId
             },
@@ -15355,8 +15395,8 @@ block('button').elem('text').match(function() { return this._select; })(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/select/__button/select__button.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/select/__menu/select__menu.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__button/select__button.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__menu/select__menu.bemhtml */
 block('select').elem('menu')(
     def()(function() {
         var mods = this.mods,
@@ -15406,8 +15446,8 @@ block('select').elem('menu')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/select/__menu/select__menu.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/select/_mode/select_mode_check.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__menu/select__menu.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_check.bemhtml */
 block('select').mod('mode', 'check')(
     js()(function() {
         return this.extend(applyNext(), { text : this.ctx.text });
@@ -15441,8 +15481,8 @@ block('select').mod('mode', 'check')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/select/_mode/select_mode_check.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/select/_mode/select_mode_radio-check.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_check.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_radio-check.bemhtml */
 block('select').mod('mode', 'radio-check')(
     js()(function() {
         return this.extend(applyNext(), { text : this.ctx.text });
@@ -15468,8 +15508,8 @@ block('select').mod('mode', 'radio-check')(
     )
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/select/_mode/select_mode_radio-check.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/select/_mode/select_mode_radio.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_radio-check.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_radio.bemhtml */
 block('select').mod('mode', 'radio')(
     def().match(function() { return this._checkedOptions; })(function() {
         var checkedOptions = this._checkedOptions,
@@ -15499,14 +15539,14 @@ block('select').mod('mode', 'radio')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/select/_mode/select_mode_radio.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/spin/spin.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_radio.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/spin/spin.bemhtml */
 block('spin')(
     tag()('span')
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/spin/spin.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/common.blocks/textarea/textarea.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/spin/spin.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/textarea/textarea.bemhtml */
 block('textarea')(
     js()(true),
     tag()('textarea'),
@@ -15533,8 +15573,8 @@ block('textarea')(
     })
 );
 
-/* end: /Users/tadatuta/Sites/bem-components/common.blocks/textarea/textarea.bemhtml */
-/* begin: /Users/tadatuta/Sites/bem-components/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/textarea/textarea.bemhtml */
+/* begin: /Users/tadatuta/projects/bem/bem-components-2/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml */
 block('progressbar').mod('theme', 'simple').content()(function() {
     return [
         {
@@ -15548,7 +15588,7 @@ block('progressbar').mod('theme', 'simple').content()(function() {
     ];
 });
 
-/* end: /Users/tadatuta/Sites/bem-components/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components-2/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml */
 oninit(function(exports, context) {
     var BEMContext = exports.BEMContext || context.BEMContext;
     // Provides third-party libraries from different modular systems
@@ -15562,21 +15602,48 @@ api.exportApply(exports);
 /// ------ BEM-XJST User-code End -------
 /// -------------------------------------
 
-    return exports;
-};
 
-var defineAsGlobal = true;
-if(typeof module === "object" && typeof module.exports === "object") {
-    exports["BEMHTML"] = buildBemXjst({}, {});
-    defineAsGlobal = false;
+        return exports;
+    };
+
+    
+
+    var defineAsGlobal = true;
+
+    // Provide with CommonJS
+    if (typeof module === 'object' && typeof module.exports === 'object') {
+        exports['BEMHTML'] = buildBemXjst({
+    
 }
-if(typeof modules === "object") {
-    modules.define("BEMHTML", [], function(provide) {
-        provide(buildBemXjst({}, {}));
-    });
-    defineAsGlobal = false;
+);
+        defineAsGlobal = false;
+    }
+
+    // Provide to YModules
+    if (typeof modules === 'object') {
+        modules.define(
+            'BEMHTML',
+            [],
+            function(
+                provide
+                
+                ) {
+                    provide(buildBemXjst({
+    
 }
-if(defineAsGlobal) {
-    global["BEMHTML"] = buildBemXjst({}, {});
+));
+                }
+            );
+
+        defineAsGlobal = false;
+    }
+
+    // Provide to global scope
+    if (defineAsGlobal) {
+        BEMHTML = buildBemXjst({
+    
 }
-})(this);
+);
+        global['BEMHTML'] = BEMHTML;
+    }
+})(typeof window !== "undefined" ? window : global);

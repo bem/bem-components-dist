@@ -2137,7 +2137,7 @@ var init = function (global, BH) {
             .js({ val : json.val })
             .attrs({
                 role : role,
-                id : ctx.generateId(),
+                id : json.id || ctx.generateId(),
                 'aria-disabled' : ctx.mod('disabled') && 'true',
                 'aria-checked' : menuMode && String(!!ctx.mod('checked'))
             });
@@ -2515,7 +2515,8 @@ var init = function (global, BH) {
                 type : 'hidden',
                 name : ctx.tParam('select').name,
                 value : json.val,
-                disabled : mods.disabled? 'disabled' : undefined
+                disabled : mods.disabled? 'disabled' : undefined,
+                autocomplete : 'off'
             });
     });
 
@@ -2831,4 +2832,4 @@ if (defineAsGlobal) {
     global["bh"] = bh;
     global["BEMHTML"] = bh;
 }
-}(this));
+}(typeof window !== "undefined" ? window : global));
