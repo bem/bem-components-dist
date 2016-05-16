@@ -1156,32 +1156,6 @@ var bh = new BH();
 bh.setOptions({"jsAttrName":"data-bem","jsAttrScheme":"json"});
 var init = function (global, BH) {
 (function () {
-// begin: ../../libs/bem-core/common.blocks/i-bem/__i18n/i-bem__i18n.bh.js
-
-    bh.match('i-bem__i18n', function(ctx, json) {
-        if(!json) return '';
-
-        var keyset = json.keyset,
-            key = json.key,
-            params = json.params || {};
-
-        if(!(keyset || key))
-            return '';
-
-        /**
-         * Consider `content` is a reserved param that contains
-         * valid bemjson data
-         */
-        if(typeof json.content === 'undefined' || json.content !== null) {
-            params.content = bh.apply(json.content);
-        }
-
-        return bh.lib.i18n(keyset, key, params);
-    });
-
-// end: ../../libs/bem-core/common.blocks/i-bem/__i18n/i-bem__i18n.bh.js
-}());
-(function () {
 // begin: ../../libs/bem-core/common.blocks/page/page.bh.js
 
 
@@ -1793,7 +1767,7 @@ var init = function (global, BH) {
                     dropdown.switcher.mix || [],
                     dropdown.mix || []));
 
-            return [{ elem : 'switcher' }, { elem : 'popup' }];
+            return [{ elem : 'popup' }, { elem : 'switcher' }];
         },
 
         'dropdown__popup' : function(ctx) {

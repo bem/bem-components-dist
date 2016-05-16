@@ -17,7 +17,7 @@ This is precompiled version of [bem-components](https://en.bem.info/libs/bem-com
 </head>
 <body class="page page_theme_islands">
 <!-- write your code here -->
-<script src="dist/desktop/bem-components.js+bh.js"></script>
+<script src="dist/desktop/bem-components.js+bemhtml.js"></script>
 </body>
 </html>
 ```

@@ -711,7 +711,7 @@ provide(/** @exports */{
      * URL for loading jQuery if it does not exist
      * @type {String}
      */
-    url : 'https://yastatic.net/jquery/2.2.0/jquery.min.js'
+    url : 'https://yastatic.net/jquery/2.2.3/jquery.min.js'
 });
 
 });
@@ -734,7 +734,7 @@ provide(
         objects.extend(
             base,
             {
-                url : 'https://yastatic.net/jquery/1.12.0/jquery.min.js'
+                url : 'https://yastatic.net/jquery/1.12.3/jquery.min.js'
             }) :
         base);
 
@@ -4764,796 +4764,67 @@ idle.start();
 /* ../../libs/bem-core/common.blocks/idle/_start/idle_start_auto.js end */
 
 /* ../../libs/bem-core/common.blocks/jquery/__event/_type/jquery__event_type_pointerclick.js begin */
-/**
- * FastClick to jQuery module wrapper.
- * @see https://github.com/ftlabs/fastclick
- */
-modules.define('jquery', function(provide, $) {
+modules.define('jquery', ['next-tick'], function(provide, nextTick, $) {
 
-/**
- * FastClick: polyfill to remove click delays on browsers with touch UIs.
- *
- * @version 0.6.11
- * @copyright The Financial Times Limited [All Rights Reserved]
- * @license MIT License (see LICENSE.txt)
- */
-
-/**
- * @class FastClick
- */
-
-/**
- * Instantiate fast-clicking listeners on the specificed layer.
- *
- * @constructor
- * @param {Element} layer The layer to listen on
- */
-function FastClick(layer) {
-    'use strict';
-    var oldOnClick, self = this;
-
-
-    /**
-     * Whether a click is currently being tracked.
-     *
-     * @type boolean
-     */
-    this.trackingClick = false;
-
-
-    /**
-     * Timestamp for when when click tracking started.
-     *
-     * @type number
-     */
-    this.trackingClickStart = 0;
-
-
-    /**
-     * The element being tracked for a click.
-     *
-     * @type EventTarget
-     */
-    this.targetElement = null;
-
-
-    /**
-     * X-coordinate of touch start event.
-     *
-     * @type number
-     */
-    this.touchStartX = 0;
-
-
-    /**
-     * Y-coordinate of touch start event.
-     *
-     * @type number
-     */
-    this.touchStartY = 0;
-
-
-    /**
-     * ID of the last touch, retrieved from Touch.identifier.
-     *
-     * @type number
-     */
-    this.lastTouchIdentifier = 0;
-
-
-    /**
-     * Touchmove boundary, beyond which a click will be cancelled.
-     *
-     * @type number
-     */
-    this.touchBoundary = 10;
-
-
-    /**
-     * The FastClick layer.
-     *
-     * @type Element
-     */
-    this.layer = layer;
-
-    if (!layer || !layer.nodeType) {
-        throw new TypeError('Layer must be a document node');
-    }
-
-    /** @type function() */
-    this.onClick = function() { return FastClick.prototype.onClick.apply(self, arguments); };
-
-    /** @type function() */
-    this.onMouse = function() { return FastClick.prototype.onMouse.apply(self, arguments); };
-
-    /** @type function() */
-    this.onTouchStart = function() { return FastClick.prototype.onTouchStart.apply(self, arguments); };
-
-    /** @type function() */
-    this.onTouchMove = function() { return FastClick.prototype.onTouchMove.apply(self, arguments); };
-
-    /** @type function() */
-    this.onTouchEnd = function() { return FastClick.prototype.onTouchEnd.apply(self, arguments); };
-
-    /** @type function() */
-    this.onTouchCancel = function() { return FastClick.prototype.onTouchCancel.apply(self, arguments); };
-
-    if (FastClick.notNeeded(layer)) {
-        return;
-    }
-
-    // Set up event handlers as required
-    if (this.deviceIsAndroid) {
-        layer.addEventListener('mouseover', this.onMouse, true);
-        layer.addEventListener('mousedown', this.onMouse, true);
-        layer.addEventListener('mouseup', this.onMouse, true);
-    }
-
-    layer.addEventListener('click', this.onClick, true);
-    layer.addEventListener('touchstart', this.onTouchStart, false);
-    layer.addEventListener('touchmove', this.onTouchMove, false);
-    layer.addEventListener('touchend', this.onTouchEnd, false);
-    layer.addEventListener('touchcancel', this.onTouchCancel, false);
-
-    // Hack is required for browsers that don't support Event#stopImmediatePropagation (e.g. Android 2)
-    // which is how FastClick normally stops click events bubbling to callbacks registered on the FastClick
-    // layer when they are cancelled.
-    if (!Event.prototype.stopImmediatePropagation) {
-        layer.removeEventListener = function(type, callback, capture) {
-            var rmv = Node.prototype.removeEventListener;
-            if (type === 'click') {
-                rmv.call(layer, type, callback.hijacked || callback, capture);
-            } else {
-                rmv.call(layer, type, callback, capture);
-            }
-        };
-
-        layer.addEventListener = function(type, callback, capture) {
-            var adv = Node.prototype.addEventListener;
-            if (type === 'click') {
-                adv.call(layer, type, callback.hijacked || (callback.hijacked = function(event) {
-                    if (!event.propagationStopped) {
-                        callback(event);
-                    }
-                }), capture);
-            } else {
-                adv.call(layer, type, callback, capture);
-            }
-        };
-    }
-
-    // If a handler is already declared in the element's onclick attribute, it will be fired before
-    // FastClick's onClick handler. Fix this by pulling out the user-defined handler function and
-    // adding it as listener.
-    if (typeof layer.onclick === 'function') {
-
-        // Android browser on at least 3.2 requires a new reference to the function in layer.onclick
-        // - the old one won't work if passed to addEventListener directly.
-        oldOnClick = layer.onclick;
-        layer.addEventListener('click', function(event) {
-            oldOnClick(event);
-        }, false);
-        layer.onclick = null;
-    }
-}
-
-
-/**
- * Android requires exceptions.
- *
- * @type boolean
- */
-FastClick.prototype.deviceIsAndroid = navigator.userAgent.indexOf('Android') > 0;
-
-
-/**
- * iOS requires exceptions.
- *
- * @type boolean
- */
-FastClick.prototype.deviceIsIOS = /iP(ad|hone|od)/.test(navigator.userAgent);
-
-
-/**
- * iOS 4 requires an exception for select elements.
- *
- * @type boolean
- */
-FastClick.prototype.deviceIsIOS4 = FastClick.prototype.deviceIsIOS && (/OS 4_\d(_\d)?/).test(navigator.userAgent);
-
-
-/**
- * iOS 6.0(+?) requires the target element to be manually derived
- *
- * @type boolean
- */
-FastClick.prototype.deviceIsIOSWithBadTarget = FastClick.prototype.deviceIsIOS && (/OS ([6-9]|\d{2})_\d/).test(navigator.userAgent);
-
-
-/**
- * Determine whether a given element requires a native click.
- *
- * @param {EventTarget|Element} target Target DOM element
- * @returns {boolean} Returns true if the element needs a native click
- */
-FastClick.prototype.needsClick = function(target) {
-    'use strict';
-    switch (target.nodeName.toLowerCase()) {
-
-    // Don't send a synthetic click to disabled inputs (issue #62)
-    case 'button':
-    case 'select':
-    case 'textarea':
-        if (target.disabled) {
-            return true;
-        }
-
-        break;
-    case 'input':
-
-        // File inputs need real clicks on iOS 6 due to a browser bug (issue #68)
-        if ((this.deviceIsIOS && target.type === 'file') || target.disabled) {
-            return true;
-        }
-
-        break;
-    case 'label':
-    case 'video':
-        return true;
-    }
-
-    return (/\bneedsclick\b/).test(target.className);
-};
-
-
-/**
- * Determine whether a given element requires a call to focus to simulate click into element.
- *
- * @param {EventTarget|Element} target Target DOM element
- * @returns {boolean} Returns true if the element requires a call to focus to simulate native click.
- */
-FastClick.prototype.needsFocus = function(target) {
-    'use strict';
-    switch (target.nodeName.toLowerCase()) {
-    case 'textarea':
-        return true;
-    case 'select':
-        return !this.deviceIsAndroid;
-    case 'input':
-        switch (target.type) {
-        case 'button':
-        case 'checkbox':
-        case 'file':
-        case 'image':
-        case 'radio':
-        case 'submit':
-            return false;
-        }
-
-        // No point in attempting to focus disabled inputs
-        return !target.disabled && !target.readOnly;
-    default:
-        return (/\bneedsfocus\b/).test(target.className);
-    }
-};
-
-
-/**
- * Send a click event to the specified element.
- *
- * @param {EventTarget|Element} targetElement
- * @param {Event} event
- */
-FastClick.prototype.sendClick = function(targetElement, event) {
-    'use strict';
-    var clickEvent, touch;
-
-    // On some Android devices activeElement needs to be blurred otherwise the synthetic click will have no effect (#24)
-    if (document.activeElement && document.activeElement !== targetElement) {
-        document.activeElement.blur();
-    }
-
-    touch = event.changedTouches[0];
-
-    // Synthesise a click event, with an extra attribute so it can be tracked
-    clickEvent = document.createEvent('MouseEvents');
-    clickEvent.initMouseEvent(this.determineEventType(targetElement), true, true, window, 1, touch.screenX, touch.screenY, touch.clientX, touch.clientY, false, false, false, false, 0, null);
-    clickEvent.forwardedTouchEvent = true;
-    targetElement.dispatchEvent(clickEvent);
-};
-
-FastClick.prototype.determineEventType = function(targetElement) {
-    'use strict';
-
-    //Issue #159: Android Chrome Select Box does not open with a synthetic click event
-    if (this.deviceIsAndroid && targetElement.tagName.toLowerCase() === 'select') {
-        return 'mousedown';
-    }
-
-    return 'click';
-};
-
-
-/**
- * @param {EventTarget|Element} targetElement
- */
-FastClick.prototype.focus = function(targetElement) {
-    'use strict';
-    var length;
-
-    // Issue #160: on iOS 7, some input elements (e.g. date datetime) throw a vague TypeError on setSelectionRange. These elements don't have an integer value for the selectionStart and selectionEnd properties, but unfortunately that can't be used for detection because accessing the properties also throws a TypeError. Just check the type instead. Filed as Apple bug #15122724.
-    if (this.deviceIsIOS && targetElement.setSelectionRange && targetElement.type.indexOf('date') !== 0 && targetElement.type !== 'time') {
-        length = targetElement.value.length;
-        targetElement.setSelectionRange(length, length);
-    } else {
-        targetElement.focus();
-    }
-};
-
-
-/**
- * Check whether the given target element is a child of a scrollable layer and if so, set a flag on it.
- *
- * @param {EventTarget|Element} targetElement
- */
-FastClick.prototype.updateScrollParent = function(targetElement) {
-    'use strict';
-    var scrollParent, parentElement;
-
-    scrollParent = targetElement.fastClickScrollParent;
-
-    // Attempt to discover whether the target element is contained within a scrollable layer. Re-check if the
-    // target element was moved to another parent.
-    if (!scrollParent || !scrollParent.contains(targetElement)) {
-        parentElement = targetElement;
-        do {
-            if (parentElement.scrollHeight > parentElement.offsetHeight) {
-                scrollParent = parentElement;
-                targetElement.fastClickScrollParent = parentElement;
-                break;
-            }
-
-            parentElement = parentElement.parentElement;
-        } while (parentElement);
-    }
-
-    // Always update the scroll top tracker if possible.
-    if (scrollParent) {
-        scrollParent.fastClickLastScrollTop = scrollParent.scrollTop;
-    }
-};
-
-
-/**
- * @param {EventTarget} targetElement
- * @returns {Element|EventTarget}
- */
-FastClick.prototype.getTargetElementFromEventTarget = function(eventTarget) {
-    'use strict';
-
-    // On some older browsers (notably Safari on iOS 4.1 - see issue #56) the event target may be a text node.
-    if (eventTarget.nodeType === Node.TEXT_NODE) {
-        return eventTarget.parentNode;
-    }
-
-    return eventTarget;
-};
-
-
-/**
- * On touch start, record the position and scroll offset.
- *
- * @param {Event} event
- * @returns {boolean}
- */
-FastClick.prototype.onTouchStart = function(event) {
-    'use strict';
-    var targetElement, touch, selection;
-
-    // Ignore multiple touches, otherwise pinch-to-zoom is prevented if both fingers are on the FastClick element (issue #111).
-    if (event.targetTouches.length > 1) {
-        return true;
-    }
-
-    targetElement = this.getTargetElementFromEventTarget(event.target);
-    touch = event.targetTouches[0];
-
-    if (this.deviceIsIOS) {
-
-        // Only trusted events will deselect text on iOS (issue #49)
-        selection = window.getSelection();
-        if (selection.rangeCount && !selection.isCollapsed) {
-            return true;
-        }
-
-        if (!this.deviceIsIOS4) {
-
-            // Weird things happen on iOS when an alert or confirm dialog is opened from a click event callback (issue #23):
-            // when the user next taps anywhere else on the page, new touchstart and touchend events are dispatched
-            // with the same identifier as the touch event that previously triggered the click that triggered the alert.
-            // Sadly, there is an issue on iOS 4 that causes some normal touch events to have the same identifier as an
-            // immediately preceeding touch event (issue #52), so this fix is unavailable on that platform.
-            if (touch.identifier === this.lastTouchIdentifier) {
-                event.preventDefault();
-                return false;
-            }
-
-            this.lastTouchIdentifier = touch.identifier;
-
-            // If the target element is a child of a scrollable layer (using -webkit-overflow-scrolling: touch) and:
-            // 1) the user does a fling scroll on the scrollable layer
-            // 2) the user stops the fling scroll with another tap
-            // then the event.target of the last 'touchend' event will be the element that was under the user's finger
-            // when the fling scroll was started, causing FastClick to send a click event to that layer - unless a check
-            // is made to ensure that a parent layer was not scrolled before sending a synthetic click (issue #42).
-            this.updateScrollParent(targetElement);
-        }
-    }
-
-    this.trackingClick = true;
-    this.trackingClickStart = event.timeStamp;
-    this.targetElement = targetElement;
-
-    this.touchStartX = touch.pageX;
-    this.touchStartY = touch.pageY;
-
-    // Prevent phantom clicks on fast double-tap (issue #36)
-    if ((event.timeStamp - this.lastClickTime) < 200) {
-        event.preventDefault();
-    }
-
-    return true;
-};
-
-
-/**
- * Based on a touchmove event object, check whether the touch has moved past a boundary since it started.
- *
- * @param {Event} event
- * @returns {boolean}
- */
-FastClick.prototype.touchHasMoved = function(event) {
-    'use strict';
-    var touch = event.changedTouches[0], boundary = this.touchBoundary;
-
-    if (Math.abs(touch.pageX - this.touchStartX) > boundary || Math.abs(touch.pageY - this.touchStartY) > boundary) {
-        return true;
-    }
-
-    return false;
-};
-
-
-/**
- * Update the last position.
- *
- * @param {Event} event
- * @returns {boolean}
- */
-FastClick.prototype.onTouchMove = function(event) {
-    'use strict';
-    if (!this.trackingClick) {
-        return true;
-    }
-
-    // If the touch has moved, cancel the click tracking
-    if (this.targetElement !== this.getTargetElementFromEventTarget(event.target) || this.touchHasMoved(event)) {
-        this.trackingClick = false;
-        this.targetElement = null;
-    }
-
-    return true;
-};
-
-
-/**
- * Attempt to find the labelled control for the given label element.
- *
- * @param {EventTarget|HTMLLabelElement} labelElement
- * @returns {Element|null}
- */
-FastClick.prototype.findControl = function(labelElement) {
-    'use strict';
-
-    // Fast path for newer browsers supporting the HTML5 control attribute
-    if (labelElement.control !== undefined) {
-        return labelElement.control;
-    }
-
-    // All browsers under test that support touch events also support the HTML5 htmlFor attribute
-    if (labelElement.htmlFor) {
-        return document.getElementById(labelElement.htmlFor);
-    }
-
-    // If no for attribute exists, attempt to retrieve the first labellable descendant element
-    // the list of which is defined here: http://www.w3.org/TR/html5/forms.html#category-label
-    return labelElement.querySelector('button, input:not([type=hidden]), keygen, meter, output, progress, select, textarea');
-};
-
-
-/**
- * On touch end, determine whether to send a click event at once.
- *
- * @param {Event} event
- * @returns {boolean}
- */
-FastClick.prototype.onTouchEnd = function(event) {
-    'use strict';
-    var forElement, trackingClickStart, targetTagName, scrollParent, touch, targetElement = this.targetElement;
-
-    if (!this.trackingClick) {
-        return true;
-    }
-
-    // Prevent phantom clicks on fast double-tap (issue #36)
-    if ((event.timeStamp - this.lastClickTime) < 200) {
-        this.cancelNextClick = true;
-        return true;
-    }
-
-    // Reset to prevent wrong click cancel on input (issue #156).
-    this.cancelNextClick = false;
-
-    this.lastClickTime = event.timeStamp;
-
-    trackingClickStart = this.trackingClickStart;
-    this.trackingClick = false;
-    this.trackingClickStart = 0;
-
-    // On some iOS devices, the targetElement supplied with the event is invalid if the layer
-    // is performing a transition or scroll, and has to be re-detected manually. Note that
-    // for this to function correctly, it must be called *after* the event target is checked!
-    // See issue #57; also filed as rdar://13048589 .
-    if (this.deviceIsIOSWithBadTarget) {
-        touch = event.changedTouches[0];
-
-        // In certain cases arguments of elementFromPoint can be negative, so prevent setting targetElement to null
-        targetElement = document.elementFromPoint(touch.pageX - window.pageXOffset, touch.pageY - window.pageYOffset) || targetElement;
-        targetElement.fastClickScrollParent = this.targetElement.fastClickScrollParent;
-    }
-
-    targetTagName = targetElement.tagName.toLowerCase();
-    if (targetTagName === 'label') {
-        forElement = this.findControl(targetElement);
-        if (forElement) {
-            this.focus(targetElement);
-            if (this.deviceIsAndroid) {
-                return false;
-            }
-
-            targetElement = forElement;
-        }
-    } else if (this.needsFocus(targetElement)) {
-
-        // Case 1: If the touch started a while ago (best guess is 100ms based on tests for issue #36) then focus will be triggered anyway. Return early and unset the target element reference so that the subsequent click will be allowed through.
-        // Case 2: Without this exception for input elements tapped when the document is contained in an iframe, then any inputted text won't be visible even though the value attribute is updated as the user types (issue #37).
-        if ((event.timeStamp - trackingClickStart) > 100 || (this.deviceIsIOS && window.top !== window && targetTagName === 'input')) {
-            this.targetElement = null;
-            return false;
-        }
-
-        this.focus(targetElement);
-
-        // Select elements need the event to go through on iOS 4, otherwise the selector menu won't open.
-        if (!this.deviceIsIOS4 || targetTagName !== 'select') {
-            this.targetElement = null;
-            event.preventDefault();
-        }
-
-        return false;
-    }
-
-    if (this.deviceIsIOS && !this.deviceIsIOS4) {
-
-        // Don't send a synthetic click event if the target element is contained within a parent layer that was scrolled
-        // and this tap is being used to stop the scrolling (usually initiated by a fling - issue #42).
-        scrollParent = targetElement.fastClickScrollParent;
-        if (scrollParent && scrollParent.fastClickLastScrollTop !== scrollParent.scrollTop) {
-            return true;
-        }
-    }
-
-    // Prevent the actual click from going though - unless the target node is marked as requiring
-    // real clicks or if it is in the whitelist in which case only non-programmatic clicks are permitted.
-    if (!this.needsClick(targetElement)) {
-        event.preventDefault();
-        this.sendClick(targetElement, event);
-    }
-
-    return false;
-};
-
-
-/**
- * On touch cancel, stop tracking the click.
- *
- * @returns {void}
- */
-FastClick.prototype.onTouchCancel = function() {
-    'use strict';
-    this.trackingClick = false;
-    this.targetElement = null;
-};
-
-
-/**
- * Determine mouse events which should be permitted.
- *
- * @param {Event} event
- * @returns {boolean}
- */
-FastClick.prototype.onMouse = function(event) {
-    'use strict';
-
-    // If a target element was never set (because a touch event was never fired) allow the event
-    if (!this.targetElement) {
-        return true;
-    }
-
-    if (event.forwardedTouchEvent) {
-        return true;
-    }
-
-    // Programmatically generated events targeting a specific element should be permitted
-    if (!event.cancelable) {
-        return true;
-    }
-
-    // Derive and check the target element to see whether the mouse event needs to be permitted;
-    // unless explicitly enabled, prevent non-touch click events from triggering actions,
-    // to prevent ghost/doubleclicks.
-    if (!this.needsClick(this.targetElement) || this.cancelNextClick) {
-
-        // Prevent any user-added listeners declared on FastClick element from being fired.
-        if (event.stopImmediatePropagation) {
-            event.stopImmediatePropagation();
-        } else {
-
-            // Part of the hack for browsers that don't support Event#stopImmediatePropagation (e.g. Android 2)
-            event.propagationStopped = true;
-        }
-
-        // Cancel the event
-        event.stopPropagation();
-        event.preventDefault();
-
-        return false;
-    }
-
-    // If the mouse event is permitted, return true for the action to go through.
-    return true;
-};
-
-
-/**
- * On actual clicks, determine whether this is a touch-generated click, a click action occurring
- * naturally after a delay after a touch (which needs to be cancelled to avoid duplication), or
- * an actual click which should be permitted.
- *
- * @param {Event} event
- * @returns {boolean}
- */
-FastClick.prototype.onClick = function(event) {
-    'use strict';
-    var permitted;
-
-    // It's possible for another FastClick-like library delivered with third-party code to fire a click event before FastClick does (issue #44). In that case, set the click-tracking flag back to false and return early. This will cause onTouchEnd to return early.
-    if (this.trackingClick) {
-        this.targetElement = null;
-        this.trackingClick = false;
-        return true;
-    }
-
-    // Very odd behaviour on iOS (issue #18): if a submit element is present inside a form and the user hits enter in the iOS simulator or clicks the Go button on the pop-up OS keyboard the a kind of 'fake' click event will be triggered with the submit-type input element as the target.
-    if (event.target.type === 'submit' && event.detail === 0) {
-        return true;
-    }
-
-    permitted = this.onMouse(event);
-
-    // Only unset targetElement if the click is not permitted. This will ensure that the check for !targetElement in onMouse fails and the browser's click doesn't go through.
-    if (!permitted) {
-        this.targetElement = null;
-    }
-
-    // If clicks are permitted, return true for the action to go through.
-    return permitted;
-};
-
-
-/**
- * Remove all FastClick's event listeners.
- *
- * @returns {void}
- */
-FastClick.prototype.destroy = function() {
-    'use strict';
-    var layer = this.layer;
-
-    if (this.deviceIsAndroid) {
-        layer.removeEventListener('mouseover', this.onMouse, true);
-        layer.removeEventListener('mousedown', this.onMouse, true);
-        layer.removeEventListener('mouseup', this.onMouse, true);
-    }
-
-    layer.removeEventListener('click', this.onClick, true);
-    layer.removeEventListener('touchstart', this.onTouchStart, false);
-    layer.removeEventListener('touchmove', this.onTouchMove, false);
-    layer.removeEventListener('touchend', this.onTouchEnd, false);
-    layer.removeEventListener('touchcancel', this.onTouchCancel, false);
-};
-
-
-/**
- * Check whether FastClick is needed.
- *
- * @param {Element} layer The layer to listen on
- */
-FastClick.notNeeded = function(layer) {
-    'use strict';
-    var metaViewport;
-
-    // Devices that don't support touch don't need FastClick
-    if (typeof window.ontouchstart === 'undefined') {
-        return true;
-    }
-
-    if ((/Chrome\/[0-9]+/).test(navigator.userAgent)) {
-
-        // Chrome on Android with user-scalable="no" doesn't need FastClick (issue #89)
-        if (FastClick.prototype.deviceIsAndroid) {
-            metaViewport = document.querySelector('meta[name=viewport]');
-            if (metaViewport && metaViewport.content.indexOf('user-scalable=no') !== -1) {
-                return true;
-            }
-
-        // Chrome desktop doesn't need FastClick (issue #15)
-        } else {
-            return true;
-        }
-    }
-
-    // IE10 with -ms-touch-action: none, which disables double-tap-to-zoom (issue #97)
-    if (layer.style.msTouchAction === 'none') {
-        return true;
-    }
-
-    return false;
-};
-
-
-/**
- * Factory method for creating a FastClick object
- *
- * @param {Element} layer The layer to listen on
- */
-FastClick.attach = function(layer) {
-    'use strict';
-    return new FastClick(layer);
-};
-
-var event = $.event.special.pointerclick = {
+var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
+    event = $.event.special.pointerclick = {
         setup : function() {
-            $(this).on('click', event.handler);
+            if(isIOS) {
+                $(this)
+                    .on('pointerdown', event.onPointerdown)
+                    .on('pointerup', event.onPointerup)
+                    .on('pointerleave pointercancel', event.onPointerleave);
+            } else {
+                $(this).on('click', event.handler);
+            }
         },
 
         teardown : function() {
-            $(this).off('click', event.handler);
+            if(isIOS) {
+                $(this)
+                    .off('pointerdown', event.onPointerdown)
+                    .off('pointerup', event.onPointerup)
+                    .off('pointerleave pointercancel', event.onPointerleave);
+            } else {
+                $(this).off('click', event.handler);
+            }
         },
 
         handler : function(e) {
             if(!e.button) {
+                var type = e.type;
                 e.type = 'pointerclick';
                 $.event.dispatch.apply(this, arguments);
-                e.type = 'click';
+                e.type = type;
             }
-        }
-    };
+        },
 
-$(function() {
-    FastClick.attach(document.body);
-    provide($);
-});
+        onPointerdown : function(e) {
+            pointerdownEvent = e;
+        },
+
+        onPointerleave : function() {
+            pointerdownEvent = null;
+        },
+
+        onPointerup : function(e) {
+            if(!pointerdownEvent) return;
+
+            if(!pointerDownUpInProgress) {
+                nextTick(function() {
+                    pointerDownUpInProgress = false;
+                    pointerdownEvent = null;
+                });
+                pointerDownUpInProgress = true;
+            }
+
+            event.handler.apply(this, arguments);
+        }
+    },
+    pointerDownUpInProgress = false,
+    pointerdownEvent;
+
+provide($);
 
 });
 
@@ -5701,7 +4972,7 @@ function SparseArrayMap() {
 SparseArrayMap.prototype = {
     set : function(k, v) {
         if(v === undef) {
-            return this.delete(k);
+            return this['delete'](k);
         }
         if(!this.has(k)) {
             this.size++;
@@ -5713,7 +4984,7 @@ SparseArrayMap.prototype = {
         return this.array[k] !== undef;
     },
 
-    delete : function(k) {
+    'delete' : function(k) {
         if(this.has(k)){
             delete this.array[k];
             this.size--;
@@ -8666,7 +7937,13 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends butto
             .__base.apply(this, arguments);
     },
 
+    _onMouseDown : function(e) {
+        e.preventDefault(); // NOTE: prevents button from being blurred at least in FF and Safari
+        this.unbindFrom('mousedown', this._onMouseDown);
+    },
+
     _onPointerPress : function() {
+        this.bindTo('mousedown', this._onMouseDown);
         if(!this.hasMod('disabled')) {
             this._isPointerPressInProgress = true;
             this
@@ -9171,12 +8448,6 @@ provide(BEMDOM.decl(this.name, /** @lends dropdown.prototype */{
             (this._switcher = this.findBlockOn(this.getMod('switcher')));
     },
 
-    _onPopupVisibilityChange : function(_, data) {
-        this.setMod('opened', data.modVal);
-    }
-}, /** @lends dropdown */{
-    live : true,
-
     /**
      * On BEM click event handler
      * @param {events:Event} e
@@ -9185,7 +8456,13 @@ provide(BEMDOM.decl(this.name, /** @lends dropdown.prototype */{
     onSwitcherClick : function(e) {
         this._switcher || (this._switcher = e.target);
         this.toggleMod('opened');
+    },
+
+    _onPopupVisibilityChange : function(_, data) {
+        this.setMod('opened', data.modVal);
     }
+}, /** @lends dropdown */{
+    live : true
 }));
 
 });
@@ -10003,7 +9280,7 @@ provide(Dropdown.decl({ modName : 'switcher', modVal : 'button' }, /** @lends dr
     }
 }, /** @lends dropdown */{
     live : function() {
-        this.liveInitOnBlockEvent('click', 'button', this.onSwitcherClick);
+        this.liveInitOnBlockEvent('click', 'button', this.prototype.onSwitcherClick);
         return this.__base.apply(this, arguments);
     }
 }));
@@ -10026,7 +9303,7 @@ modules.define('dropdown', ['link'], function(provide, _, Dropdown) {
  */
 provide(Dropdown.decl({ modName : 'switcher', modVal : 'link' }, null, /** @lends dropdown */{
     live : function() {
-        this.liveInitOnBlockEvent('click', 'link', this.onSwitcherClick);
+        this.liveInitOnBlockEvent('click', 'link', this.prototype.onSwitcherClick);
         return this.__base.apply(this, arguments);
     }
 }));
@@ -12235,124 +11512,24 @@ var BEMHTML;
 /// --------- BEM-XJST Runtime Start ----
 /// -------------------------------------
 var BEMHTML = function(module, exports) {
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.BEMHTML = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-function ClassBuilder(options) {
-  this.modDelim = options.mod || '_';
-  this.elemDelim = options.elem || '__';
-}
-exports.ClassBuilder = ClassBuilder;
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.bemhtml = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var inherits = require('inherits');
+var Match = require('../bemxjst/match').Match;
+var BemxjstEntity = require('../bemxjst/entity').Entity;
 
-ClassBuilder.prototype.build = function build(block, elem) {
-  if (!elem)
-    return block;
-  else
-    return block + this.elemDelim + elem;
-};
+/**
+ * @class Entity
+ * @param {BEMXJST} bemxjst
+ * @param {String} block
+ * @param {String} elem
+ * @param {Array} templates
+ */
+function Entity(bemxjst) {
+  this.bemxjst = bemxjst;
 
-ClassBuilder.prototype.buildModPostfix = function buildModPostfix(modName,
-                                                                  modVal) {
-  var res = this.modDelim + modName;
-  if (modVal !== true) res += this.modDelim + modVal;
-  return res;
-};
-
-ClassBuilder.prototype.buildBlockClass = function buildBlockClass(name,
-                                                                  modName,
-                                                                  modVal) {
-  var res = name;
-  if (modVal) res += this.buildModPostfix(modName, modVal);
-  return res;
-};
-
-ClassBuilder.prototype.buildElemClass = function buildElemClass(block,
-                                                                name,
-                                                                modName,
-                                                                modVal) {
-  var res = this.buildBlockClass(block) + this.elemDelim + name;
-  if (modVal) res += this.buildModPostfix(modName, modVal);
-  return res;
-};
-
-ClassBuilder.prototype.split = function split(key) {
-  return key.split(this.elemDelim, 2);
-};
-
-},{}],2:[function(require,module,exports){
-var utils = require('./utils');
-
-function Context(bemhtml) {
-  this._bemhtml = bemhtml;
-
-  this.ctx = null;
-  this.block = '';
-
-  // Save current block until the next BEM entity
-  this._currBlock = '';
-
-  this.elem = null;
-  this.mods = {};
-  this.elemMods = {};
-
-  this.position = 0;
-  this._listLength = 0;
-  this._notNewList = false;
-
-  // Used in `OnceMatch` check to detect context change
-  this._onceRef = {};
-}
-exports.Context = Context;
-
-Context.prototype._flush = null;
-Context.prototype.isArray = utils.isArray;
-
-Context.prototype.isSimple = utils.isSimple;
-
-Context.prototype.isShortTag = utils.isShortTag;
-Context.prototype.extend = utils.extend;
-Context.prototype.identify = utils.identify;
-
-Context.prototype.xmlEscape = utils.xmlEscape;
-Context.prototype.attrEscape = utils.attrEscape;
-Context.prototype.jsAttrEscape = utils.jsAttrEscape;
-
-Context.prototype.isFirst = function isFirst() {
-  return this.position === 1;
-};
-
-Context.prototype.isLast = function isLast() {
-  return this.position === this._listLength;
-};
-
-Context.prototype.generateId = function generateId() {
-  return utils.identify(this.ctx);
-};
-
-Context.prototype.reapply = function reapply(ctx) {
-  return this._bemhtml.run(ctx);
-};
-
-},{"./utils":7}],3:[function(require,module,exports){
-var utils = require('./utils');
-var Template = require('./tree').Template;
-var PropertyMatch = require('./tree').PropertyMatch;
-var CompilerOptions = require('./tree').CompilerOptions;
-var Match = require('./match').Match;
-
-function Entity(bemhtml, block, elem, templates) {
-  this.bemhtml = bemhtml;
-
-  this.block = null;
-  this.elem = null;
   this.jsClass = null;
 
-  // `true` if entity has just a default renderer for `def()` mode
-  this.canFlush = true;
-
-  // Compiler options via `xjstOptions()`
-  this.options = {};
-
   // "Fast modes"
-  this.def = new Match(this);
   this.tag = new Match(this);
   this.attrs = new Match(this);
   this.mod = new Match(this);
@@ -12360,15 +11537,11 @@ function Entity(bemhtml, block, elem, templates) {
   this.mix = new Match(this);
   this.bem = new Match(this);
   this.cls = new Match(this);
-  this.content = new Match(this);
 
-  // "Slow modes"
-  this.rest = {};
-
-  // Initialize
-  this.init(block, elem);
-  this.initModes(templates);
+  BemxjstEntity.apply(this, arguments);
 }
+
+inherits(Entity, BemxjstEntity);
 exports.Entity = Entity;
 
 Entity.prototype.init = function init(block, elem) {
@@ -12376,118 +11549,30 @@ Entity.prototype.init = function init(block, elem) {
   this.elem = elem;
 
   // Class for jsParams
-  this.jsClass = this.bemhtml.classBuilder.build(this.block, this.elem);
-};
-
-function contentMode() {
-  return this.ctx.content;
-}
-
-Entity.prototype.initModes = function initModes(templates) {
-  /* jshint maxdepth : false */
-  for (var i = 0; i < templates.length; i++) {
-    var template = templates[i];
-
-    for (var j = template.predicates.length - 1; j >= 0; j--) {
-      var pred = template.predicates[j];
-      if (!(pred instanceof PropertyMatch))
-        continue;
-
-      if (pred.key !== '_mode')
-        continue;
-
-      template.predicates.splice(j, 1);
-      this._initRest(pred.value);
-
-      // All templates should go there anyway
-      this.rest[pred.value].push(template);
-      break;
-    }
-
-    if (j === -1)
-      this.def.push(template);
-
-    // Merge compiler options
-    for (var j = template.predicates.length - 1; j >= 0; j--) {
-      var pred = template.predicates[j];
-      if (!(pred instanceof CompilerOptions))
-        continue;
-
-      this.options = utils.extend(this.options, pred.options);
-    }
-  }
+  this.jsClass = this.bemxjst.classBuilder.build(this.block, this.elem);
 };
 
 Entity.prototype._initRest = function _initRest(key) {
-  if (key === 'tag' ||
-      key === 'attrs' ||
-      key === 'js' ||
-      key === 'mix' ||
-      key === 'bem' ||
-      key === 'cls' ||
-      key === 'content' ||
-      key === 'default') {
-    if (key === 'default')
-      this.rest[key] = this.def;
-    else
-      this.rest[key] = this[key];
+  if (key === 'default') {
+    this.rest[key] = this.def;
+  } else if (key === 'tag' ||
+    key === 'attrs' ||
+    key === 'js' ||
+    key === 'mix' ||
+    key === 'bem' ||
+    key === 'cls' ||
+    key === 'content') {
+    this.rest[key] = this[key];
   } else {
     if (!this.rest.hasOwnProperty(key))
       this.rest[key] = new Match(this);
   }
 };
 
-Entity.prototype.setDefaults = function setDefaults() {
-  // Default .content() template for applyNext()
-  if (this.content.count !== 0)
-    this.content.push(new Template([], contentMode));
-
-  // .def() default
-  if (this.def.count !== 0) {
-    // `.xjstOptions({ flush: true })` will override this
-    this.canFlush = this.options.flush || false;
-    var self = this;
-    this.def.push(new Template([], function defaultBodyProxy() {
-      return self.defaultBody(this);
-    }));
-  }
-};
-
-Entity.prototype.prepend = function prepend(other) {
-  // Prepend to the slow modes, fast modes are in this hashmap too anyway
-  var keys = Object.keys(this.rest);
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    if (!other.rest[key])
-      continue;
-
-    this.rest[key].prepend(other.rest[key]);
-  }
-
-  // Add new slow modes
-  keys = Object.keys(other.rest);
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    if (this.rest[key])
-      continue;
-
-    this._initRest(key);
-    this.rest[key].prepend(other.rest[key]);
-  }
-};
-
-// NOTE: This could be potentially compiled into inlined invokations
-Entity.prototype.run = function run(context) {
-  if (this.def.count !== 0)
-    return this.def.exec(context);
-
-  return this.defaultBody(context);
-};
-
 Entity.prototype.defaultBody = function defaultBody(context) {
-  var tag = context.ctx.tag;
+  var tag = this.tag.exec(context);
   if (tag === undefined)
-    tag = this.tag.exec(context);
+    tag = context.ctx.tag;
 
   var js;
   if (context.ctx.js !== false)
@@ -12503,7 +11588,7 @@ Entity.prototype.defaultBody = function defaultBody(context) {
   if (this.content.count === 0 && content === undefined)
     content = context.ctx.content;
 
-  return this.bemhtml.render(context,
+  return this.bemxjst.render(context,
                              this,
                              tag,
                              js,
@@ -12514,281 +11599,25 @@ Entity.prototype.defaultBody = function defaultBody(context) {
                              content);
 };
 
-},{"./match":5,"./tree":6,"./utils":7}],4:[function(require,module,exports){
+},{"../bemxjst/entity":5,"../bemxjst/match":8,"inherits":11}],2:[function(require,module,exports){
 var inherits = require('inherits');
-
-var Tree = require('./tree').Tree;
-var PropertyMatch = require('./tree').PropertyMatch;
+var utils = require('../bemxjst/utils');
 var Entity = require('./entity').Entity;
-var Context = require('./context').Context;
-var ClassBuilder = require('./class-builder').ClassBuilder;
-var utils = require('./utils');
+var BEMXJST = require('../bemxjst');
 
 function BEMHTML(options) {
-  this.options = options || {};
+  BEMXJST.apply(this, arguments);
 
-  this.entities = null;
-  this.defaultEnt = null;
+  var xhtml = typeof options.xhtml === 'undefined' ? true : options.xhtml;
+  this._shortTagCloser = xhtml ? '/>' : '>';
 
-  // Current tree
-  this.tree = null;
-
-  // Current match
-  this.match = null;
-
-  // Create new Context constructor for overriding prototype
-  this.contextConstructor = function ContextChild(bemhtml) {
-    Context.call(this, bemhtml);
-  };
-  inherits(this.contextConstructor, Context);
-  this.context = null;
-
-  this.classBuilder = new ClassBuilder(this.options.naming || {});
-
-  // Execution depth, used to invalidate `applyNext` bitfields
-  this.depth = 0;
-
-  // Do not call `_flush` on overridden `def()` mode
-  this.canFlush = false;
-
-  // oninit templates
-  this.oninit = null;
-
-  // Initialize default entity (no block/elem match)
-  this.defaultEnt = new Entity(this, '', '', []);
-  this.defaultElemEnt = new Entity(this, '', '', []);
+  this._elemJsInstances = options.elemJsInstances;
 }
+
+inherits(BEMHTML, BEMXJST);
 module.exports = BEMHTML;
 
-BEMHTML.locals = Tree.methods.concat('local', 'applyCtx', 'applyNext', 'apply');
-
-BEMHTML.prototype.compile = function compile(code) {
-  var self = this;
-
-  function applyCtx() {
-    return self._run(self.context.ctx);
-  }
-
-  function applyCtxWrap(ctx, changes) {
-    // Fast case
-    if (!changes)
-      return self.local({ ctx: ctx }, applyCtx);
-
-    return self.local(changes, function() {
-      return self.local({ ctx: ctx }, applyCtx);
-    });
-  }
-
-  function apply(mode, changes) {
-    return self.applyMode(mode, changes);
-  }
-
-  function localWrap(changes) {
-    return function localBody(body) {
-      return self.local(changes, body);
-    };
-  }
-
-  var tree = new Tree({
-    refs: {
-      applyCtx: applyCtxWrap,
-      local: localWrap
-    }
-  });
-
-  // Yeah, let people pass functions to us!
-  var templates = this.recompileInput(code);
-
-  var out = tree.build(templates, [
-    localWrap,
-    applyCtxWrap,
-    function applyNextWrap(changes) {
-      if (changes)
-        return self.local(changes, applyNextWrap);
-      return self.applyNext();
-    },
-    apply
-  ]);
-
-  // Concatenate templates with existing ones
-  // TODO(indutny): it should be possible to incrementally add templates
-  if (this.tree) {
-    out = {
-      templates: out.templates.concat(this.tree.templates),
-      oninit: this.tree.oninit.concat(out.oninit)
-    };
-  }
-  this.tree = out;
-
-  // Group block+elem entities into a hashmap
-  var ent = this.groupEntities(out.templates);
-
-  // Transform entities from arrays to Entity instances
-  ent = this.transformEntities(ent);
-
-  this.entities = ent;
-  this.oninit = out.oninit;
-};
-
-BEMHTML.prototype.recompileInput = function recompileInput(code) {
-  var out = code.toString();
-
-  var args = BEMHTML.locals;
-
-  // Reuse function if it already has right arguments
-  if (typeof code === 'function' && code.length === args.length)
-    return code;
-
-  // Strip the function
-  out = out.replace(/^function[^{]+{|}$/g, '');
-
-  // And recompile it with right arguments
-  out = new Function(args.join(', '), out);
-
-  return out;
-};
-
-BEMHTML.prototype.groupEntities = function groupEntities(tree) {
-  var res = {};
-  for (var i = 0; i < tree.length; i++) {
-    // Make sure to change only the copy, the original is cached in `this.tree`
-    var template = tree[i].clone();
-    var block = null;
-    var elem;
-
-    elem = undefined;
-    for (var j = 0; j < template.predicates.length; j++) {
-      var pred = template.predicates[j];
-      if (!(pred instanceof PropertyMatch))
-        continue;
-
-      if (pred.key === 'block')
-        block = pred.value;
-      else if (pred.key === 'elem')
-        elem = pred.value;
-      else
-        continue;
-
-      // Remove predicate, we won't much against it
-      template.predicates.splice(j, 1);
-      j--;
-    }
-
-    // TODO(indutny): print out the template itself
-    if (block === null)
-      throw new Error('block("...") not found in one of the templates');
-
-    var key = this.classBuilder.build(block, elem);
-
-    if (!res[key])
-      res[key] = [];
-    res[key].push(template);
-  }
-  return res;
-};
-
-BEMHTML.prototype.transformEntities = function transformEntities(entities) {
-  var wildcardElems = [];
-
-  var keys = Object.keys(entities);
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-
-    // TODO(indutny): pass this values over
-    var parts = this.classBuilder.split(key);
-    var block = parts[0];
-    var elem = parts[1];
-
-    if (elem === '*')
-      wildcardElems.push(block);
-
-    entities[key] = new Entity(this, block, elem, entities[key]);
-  }
-
-  // Merge wildcard block templates
-  if (entities.hasOwnProperty('*')) {
-    var wildcard = entities['*'];
-    for (var i = 0; i < keys.length; i++) {
-      var key = keys[i];
-      if (key === '*')
-        continue;
-
-      entities[key].prepend(wildcard);
-    }
-    this.defaultEnt.prepend(wildcard);
-    this.defaultElemEnt.prepend(wildcard);
-  }
-
-  // Merge wildcard elem templates
-  for (var i = 0; i < wildcardElems.length; i++) {
-    var block = wildcardElems[i];
-    var wildcardKey = this.classBuilder.build(block, '*');
-    var wildcard = entities[wildcardKey];
-    for (var i = 0; i < keys.length; i++) {
-      var key = keys[i];
-      if (key === wildcardKey)
-        continue;
-
-      var entity = entities[key];
-      if (entity.block !== block)
-        continue;
-
-      if (entity.elem === undefined)
-        continue;
-
-      entities[key].prepend(wildcard);
-    }
-    this.defaultElemEnt.prepend(wildcard);
-  }
-
-  // Set default templates after merging with wildcard
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    entities[key].setDefaults();
-    this.defaultEnt.setDefaults();
-    this.defaultElemEnt.setDefaults();
-  }
-
-  return entities;
-};
-
-BEMHTML.prototype._run = function _run(context) {
-  var res;
-  if (context === undefined || context === '' || context === null)
-    res = this.runEmpty();
-  else if (utils.isArray(context))
-    res = this.runMany(context);
-  else if (utils.isSimple(context))
-    res = this.runSimple(context);
-  else
-    res = this.runOne(context);
-  return res;
-};
-
-BEMHTML.prototype.run = function run(json) {
-  var match = this.match;
-  var context = this.context;
-
-  this.match = null;
-  this.context = new this.contextConstructor(this);
-  this.canFlush = this.context._flush !== null;
-  this.depth = 0;
-  var res = this._run(json);
-
-  if (this.canFlush)
-    res = this.context._flush(res);
-
-  this.match = match;
-  this.context = context;
-
-  return res;
-};
-
-
-BEMHTML.prototype.runEmpty = function runEmpty() {
-  this.context._listLength--;
-  return '';
-};
+BEMHTML.prototype.Entity = Entity;
 
 BEMHTML.prototype.runMany = function runMany(arr) {
   var out = '';
@@ -12816,94 +11645,6 @@ BEMHTML.prototype.runMany = function runMany(arr) {
     context.position = prevPos;
 
   return out;
-};
-
-BEMHTML.prototype.runSimple = function runSimple(context) {
-  this.context._listLength--;
-  var res = '';
-  if (context && context !== true || context === 0)
-    res += context;
-  return res;
-};
-
-BEMHTML.prototype.runOne = function runOne(json) {
-  var context = this.context;
-
-  var oldCtx = context.ctx;
-  var oldBlock = context.block;
-  var oldCurrBlock = context._currBlock;
-  var oldElem = context.elem;
-  var oldMods = context.mods;
-  var oldElemMods = context.elemMods;
-
-  if (json.block || json.elem)
-    context._currBlock = '';
-  else
-    context._currBlock = context.block;
-
-  context.ctx = json;
-  if (json.block) {
-    context.block = json.block;
-
-    if (json.mods)
-      context.mods = json.mods;
-    else
-      context.mods = {};
-  } else {
-    if (!json.elem)
-      context.block = '';
-    else if (oldCurrBlock)
-      context.block = oldCurrBlock;
-  }
-
-  context.elem = json.elem;
-  if (json.elemMods)
-    context.elemMods = json.elemMods;
-  else
-    context.elemMods = {};
-
-  var block = context.block || '';
-  var elem = context.elem;
-
-  // Control list position
-  if (block || elem)
-    context.position++;
-  else
-    context._listLength--;
-
-  // To invalidate `applyNext` flags
-  this.depth++;
-
-  var key = this.classBuilder.build(block, elem);
-
-  var restoreFlush = false;
-  var ent = this.entities[key];
-  if (ent) {
-    if (this.canFlush && !ent.canFlush) {
-      // Entity does not support flushing, do not flush anything nested
-      restoreFlush = true;
-      this.canFlush = false;
-    }
-  } else {
-    // No entity - use default one
-    ent = this.defaultEnt;
-    if (elem !== undefined)
-      ent = this.defaultElemEnt;
-    ent.init(block, elem);
-  }
-
-  var res = ent.run(context);
-  context.ctx = oldCtx;
-  context.block = oldBlock;
-  context.elem = oldElem;
-  context.mods = oldMods;
-  context.elemMods = oldElemMods;
-  context._currBlock = oldCurrBlock;
-  this.depth--;
-  if (restoreFlush)
-    this.canFlush = true;
-
-  return res;
 };
 
 BEMHTML.prototype.render = function render(context,
@@ -12958,16 +11699,19 @@ BEMHTML.prototype.render = function render(context,
   if (cls === undefined)
     cls = ctx.cls;
 
-  var addJSInitClass = entity.block && jsParams && !entity.elem;
+  var addJSInitClass = jsParams && (
+    this._elemJsInstances ?
+      (entity.block || entity.elem) :
+      (entity.block && !entity.elem)
+  );
+
   if (!isBEM && !cls) {
     return this.renderClose(out, context, tag, attrs, isBEM, ctx, content);
   }
 
   out += ' class="';
   if (isBEM) {
-    var mods = ctx.elemMods || ctx.mods;
-    if (!mods && ctx.block)
-      mods = context.mods;
+    var mods = entity.elem ? context.elemMods : context.mods;
 
     out += entity.jsClass;
     out += this.buildModsClasses(entity.block, entity.elem, mods);
@@ -13021,19 +11765,22 @@ BEMHTML.prototype.renderClose = function renderClose(prefix,
     /* jshint forin : false */
     for (name in attrs) {
       var attr = attrs[name];
-      if (attr === undefined)
+      if (attr === undefined || attr === false || attr === null)
         continue;
 
-      out += ' ' + name + '="' +
-        utils.attrEscape(utils.isSimple(attr) ?
-                         attr :
-                         this.context.reapply(attr)) +
-                         '"';
+      if (attr === true)
+        out += ' ' + name;
+      else
+        out += ' ' + name + '="' +
+          utils.attrEscape(utils.isSimple(attr) ?
+                           attr :
+                           this.context.reapply(attr)) +
+                           '"';
     }
   }
 
   if (utils.isShortTag(tag)) {
-    out += '/>';
+    out += this._shortTagCloser;
     if (this.canFlush)
       out = context._flush(out);
   } else {
@@ -13078,7 +11825,16 @@ BEMHTML.prototype.renderMix = function renderMix(entity,
     if (typeof item === 'string')
       item = { block: item, elem: undefined };
 
-    var hasItem = item.block || item.elem;
+    var hasItem = false;
+
+    if (item.elem) {
+      hasItem = item.elem !== entity.elem && item.elem !== context.elem ||
+        item.block && item.block !== entity.block;
+    } else if (item.block) {
+      hasItem = !(item.block === entity.block && item.mods) ||
+        item.mods && entity.elem;
+    }
+
     var block = item.block || item._block || context.block;
     var elem = item.elem || item._elem || context.elem;
     var key = classBuilder.build(block, elem);
@@ -13089,7 +11845,9 @@ BEMHTML.prototype.renderMix = function renderMix(entity,
     if (hasItem)
       out += ' ' + classBuilder.build(block, classElem);
 
-    out += this.buildModsClasses(block, classElem, item.elemMods || item.mods);
+    out += this.buildModsClasses(block, classElem,
+      (item.elem || !item.block && (item._elem || context.elem)) ?
+        item.elemMods : item.mods);
 
     if (item.js) {
       if (!js)
@@ -13170,27 +11928,6 @@ BEMHTML.prototype.buildModsClasses = function buildModsClasses(block,
   return res;
 };
 
-BEMHTML.prototype.renderContent = function renderContent(content, isBEM) {
-  var context = this.context;
-  var oldPos = context.position;
-  var oldListLength = context._listLength;
-  var oldNotNewList = context._notNewList;
-
-  context._notNewList = false;
-  if (isBEM) {
-    context.position = 1;
-    context._listLength = 1;
-  }
-
-  var res = this._run(content);
-
-  context.position = oldPos;
-  context._listLength = oldListLength;
-  context._notNewList = oldNotNewList;
-
-  return res;
-};
-
 BEMHTML.prototype.renderNoTag = function renderNoTag(context,
                                                      js,
                                                      bem,
@@ -13205,7 +11942,681 @@ BEMHTML.prototype.renderNoTag = function renderNoTag(context,
   return '';
 };
 
-BEMHTML.prototype.local = function local(changes, body) {
+},{"../bemxjst":7,"../bemxjst/utils":10,"./entity":1,"inherits":11}],3:[function(require,module,exports){
+function ClassBuilder(options) {
+  this.modDelim = options.mod || '_';
+  this.elemDelim = options.elem || '__';
+}
+exports.ClassBuilder = ClassBuilder;
+
+ClassBuilder.prototype.build = function build(block, elem) {
+  if (!elem)
+    return block;
+  else
+    return block + this.elemDelim + elem;
+};
+
+ClassBuilder.prototype.buildModPostfix = function buildModPostfix(modName,
+                                                                  modVal) {
+  var res = this.modDelim + modName;
+  if (modVal !== true) res += this.modDelim + modVal;
+  return res;
+};
+
+ClassBuilder.prototype.buildBlockClass = function buildBlockClass(name,
+                                                                  modName,
+                                                                  modVal) {
+  var res = name;
+  if (modVal) res += this.buildModPostfix(modName, modVal);
+  return res;
+};
+
+ClassBuilder.prototype.buildElemClass = function buildElemClass(block,
+                                                                name,
+                                                                modName,
+                                                                modVal) {
+  var res = this.buildBlockClass(block) + this.elemDelim + name;
+  if (modVal) res += this.buildModPostfix(modName, modVal);
+  return res;
+};
+
+ClassBuilder.prototype.split = function split(key) {
+  return key.split(this.elemDelim, 2);
+};
+
+},{}],4:[function(require,module,exports){
+var utils = require('./utils');
+
+function Context(bemxjst) {
+  this._bemxjst = bemxjst;
+
+  this.ctx = null;
+  this.block = '';
+
+  // Save current block until the next BEM entity
+  this._currBlock = '';
+
+  this.elem = null;
+  this.mods = {};
+  this.elemMods = {};
+
+  this.position = 0;
+  this._listLength = 0;
+  this._notNewList = false;
+
+  // (miripiruni) this will be changed in next major release
+  this.escapeContent = bemxjst.options.escapeContent === true;
+
+  // Used in `OnceMatch` check to detect context change
+  this._onceRef = {};
+}
+exports.Context = Context;
+
+Context.prototype._flush = null;
+Context.prototype.isArray = utils.isArray;
+
+Context.prototype.isSimple = utils.isSimple;
+
+Context.prototype.isShortTag = utils.isShortTag;
+Context.prototype.extend = utils.extend;
+Context.prototype.identify = utils.identify;
+
+Context.prototype.xmlEscape = utils.xmlEscape;
+Context.prototype.attrEscape = utils.attrEscape;
+Context.prototype.jsAttrEscape = utils.jsAttrEscape;
+
+Context.prototype.isFirst = function isFirst() {
+  return this.position === 1;
+};
+
+Context.prototype.isLast = function isLast() {
+  return this.position === this._listLength;
+};
+
+Context.prototype.generateId = function generateId() {
+  return utils.identify(this.ctx);
+};
+
+Context.prototype.reapply = function reapply(ctx) {
+  return this._bemxjst.run(ctx);
+};
+
+},{"./utils":10}],5:[function(require,module,exports){
+var utils = require('./utils');
+var Match = require('./match').Match;
+var tree = require('./tree');
+var Template = tree.Template;
+var PropertyMatch = tree.PropertyMatch;
+var CompilerOptions = tree.CompilerOptions;
+
+function Entity(bemxjst, block, elem, templates) {
+  this.bemxjst = bemxjst;
+
+  this.block = null;
+  this.elem = null;
+
+  // Compiler options via `xjstOptions()`
+  this.options = {};
+
+  // `true` if entity has just a default renderer for `def()` mode
+  this.canFlush = true;
+
+  // "Fast modes"
+  this.def = new Match(this);
+  this.content = new Match(this);
+
+  // "Slow modes"
+  this.rest = {};
+
+  // Initialize
+  this.init(block, elem);
+  this.initModes(templates);
+}
+exports.Entity = Entity;
+
+Entity.prototype.init = function init(block, elem) {
+  this.block = block;
+  this.elem = elem;
+};
+
+function contentMode() {
+  return this.ctx.content;
+}
+
+Entity.prototype.initModes = function initModes(templates) {
+  /* jshint maxdepth : false */
+  for (var i = 0; i < templates.length; i++) {
+    var template = templates[i];
+
+    for (var j = template.predicates.length - 1; j >= 0; j--) {
+      var pred = template.predicates[j];
+      if (!(pred instanceof PropertyMatch))
+        continue;
+
+      if (pred.key !== '_mode')
+        continue;
+
+      template.predicates.splice(j, 1);
+      this._initRest(pred.value);
+
+      // All templates should go there anyway
+      this.rest[pred.value].push(template);
+      break;
+    }
+
+    if (j === -1)
+      this.def.push(template);
+
+    // Merge compiler options
+    for (var j = template.predicates.length - 1; j >= 0; j--) {
+      var pred = template.predicates[j];
+      if (!(pred instanceof CompilerOptions))
+        continue;
+
+      this.options = utils.extend(this.options, pred.options);
+    }
+  }
+};
+
+Entity.prototype.prepend = function prepend(other) {
+  // Prepend to the slow modes, fast modes are in this hashmap too anyway
+  var keys = Object.keys(this.rest);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (!other.rest[key])
+      continue;
+
+    this.rest[key].prepend(other.rest[key]);
+  }
+
+  // Add new slow modes
+  keys = Object.keys(other.rest);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (this.rest[key])
+      continue;
+
+    this._initRest(key);
+    this.rest[key].prepend(other.rest[key]);
+  }
+};
+
+// NOTE: This could be potentially compiled into inlined invokations
+Entity.prototype.run = function run(context) {
+  if (this.def.count !== 0)
+    return this.def.exec(context);
+
+  return this.defaultBody(context);
+};
+
+Entity.prototype.setDefaults = function setDefaults() {
+  // Default .content() template for applyNext()
+  if (this.content.count !== 0)
+    this.content.push(new Template([], contentMode));
+
+  // .def() default
+  if (this.def.count !== 0) {
+    this.canFlush = this.options.flush || false;
+    var self = this;
+    this.def.push(new Template([], function defaultBodyProxy() {
+      return self.defaultBody(this);
+    }));
+  }
+};
+
+},{"./match":8,"./tree":9,"./utils":10}],6:[function(require,module,exports){
+function BEMXJSTError(msg, func) {
+  this.name = 'BEMXJSTError';
+  this.message = msg;
+
+  if (Error.captureStackTrace)
+    Error.captureStackTrace(this, func || this.constructor);
+  else
+    this.stack = (new Error()).stack;
+}
+
+BEMXJSTError.prototype = Object.create(Error.prototype);
+BEMXJSTError.prototype.constructor = BEMXJSTError;
+
+exports.BEMXJSTError = BEMXJSTError;
+
+},{}],7:[function(require,module,exports){
+var inherits = require('inherits');
+
+var Tree = require('./tree').Tree;
+var PropertyMatch = require('./tree').PropertyMatch;
+var Context = require('./context').Context;
+var ClassBuilder = require('./class-builder').ClassBuilder;
+var utils = require('./utils');
+
+function BEMXJST(options) {
+  this.options = options || {};
+
+  this.entities = null;
+  this.defaultEnt = null;
+
+  // Current tree
+  this.tree = null;
+
+  // Current match
+  this.match = null;
+
+  // Create new Context constructor for overriding prototype
+  this.contextConstructor = function ContextChild(bemxjst) {
+    Context.call(this, bemxjst);
+  };
+  inherits(this.contextConstructor, Context);
+  this.context = null;
+
+  this.classBuilder = new ClassBuilder(this.options.naming || {});
+
+  // Execution depth, used to invalidate `applyNext` bitfields
+  this.depth = 0;
+
+  // Do not call `_flush` on overridden `def()` mode
+  this.canFlush = false;
+
+  // oninit templates
+  this.oninit = null;
+
+  // Initialize default entity (no block/elem match)
+  this.defaultEnt = new this.Entity(this, '', '', []);
+  this.defaultElemEnt = new this.Entity(this, '', '', []);
+}
+module.exports = BEMXJST;
+
+BEMXJST.prototype.locals = Tree.methods
+    .concat('local', 'applyCtx', 'applyNext', 'apply');
+
+BEMXJST.prototype.compile = function compile(code) {
+  var self = this;
+
+  function applyCtx() {
+    return self._run(self.context.ctx);
+  }
+
+  function applyCtxWrap(ctx, changes) {
+    // Fast case
+    if (!changes)
+      return self.local({ ctx: ctx }, applyCtx);
+
+    return self.local(changes, function() {
+      return self.local({ ctx: ctx }, applyCtx);
+    });
+  }
+
+  function apply(mode, changes) {
+    return self.applyMode(mode, changes);
+  }
+
+  function localWrap(changes) {
+    return function localBody(body) {
+      return self.local(changes, body);
+    };
+  }
+
+  var tree = new Tree({
+    refs: {
+      applyCtx: applyCtxWrap,
+      local: localWrap
+    }
+  });
+
+  // Yeah, let people pass functions to us!
+  var templates = this.recompileInput(code);
+
+  var out = tree.build(templates, [
+    localWrap,
+    applyCtxWrap,
+    function applyNextWrap(changes) {
+      if (changes)
+        return self.local(changes, applyNextWrap);
+      return self.applyNext();
+    },
+    apply
+  ]);
+
+  // Concatenate templates with existing ones
+  // TODO(indutny): it should be possible to incrementally add templates
+  if (this.tree) {
+    out = {
+      templates: out.templates.concat(this.tree.templates),
+      oninit: this.tree.oninit.concat(out.oninit)
+    };
+  }
+  this.tree = out;
+
+  // Group block+elem entities into a hashmap
+  var ent = this.groupEntities(out.templates);
+
+  // Transform entities from arrays to Entity instances
+  ent = this.transformEntities(ent);
+
+  this.entities = ent;
+  this.oninit = out.oninit;
+};
+
+BEMXJST.prototype.recompileInput = function recompileInput(code) {
+  var out = code.toString();
+
+  var args = BEMXJST.prototype.locals;
+  // Reuse function if it already has right arguments
+  if (typeof code === 'function' && code.length === args.length)
+    return code;
+
+  // Strip the function
+  out = out.replace(/^function[^{]+{|}$/g, '');
+
+  // And recompile it with right arguments
+  out = new Function(args.join(', '), out);
+
+  return out;
+};
+
+BEMXJST.prototype.groupEntities = function groupEntities(tree) {
+  var res = {};
+  for (var i = 0; i < tree.length; i++) {
+    // Make sure to change only the copy, the original is cached in `this.tree`
+    var template = tree[i].clone();
+    var block = null;
+    var elem;
+
+    elem = undefined;
+    for (var j = 0; j < template.predicates.length; j++) {
+      var pred = template.predicates[j];
+      if (!(pred instanceof PropertyMatch))
+        continue;
+
+      if (pred.key === 'block')
+        block = pred.value;
+      else if (pred.key === 'elem')
+        elem = pred.value;
+      else
+        continue;
+
+      // Remove predicate, we won't much against it
+      template.predicates.splice(j, 1);
+      j--;
+    }
+
+    if (block === null) {
+      var msg = 'block(…) subpredicate is not found.\n' +
+      '    See template with subpredicates:\n     * ';
+
+      for (var j = 0; j < template.predicates.length; j++) {
+        var pred = template.predicates[j];
+
+        if (j !== 0)
+          msg += '\n     * ';
+
+        if (pred.key === '_mode') {
+          msg += pred.value + '()';
+        } else {
+          if (Array.isArray(pred.key)) {
+            msg += pred.key[0].replace('mods', 'mod')
+              .replace('elemMods', 'elemMod') +
+              '(\'' + pred.key[1] + '\', \'' + pred.value + '\')';
+          } else if (!pred.value || !pred.key) {
+            msg += 'match(…)';
+          } else {
+            msg += pred.key + '(\'' + pred.value + '\')';
+          }
+        }
+      }
+
+      msg += '\n    And template body: \n    (' +
+        (typeof template.body === 'function' ?
+          template.body :
+          JSON.stringify(template.body)) + ')';
+
+      if (typeof BEMXJSTError === 'undefined') {
+        BEMXJSTError = require('./error').BEMXJSTError;
+      }
+
+      throw new BEMXJSTError(msg);
+    }
+
+    var key = this.classBuilder.build(block, elem);
+
+    if (!res[key])
+      res[key] = [];
+    res[key].push(template);
+  }
+  return res;
+};
+
+BEMXJST.prototype.transformEntities = function transformEntities(entities) {
+  var wildcardElems = [];
+
+  var keys = Object.keys(entities);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+
+    // TODO(indutny): pass this values over
+    var parts = this.classBuilder.split(key);
+    var block = parts[0];
+    var elem = parts[1];
+
+    if (elem === '*')
+      wildcardElems.push(block);
+
+    entities[key] = new this.Entity(
+      this, block, elem, entities[key]);
+  }
+
+  // Merge wildcard block templates
+  if (entities.hasOwnProperty('*')) {
+    var wildcard = entities['*'];
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (key === '*')
+        continue;
+
+      entities[key].prepend(wildcard);
+    }
+    this.defaultEnt.prepend(wildcard);
+    this.defaultElemEnt.prepend(wildcard);
+  }
+
+  // Merge wildcard elem templates
+  for (var i = 0; i < wildcardElems.length; i++) {
+    var block = wildcardElems[i];
+    var wildcardKey = this.classBuilder.build(block, '*');
+    var wildcard = entities[wildcardKey];
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (key === wildcardKey)
+        continue;
+
+      var entity = entities[key];
+      if (entity.block !== block)
+        continue;
+
+      if (entity.elem === undefined)
+        continue;
+
+      entities[key].prepend(wildcard);
+    }
+    this.defaultElemEnt.prepend(wildcard);
+  }
+
+  // Set default templates after merging with wildcard
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    entities[key].setDefaults();
+    this.defaultEnt.setDefaults();
+    this.defaultElemEnt.setDefaults();
+  }
+
+  return entities;
+};
+
+BEMXJST.prototype._run = function _run(context) {
+  var res;
+  if (context === undefined || context === '' || context === null)
+    res = this.runEmpty();
+  else if (utils.isArray(context))
+    res = this.runMany(context);
+  else if (utils.isSimple(context))
+    res = this.runSimple(context);
+  else if (
+    context.html &&
+    typeof context.html === 'string' &&
+    typeof context.block === 'undefined' &&
+    typeof context.elem === 'undefined' &&
+    typeof context.tag === 'undefined' &&
+    typeof context.cls === 'undefined' &&
+    typeof context.attrs === 'undefined'
+  )
+    res = this.runUnescaped(context.html);
+  else
+    res = this.runOne(context);
+  return res;
+};
+
+BEMXJST.prototype.run = function run(json) {
+  var match = this.match;
+  var context = this.context;
+
+  this.match = null;
+  this.context = new this.contextConstructor(this);
+  this.canFlush = this.context._flush !== null;
+  this.depth = 0;
+  var res = this._run(json);
+
+  if (this.canFlush)
+    res = this.context._flush(res);
+
+  this.match = match;
+  this.context = context;
+
+  return res;
+};
+
+
+BEMXJST.prototype.runEmpty = function runEmpty() {
+  this.context._listLength--;
+  return '';
+};
+
+BEMXJST.prototype.runUnescaped = function runUnescaped(context) {
+  this.context._listLength--;
+  return '' + context;
+};
+
+BEMXJST.prototype.runSimple = function runSimple(simple) {
+  this.context._listLength--;
+  var res = '';
+  if (simple && simple !== true || simple === 0) {
+    res += typeof simple === 'string' && this.context.escapeContent ?
+      utils.xmlEscape(simple) :
+      simple;
+  }
+  return res;
+};
+
+BEMXJST.prototype.runOne = function runOne(json) {
+  var context = this.context;
+
+  var oldCtx = context.ctx;
+  var oldBlock = context.block;
+  var oldCurrBlock = context._currBlock;
+  var oldElem = context.elem;
+  var oldMods = context.mods;
+  var oldElemMods = context.elemMods;
+
+  if (json.block || json.elem)
+    context._currBlock = '';
+  else
+    context._currBlock = context.block;
+
+  context.ctx = json;
+  if (json.block) {
+    context.block = json.block;
+
+    if (json.mods)
+      context.mods = json.mods;
+    else if (json.block !== oldBlock)
+      context.mods = {};
+  } else {
+    if (!json.elem)
+      context.block = '';
+    else if (oldCurrBlock)
+      context.block = oldCurrBlock;
+  }
+
+  context.elem = json.elem;
+  if (json.elemMods)
+    context.elemMods = json.elemMods;
+  else
+    context.elemMods = {};
+
+  var block = context.block || '';
+  var elem = context.elem;
+
+  // Control list position
+  if (block || elem)
+    context.position++;
+  else
+    context._listLength--;
+
+  // To invalidate `applyNext` flags
+  this.depth++;
+
+  var key = this.classBuilder.build(block, elem);
+
+  var restoreFlush = false;
+  var ent = this.entities[key];
+  if (ent) {
+    if (this.canFlush && !ent.canFlush) {
+      // Entity does not support flushing, do not flush anything nested
+      restoreFlush = true;
+      this.canFlush = false;
+    }
+  } else {
+    // No entity - use default one
+    ent = this.defaultEnt;
+    if (elem !== undefined)
+      ent = this.defaultElemEnt;
+    ent.init(block, elem);
+  }
+
+  var res = ent.run(context);
+  context.ctx = oldCtx;
+  context.block = oldBlock;
+  context.elem = oldElem;
+  context.mods = oldMods;
+  context.elemMods = oldElemMods;
+  context._currBlock = oldCurrBlock;
+  this.depth--;
+  if (restoreFlush)
+    this.canFlush = true;
+
+  return res;
+};
+
+BEMXJST.prototype.renderContent = function renderContent(content, isBEM) {
+  var context = this.context;
+  var oldPos = context.position;
+  var oldListLength = context._listLength;
+  var oldNotNewList = context._notNewList;
+
+  context._notNewList = false;
+  if (isBEM) {
+    context.position = 0;
+    context._listLength = 1;
+  }
+
+  var res = this._run(content);
+
+  context.position = oldPos;
+  context._listLength = oldListLength;
+  context._notNewList = oldNotNewList;
+
+  return res;
+};
+
+BEMXJST.prototype.local = function local(changes, body) {
   var keys = Object.keys(changes);
   var restore = [];
   for (var i = 0; i < keys.length; i++) {
@@ -13237,11 +12648,11 @@ BEMHTML.prototype.local = function local(changes, body) {
   return res;
 };
 
-BEMHTML.prototype.applyNext = function applyNext() {
+BEMXJST.prototype.applyNext = function applyNext() {
   return this.match.exec(this.context);
 };
 
-BEMHTML.prototype.applyMode = function applyMode(mode, changes) {
+BEMXJST.prototype.applyMode = function applyMode(mode, changes) {
   var match = this.match.entity.rest[mode];
   if (!match)
     return;
@@ -13259,7 +12670,7 @@ BEMHTML.prototype.applyMode = function applyMode(mode, changes) {
   return this.local(changes, fn);
 };
 
-BEMHTML.prototype.exportApply = function exportApply(exports) {
+BEMXJST.prototype.exportApply = function exportApply(exports) {
   var self = this;
   exports.apply = function apply(context) {
     return self.run(context);
@@ -13282,14 +12693,14 @@ BEMHTML.prototype.exportApply = function exportApply(exports) {
   }
 };
 
-},{"./class-builder":1,"./context":2,"./entity":3,"./tree":6,"./utils":7,"inherits":8}],5:[function(require,module,exports){
+},{"./class-builder":3,"./context":4,"./error":6,"./tree":9,"./utils":10,"inherits":11}],8:[function(require,module,exports){
 var utils = require('./utils');
-
-var PropertyMatch = require('./tree').PropertyMatch;
-var OnceMatch = require('./tree').OnceMatch;
-var WrapMatch = require('./tree').WrapMatch;
-var PropertyAbsent = require('./tree').PropertyAbsent;
-var CustomMatch = require('./tree').CustomMatch;
+var tree = require('./tree');
+var PropertyMatch = tree.PropertyMatch;
+var OnceMatch = tree.OnceMatch;
+var WrapMatch = tree.WrapMatch;
+var PropertyAbsent = tree.PropertyAbsent;
+var CustomMatch = tree.CustomMatch;
 
 function MatchProperty(template, pred) {
   this.template = template;
@@ -13333,7 +12744,7 @@ function MatchCustom(template, pred) {
 }
 
 MatchCustom.prototype.exec = function exec(context) {
-  return this.body.call(context);
+  return this.body.call(context, context, context.ctx);
 };
 
 function MatchOnce(template) {
@@ -13402,7 +12813,7 @@ exports.MatchTemplate = MatchTemplate;
 
 function Match(entity) {
   this.entity = entity;
-  this.bemhtml = this.entity.bemhtml;
+  this.bemxjst = this.entity.bemxjst;
   this.templates = [];
 
   // applyNext mask
@@ -13452,7 +12863,7 @@ Match.prototype.push = function push(template) {
 
 Match.prototype.tryCatch = function tryCatch(fn, ctx) {
   try {
-    return fn.call(ctx);
+    return fn.call(ctx, ctx, ctx.ctx);
   } catch (e) {
     this.thrownError = e;
   }
@@ -13494,9 +12905,9 @@ Match.prototype.exec = function exec(context) {
     return undefined;
 
   var oldMask = mask;
-  var oldMatch = this.bemhtml.match;
+  var oldMatch = this.bemxjst.match;
   this.mask[bitIndex] |= bit;
-  this.bemhtml.match = this;
+  this.bemxjst.match = this;
 
   this.thrownError = null;
 
@@ -13507,7 +12918,7 @@ Match.prototype.exec = function exec(context) {
     out = template.body;
 
   this.mask[bitIndex] = oldMask;
-  this.bemhtml.match = oldMatch;
+  this.bemxjst.match = oldMatch;
   this.restoreDepth(save);
 
   var e = this.thrownError;
@@ -13521,15 +12932,15 @@ Match.prototype.exec = function exec(context) {
 
 Match.prototype.checkDepth = function checkDepth() {
   if (this.depth === -1) {
-    this.depth = this.bemhtml.depth;
+    this.depth = this.bemxjst.depth;
     return -1;
   }
 
-  if (this.bemhtml.depth === this.depth)
+  if (this.bemxjst.depth === this.depth)
     return this.depth;
 
   var depth = this.depth;
-  this.depth = this.bemhtml.depth;
+  this.depth = this.bemxjst.depth;
 
   this.maskOffset += this.maskSize;
 
@@ -13545,7 +12956,7 @@ Match.prototype.restoreDepth = function restoreDepth(depth) {
   this.depth = depth;
 };
 
-},{"./tree":6,"./utils":7}],6:[function(require,module,exports){
+},{"./tree":9,"./utils":10}],9:[function(require,module,exports){
 var assert = require('minimalistic-assert');
 var inherits = require('inherits');
 
@@ -13616,7 +13027,7 @@ WrapMatch.prototype.wrapBody = function wrapBody(body) {
   }
 
   return function wrapAdaptor() {
-    return applyCtx(body.call(this));
+    return applyCtx(body.call(this, this, this.ctx));
   };
 };
 
@@ -13638,7 +13049,7 @@ ReplaceMatch.prototype.wrapBody = function wrapBody(body) {
   }
 
   return function replaceAdaptor() {
-    return applyCtx(body.call(this));
+    return applyCtx(body.call(this, this, this.ctx));
   };
 };
 
@@ -13734,8 +13145,8 @@ function Tree(options) {
 exports.Tree = Tree;
 
 Tree.methods = [
-  'match', 'once', 'wrap', 'elemMatch', 'block', 'elem', 'mode', 'mod',
-  'elemMod', 'def', 'tag', 'attrs', 'cls', 'js', 'jsAttr',
+  'match', 'once', 'wrap', 'block', 'elem', 'mode', 'mod',
+  'elemMod', 'def', 'tag', 'attrs', 'cls', 'js',
   'bem', 'mix', 'content', 'replace', 'extend', 'oninit',
   'xjstOptions'
 ];
@@ -13850,12 +13261,17 @@ Tree.prototype.match = function match() {
 };
 
 Tree.prototype.once = function once() {
-  if (arguments.length) throw new Error('Predicate should not have arguments');
+  if (arguments.length)
+    throw new Error('Predicate once() should not have arguments');
   return this.match(new OnceMatch());
 };
 
 Tree.prototype.applyMode = function applyMode(args, mode) {
-  if (args.length) throw new Error('Predicate should not have arguments');
+  if (args.length) {
+    throw new Error('Predicate should not have arguments but ' +
+      JSON.stringify(args) + ' passed');
+  }
+
   return this.mode(mode);
 };
 
@@ -13872,10 +13288,6 @@ Tree.prototype.xjstOptions = function xjstOptions(options) {
 
 Tree.prototype.block = function block(name) {
   return this.match(new PropertyMatch('block', name));
-};
-
-Tree.prototype.elemMatch = function elemMatch() {
-  return this.match.apply(this, arguments);
 };
 
 Tree.prototype.elem = function elem(name) {
@@ -13914,10 +13326,6 @@ Tree.prototype.js = function js() {
   return this.applyMode(arguments, 'js');
 };
 
-Tree.prototype.jsAttr = function jsAttr() {
-  return this.applyMode(arguments, 'jsAttr');
-};
-
 Tree.prototype.bem = function bem() {
   return this.applyMode(arguments, 'bem');
 };
@@ -13942,7 +13350,7 @@ Tree.prototype.oninit = function oninit(fn) {
   this.initializers.push(fn);
 };
 
-},{"inherits":8,"minimalistic-assert":9}],7:[function(require,module,exports){
+},{"inherits":11,"minimalistic-assert":12}],10:[function(require,module,exports){
 var toString = Object.prototype.toString;
 
 exports.isArray = Array.isArray;
@@ -14020,7 +13428,7 @@ exports.identify = function identify(obj, onlyGet) {
   return u;
 };
 
-},{}],8:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -14045,7 +13453,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],9:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 module.exports = assert;
 
 function assert(val, msg) {
@@ -14058,7 +13466,7 @@ assert.equal = function assertEqual(l, r, msg) {
     throw new Error(msg || ('Assertion failed: ' + l + ' != ' + r));
 };
 
-},{}]},{},[4])(4)
+},{}]},{},[2])(2)
 });;
   return module.exports ||
       exports.BEMHTML;
@@ -14067,12 +13475,12 @@ assert.equal = function assertEqual(l, r, msg) {
 /// --------- BEM-XJST Runtime End ------
 /// -------------------------------------
 
-var api = new BEMHTML({"wrap":false});
+var api = new BEMHTML({});
 /// -------------------------------------
 /// ------ BEM-XJST User-code Start -----
 /// -------------------------------------
-api.compile(function(match, once, wrap, elemMatch, block, elem, mode, mod, elemMod, def, tag, attrs, cls, js, jsAttr, bem, mix, content, replace, extend, oninit, xjstOptions, local, applyCtx, applyNext, apply) {
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/ua.bemhtml */
+api.compile(function(match, once, wrap, block, elem, mode, mod, elemMod, def, tag, attrs, cls, js, bem, mix, content, replace, extend, oninit, xjstOptions, local, applyCtx, applyNext, apply) {
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/ua.bemhtml.js */
 block('ua')(
     tag()('script'),
     bem()(false),
@@ -14083,99 +13491,42 @@ block('ua')(
     ])
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/ua.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/i-bem/__i18n/_dummy/i-bem__i18n_dummy_yes.bemhtml */
-/*global oninit, BEM, exports */
-
-oninit(function() {
-    (function(global, bem_) {
-
-        if(bem_.I18N) {
-            return;
-        }
-
-        /** @global points to global context */
-        global.BEM = bem_;
-
-        /**
-        * `BEM.I18N` API stub
-        */
-        var i18n = global.BEM.I18N = function(keyset, key) {
-            return key;
-        };
-
-        i18n.keyset = function() { return i18n; };
-        i18n.key = function(key) { return key; };
-        i18n.lang = function() { return; };
-
-    })(this, typeof BEM === 'undefined'? {} : BEM);
-});
-
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/i-bem/__i18n/_dummy/i-bem__i18n_dummy_yes.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/i-bem/__i18n/i-bem__i18n.bemhtml */
-/* global exports, BEM */
-
-block('i-bem').elem('i18n').def()(function() {
-    if(!this.ctx) return '';
-
-    var ctx = this.ctx,
-        keyset = ctx.keyset,
-        key = ctx.key,
-        params = ctx.params || {};
-
-    if(!(keyset || key))
-        return '';
-
-    /**
-     * Consider `content` is a reserved param that contains
-     * valid bemjson data
-     */
-    if(typeof ctx.content === 'undefined' || ctx.content !== null) {
-        params.content = exports.apply(ctx.content);
-    }
-
-    this._buf.push(BEM.I18N(keyset, key, params));
-});
-
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/i-bem/__i18n/i-bem__i18n.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/page.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/ua.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/page.bemhtml.js */
 block('page')(
 
-    def().match(function() { return !this._pageInit; })(function() {
+    wrap()(function() {
         var ctx = this.ctx;
         this._nonceCsp = ctx.nonce;
 
-        // TODO(indunty): remove local after bem/bem-xjst#50
-        return local({ _pageInit : true })(function() {
-            return applyCtx([
-                ctx.doctype || '<!DOCTYPE html>',
-                {
-                    tag : 'html',
-                    cls : 'ua_js_no',
-                    content : [
-                        {
-                            elem : 'head',
-                            content : [
-                                { tag : 'meta', attrs : { charset : 'utf-8' } },
-                                ctx.uaCompatible === false? '' : {
-                                    tag : 'meta',
-                                    attrs : {
-                                        'http-equiv' : 'X-UA-Compatible',
-                                        content : ctx.uaCompatible || 'IE=edge'
-                                    }
-                                },
-                                { tag : 'title', content : ctx.title },
-                                { block : 'ua', attrs : { nonce : ctx.nonce } },
-                                ctx.head,
-                                ctx.styles,
-                                ctx.favicon? { elem : 'favicon', url : ctx.favicon } : ''
-                            ]
-                        },
-                        ctx
-                    ]
-                }
-            ]);
-        });
+        return [
+            ctx.doctype || '<!DOCTYPE html>',
+            {
+                tag : 'html',
+                cls : 'ua_js_no',
+                content : [
+                    {
+                        elem : 'head',
+                        content : [
+                            { tag : 'meta', attrs : { charset : 'utf-8' } },
+                            ctx.uaCompatible === false? '' : {
+                                tag : 'meta',
+                                attrs : {
+                                    'http-equiv' : 'X-UA-Compatible',
+                                    content : ctx.uaCompatible || 'IE=edge'
+                                }
+                            },
+                            { tag : 'title', content : ctx.title },
+                            { block : 'ua', attrs : { nonce : ctx.nonce } },
+                            ctx.head,
+                            ctx.styles,
+                            ctx.favicon? { elem : 'favicon', url : ctx.favicon } : ''
+                        ]
+                    },
+                    ctx
+                ]
+            }
+        ];
     }),
 
     tag()('body'),
@@ -14210,8 +13561,8 @@ block('page')(
 
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/page.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/__css/page__css.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/page.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__css/page__css.bemhtml.js */
 block('page').elem('css')(
     bem()(false),
     tag()('style'),
@@ -14221,8 +13572,8 @@ block('page').elem('css')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/__css/page__css.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/desktop.blocks/page/__css/page__css.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__css/page__css.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/desktop.blocks/page/__css/page__css.bemhtml.js */
 block('page').elem('css').match(function() {
     return this.ctx.hasOwnProperty('ie');
 })(
@@ -14248,8 +13599,8 @@ block('page').elem('css').match(function() {
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/desktop.blocks/page/__css/page__css.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/__js/page__js.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/desktop.blocks/page/__css/page__css.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__js/page__js.bemhtml.js */
 block('page').elem('js')(
     bem()(false),
     tag()('script'),
@@ -14265,8 +13616,8 @@ block('page').elem('js')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/page/__js/page__js.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__js/page__js.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml.js */
 block('ua').content()(function() {
     return [
         applyNext(),
@@ -14277,8 +13628,8 @@ block('ua').content()(function() {
     ];
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/desktop.blocks/page/__conditional-comment/page__conditional-comment.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/desktop.blocks/page/__conditional-comment/page__conditional-comment.bemhtml.js */
 block('page').elem('conditional-comment')(
     tag()(false),
 
@@ -14303,8 +13654,8 @@ block('page').elem('conditional-comment')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/libs/bem-core/desktop.blocks/page/__conditional-comment/page__conditional-comment.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/attach.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/desktop.blocks/page/__conditional-comment/page__conditional-comment.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/attach.bemhtml.js */
 block('attach')(
     def()(function() { return applyNext({ _attach : this.ctx }); }),
 
@@ -14340,8 +13691,8 @@ block('attach')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/attach.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/button.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/attach.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/button.bemhtml.js */
 block('button')(
     def()(function() {
         var tag = apply('tag'),
@@ -14405,18 +13756,18 @@ block('button')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/button.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/__text/button__text.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/__text/button__text.bemhtml.js */
 block('button').elem('text').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/__text/button__text.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_focused/button_focused.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/__text/button__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_focused/button_focused.bemhtml.js */
 block('button').mod('focused', true).js()(function() {
     return this.extend(applyNext(), { live : false });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_focused/button_focused.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/icon/icon.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_focused/button_focused.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/icon/icon.bemhtml.js */
 block('icon')(
     tag()('span'),
     attrs()(function() {
@@ -14427,8 +13778,8 @@ block('icon')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/icon/icon.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__button/attach__button.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/icon/icon.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__button/attach__button.bemhtml.js */
 block('button').match(function() { return this._attach; })(
     tag()('span'),
     content()(function() {
@@ -14439,8 +13790,8 @@ block('button').match(function() { return this._attach; })(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__button/attach__button.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__control/attach__control.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__button/attach__button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__control/attach__control.bemhtml.js */
 block('attach').elem('control')(
 
     tag()('input'),
@@ -14461,36 +13812,36 @@ block('attach').elem('control')(
 
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__control/attach__control.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__no-file/attach__no-file.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__control/attach__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__no-file/attach__no-file.bemhtml.js */
 block('attach').elem('no-file').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__no-file/attach__no-file.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__file/attach__file.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__no-file/attach__no-file.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__file/attach__file.bemhtml.js */
 block('attach').elem('file').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__file/attach__file.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__text/attach__text.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__file/attach__file.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__text/attach__text.bemhtml.js */
 block('attach').elem('text').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__text/attach__text.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__clear/attach__clear.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__text/attach__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__clear/attach__clear.bemhtml.js */
 block('attach').elem('clear').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/attach/__clear/attach__clear.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_togglable/button_togglable_check.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__clear/attach__clear.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
 block('button').mod('togglable', 'check').attrs()(function() {
     return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_togglable/button_togglable_check.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_togglable/button_togglable_radio.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
 block('button').mod('togglable', 'radio').attrs()(function() {
     return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_togglable/button_togglable_radio.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_type/button_type_link.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_type/button_type_link.bemhtml.js */
 block('button').mod('type', 'link')(
     tag()('a'),
 
@@ -14512,8 +13863,8 @@ block('button').mod('type', 'link')(
         })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/button/_type/button_type_link.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/checkbox.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_type/button_type_link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/checkbox.bemhtml.js */
 block('checkbox')(
     tag()('label'),
 
@@ -14542,12 +13893,12 @@ block('checkbox')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/checkbox.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__box/checkbox__box.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/checkbox.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__box/checkbox__box.bemhtml.js */
 block('checkbox').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__box/checkbox__box.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__control/checkbox__control.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__box/checkbox__box.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__control/checkbox__control.bemhtml.js */
 block('checkbox').elem('control')(
     tag()('input'),
 
@@ -14565,15 +13916,15 @@ block('checkbox').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__control/checkbox__control.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__text/checkbox__text.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__control/checkbox__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
 block('checkbox').elem('text')(
     tag()('span'),
     attrs()({ role : 'presentation' })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/__text/checkbox__text.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/_type/checkbox_type_button.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/_type/checkbox_type_button.bemhtml.js */
 block('checkbox').mod('type', 'button')(
     content()(function() {
         var ctx = this.ctx,
@@ -14611,8 +13962,8 @@ block('checkbox').mod('type', 'button')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox/_type/checkbox_type_button.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox-group/checkbox-group.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/_type/checkbox_type_button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox-group/checkbox-group.bemhtml.js */
 block('checkbox-group')(
     tag()('span'),
 
@@ -14653,15 +14004,15 @@ block('checkbox-group')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/checkbox-group/checkbox-group.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/control-group/control-group.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox-group/checkbox-group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/control-group/control-group.bemhtml.js */
 block('control-group').attrs()({ role : 'group' });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/control-group/control-group.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/dropdown.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/control-group/control-group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/dropdown.bemhtml.js */
 block('dropdown')(
-    def()(function() {
-        return applyCtx([{ elem : 'switcher' }, { elem : 'popup' }]);
+    replace()(function() {
+        return [{ elem : 'popup' }, { elem : 'switcher' }];
     }),
     def()(function() {
         var ctx = this.ctx;
@@ -14672,20 +14023,20 @@ block('dropdown')(
     js()(function() {
         return { id : this.generateId() };
     }),
-    elem('switcher').def()(function() {
+    elem('switcher').replace()(function() {
         var dropdown = this._dropdown,
             switcher = dropdown.switcher;
 
         switcher.block && (switcher.mix = apply('mix'));
 
-        return applyCtx(switcher);
+        return switcher;
     }),
     elem('switcher').mix()(function() {
         var dropdown = this._dropdown;
 
         return [dropdown].concat(dropdown.switcher.mix || [], dropdown.mix || []);
     }),
-    elem('popup').def()(function() {
+    elem('popup').replace()(function() {
         var dropdown = this._dropdown,
             popup = dropdown.popup;
 
@@ -14703,12 +14054,12 @@ block('dropdown')(
 
         popup.mix = [dropdown].concat(popup.mix || []);
 
-        return applyCtx(popup);
+        return popup;
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/dropdown.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/popup/popup.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/dropdown.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/popup/popup.bemhtml.js */
 block('popup')(
     js()(function() {
         var ctx = this.ctx;
@@ -14723,9 +14074,9 @@ block('popup')(
     attrs()({ 'aria-hidden' : 'true' })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/popup/popup.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml */
-block('dropdown').mod('switcher', 'button').elem('switcher').def()(function() {
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/popup/popup.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml.js */
+block('dropdown').mod('switcher', 'button').elem('switcher').replace()(function() {
     var dropdown = this._dropdown,
         switcher = dropdown.switcher;
 
@@ -14750,12 +14101,12 @@ block('dropdown').mod('switcher', 'button').elem('switcher').def()(function() {
         res.mix = apply('mix');
     }
 
-    return applyCtx(res);
+    return res;
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml */
-block('dropdown').mod('switcher', 'link').elem('switcher').def()(function() {
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml.js */
+block('dropdown').mod('switcher', 'link').elem('switcher').replace()(function() {
     var dropdown = this._dropdown,
         switcher = dropdown.switcher;
 
@@ -14779,11 +14130,11 @@ block('dropdown').mod('switcher', 'link').elem('switcher').def()(function() {
         res.mix = apply('mix');
     }
 
-    return applyCtx(res);
+    return res;
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/link/link.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/link.bemhtml.js */
 block('link')(
     def()(function() {
         var ctx = this.ctx;
@@ -14829,8 +14180,8 @@ block('link')(
         })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/link/link.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/link/_pseudo/link_pseudo.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
 block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
     tag()('span'),
     attrs()(function() {
@@ -14838,8 +14189,8 @@ block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/link/_pseudo/link_pseudo.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/image/image.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/image/image.bemhtml.js */
 block('image')(
     attrs()({ role : 'img' }),
 
@@ -14862,8 +14213,8 @@ block('image')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/image/image.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/input.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/image/image.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/input.bemhtml.js */
 block('input')(
     tag()('span'),
     js()(true),
@@ -14873,12 +14224,12 @@ block('input')(
     content()({ elem : 'box', content : { elem : 'control' } })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/input.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__box/input__box.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/input.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__box/input__box.bemhtml.js */
 block('input').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__box/input__box.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__control/input__control.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__box/input__box.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__control/input__control.bemhtml.js */
 block('input').elem('control')(
     tag()('input'),
 
@@ -14900,31 +14251,31 @@ block('input').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__control/input__control.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_has-clear/input_has-clear.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__control/input__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_has-clear/input_has-clear.bemhtml.js */
 block('input').mod('has-clear', true).elem('box')
     .content()(function() {
         return [this.ctx.content, { elem : 'clear' }];
     });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_has-clear/input_has-clear.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__clear/input__clear.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_has-clear/input_has-clear.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__clear/input__clear.bemhtml.js */
 block('input').elem('clear').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/__clear/input__clear.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_type/input_type_password.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__clear/input__clear.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_password.bemhtml.js */
 block('input').mod('type', 'password').elem('control').attrs()(function() {
     return this.extend(applyNext(), { type : 'password' });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_type/input_type_password.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_type/input_type_search.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_password.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_search.bemhtml.js */
 block('input').mod('type', 'search').elem('control').attrs()(function() {
     return this.extend(applyNext(), { type : 'search' });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/input/_type/input_type_search.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/menu.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_search.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/menu.bemhtml.js */
 block('menu')(
     def()(function() {
         var ctx = this.ctx,
@@ -14983,8 +14334,8 @@ block('menu')(
         })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/menu.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu-item/menu-item.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/menu.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu-item/menu-item.bemhtml.js */
 block('menu-item')(
     def().match(function() { return this._menuMods; })(function() {
         var mods = this.mods;
@@ -15012,14 +14363,14 @@ block('menu-item')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu-item/menu-item.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/_focused/menu_focused.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu-item/menu-item.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_focused/menu_focused.bemhtml.js */
 block('menu').mod('focused', true).js()(function() {
     return this.extend(applyNext(), { live : false });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/_focused/menu_focused.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/__group/menu__group.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_focused/menu_focused.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__group/menu__group.bemhtml.js */
 block('menu').elem('group')(
     attrs()({ role : 'group' }),
     match(function() { return typeof this.ctx.title !== 'undefined'; })(
@@ -15045,8 +14396,8 @@ block('menu').elem('group')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/__group/menu__group.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/_mode/menu_mode_radio.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__group/menu__group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_mode/menu_mode_radio.bemhtml.js */
 block('menu')
     .mod('mode', 'radio')
     .match(function() {
@@ -15057,8 +14408,8 @@ block('menu')
         return applyNext();
     });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu/_mode/menu_mode_radio.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu-item/_type/menu-item_type_link.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_mode/menu_mode_radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu-item/_type/menu-item_type_link.bemhtml.js */
 block('menu-item').mod('type', 'link').mod('disabled', true).match(function() {
     return !this._menuItemDisabled;
 }).def()(function() {
@@ -15073,8 +14424,8 @@ block('link').match(function() {
     return applyNext();
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/menu-item/_type/menu-item_type_link.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/modal/modal.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu-item/_type/menu-item_type_link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/modal/modal.bemhtml.js */
 block('modal')(
     js()(true),
 
@@ -15105,8 +14456,8 @@ block('modal')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/modal/modal.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/progressbar/progressbar.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/modal/modal.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/progressbar/progressbar.bemhtml.js */
 block('progressbar')(
     def()(function() {
         return applyNext({ _val : this.ctx.val || 0 });
@@ -15136,8 +14487,8 @@ block('progressbar')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/progressbar/progressbar.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/radio.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/progressbar/progressbar.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/radio.bemhtml.js */
 block('radio')(
     tag()('label'),
     js()(true),
@@ -15162,12 +14513,12 @@ block('radio')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/radio.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__box/radio__box.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__box/radio__box.bemhtml.js */
 block('radio').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__box/radio__box.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__control/radio__control.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__box/radio__box.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__control/radio__control.bemhtml.js */
 block('radio').elem('control')(
     tag()('input'),
 
@@ -15188,8 +14539,8 @@ block('radio').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__control/radio__control.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__text/radio__text.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__control/radio__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__text/radio__text.bemhtml.js */
 block('radio').elem('text')(
     tag()('span'),
     attrs()(function() {
@@ -15197,8 +14548,8 @@ block('radio').elem('text')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/__text/radio__text.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/_type/radio_type_button.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__text/radio__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/_type/radio_type_button.bemhtml.js */
 block('radio').mod('type', 'button')(
     content()(function() {
         var ctx = this.ctx,
@@ -15233,8 +14584,8 @@ block('radio').mod('type', 'button')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio/_type/radio_type_button.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio-group/radio-group.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/_type/radio_type_button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/radio-group.bemhtml.js */
 block('radio-group')(
     tag()('span'),
 
@@ -15273,8 +14624,8 @@ block('radio-group')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio-group/radio-group.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/radio-group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml.js */
 block('radio-group').mod('mode', 'radio-check')(
     def()(function() {
         if(this.mods.type !== 'button')
@@ -15284,8 +14635,8 @@ block('radio-group').mod('mode', 'radio-check')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/select.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/select.bemhtml.js */
 block('select')(
     def().match(function() { return !this._select; })(function() { // TODO: check BEM-XJST for proper applyNext
         if(!this.mods.mode) throw Error('Can\'t build select without mode modifier');
@@ -15349,14 +14700,14 @@ block('select')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/select.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_focused/select_focused.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/select.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_focused/select_focused.bemhtml.js */
 block('select').mod('focused', true).js()(function() {
     return this.extend(applyNext(), { live : false });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_focused/select_focused.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__control/select__control.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_focused/select_focused.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__control/select__control.bemhtml.js */
 block('select').elem('control')(
     tag()('input'),
     attrs()(function() {
@@ -15370,14 +14721,14 @@ block('select').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__control/select__control.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__button/select__button.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__control/select__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__button/select__button.bemhtml.js */
 block('select').elem('button')(
-    def()(function() {
+    replace()(function() {
         var select = this._select,
             mods = this.mods;
 
-        return applyCtx({
+        return {
             block : 'button',
             mix : { block : this.block, elem : this.elem },
             mods : {
@@ -15400,7 +14751,7 @@ block('select').elem('button')(
                 apply('content'),
                 { block : 'icon', mix : { block : 'select', elem : 'tick' } }
             ]
-        });
+        };
     }),
     def()(function() {
         return applyNext({ _selectTextId : this.generateId() });
@@ -15413,10 +14764,10 @@ block('button').elem('text').match(function() { return this._select; })(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__button/select__button.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__menu/select__menu.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__button/select__button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__menu/select__menu.bemhtml.js */
 block('select').elem('menu')(
-    def()(function() {
+    replace()(function() {
         var mods = this.mods,
             optionToMenuItem = function(option) {
                 var res = {
@@ -15440,7 +14791,7 @@ block('select').elem('menu')(
                 return res;
             };
 
-        return applyCtx({
+        return {
             block : 'menu',
             mix : { block : this.block, elem : this.elem },
             mods : {
@@ -15460,12 +14811,12 @@ block('select').elem('menu')(
                     } :
                     optionToMenuItem(optionOrGroup);
             })
-        });
+        };
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/__menu/select__menu.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_check.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__menu/select__menu.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_check.bemhtml.js */
 block('select').mod('mode', 'check')(
     js()(function() {
         return this.extend(applyNext(), { text : this.ctx.text });
@@ -15499,8 +14850,8 @@ block('select').mod('mode', 'check')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_check.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_radio-check.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio-check.bemhtml.js */
 block('select').mod('mode', 'radio-check')(
     js()(function() {
         return this.extend(applyNext(), { text : this.ctx.text });
@@ -15526,8 +14877,8 @@ block('select').mod('mode', 'radio-check')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_radio-check.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_radio.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio-check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio.bemhtml.js */
 block('select').mod('mode', 'radio')(
     def().match(function() { return this._checkedOptions; })(function() {
         var checkedOptions = this._checkedOptions,
@@ -15557,14 +14908,14 @@ block('select').mod('mode', 'radio')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/select/_mode/select_mode_radio.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/spin/spin.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/spin/spin.bemhtml.js */
 block('spin')(
     tag()('span')
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/spin/spin.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/textarea/textarea.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/spin/spin.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/textarea/textarea.bemhtml.js */
 block('textarea')(
     js()(true),
     tag()('textarea'),
@@ -15591,8 +14942,8 @@ block('textarea')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/common.blocks/textarea/textarea.bemhtml */
-/* begin: /Users/tadatuta/projects/bem/bem-components-2/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/textarea/textarea.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml.js */
 block('progressbar').mod('theme', 'simple').content()(function() {
     return [
         {
@@ -15606,7 +14957,7 @@ block('progressbar').mod('theme', 'simple').content()(function() {
     ];
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-2/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml */
+/* end: /Users/tadatuta/projects/bem/bem-components/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml.js */
 oninit(function(exports, context) {
     var BEMContext = exports.BEMContext || context.BEMContext;
     // Provides third-party libraries from different modular systems
@@ -15664,4 +15015,4 @@ api.exportApply(exports);
 );
         global['BEMHTML'] = BEMHTML;
     }
-})(typeof window !== "undefined" ? window : global);
+})(typeof window !== "undefined" ? window : global || this);

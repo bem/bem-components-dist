@@ -7,15 +7,23 @@
     content: '';
 }
 /* ../../libs/bem-core/common.blocks/clearfix/clearfix.css:end */
-/* ../../common.blocks/attach/attach.styl:begin */
+/* ../../common.blocks/attach/attach.css:begin */
+.attach {
+  touch-action: manipulation;
+}
 .attach__file,
 .attach__no-file,
 .attach .button__text,
 .attach .attach_disabled .attach__clear {
   display: none;
 }
-/* ../../common.blocks/attach/attach.styl:end */
-/* ../../common.blocks/icon/icon.styl:begin */
+/* ../../common.blocks/attach/attach.css:end */
+/* ../../common.blocks/button/button.css:begin */
+.button {
+  touch-action: manipulation;
+}
+/* ../../common.blocks/button/button.css:end */
+/* ../../common.blocks/icon/icon.css:begin */
 .icon {
   display: inline-block;
   text-align: center;
@@ -35,29 +43,49 @@
   margin: -5.15em 0 -5em;
   vertical-align: middle;
 }
-/* ../../common.blocks/icon/icon.styl:end */
-/* ../../common.blocks/checkbox/_type/checkbox_type_button.styl:begin */
+/* ../../common.blocks/icon/icon.css:end */
+/* ../../common.blocks/checkbox/checkbox.css:begin */
+.checkbox {
+  touch-action: manipulation;
+}
+/* ../../common.blocks/checkbox/checkbox.css:end */
+/* ../../common.blocks/checkbox/_type/checkbox_type_button.css:begin */
 .checkbox.checkbox_type_button .checkbox__control {
   position: absolute;
   visibility: hidden;
 }
-/* ../../common.blocks/checkbox/_type/checkbox_type_button.styl:end */
-/* ../../common.blocks/popup/popup.styl:begin */
+/* ../../common.blocks/checkbox/_type/checkbox_type_button.css:end */
+/* ../../common.blocks/popup/popup.css:begin */
 .popup {
   position: absolute;
 }
-/* ../../common.blocks/popup/popup.styl:end */
-/* ../../common.blocks/image/image.styl:begin */
+/* ../../common.blocks/popup/popup.css:end */
+/* ../../common.blocks/link/link.css:begin */
+.link {
+  touch-action: manipulation;
+}
+/* ../../common.blocks/link/link.css:end */
+/* ../../common.blocks/image/image.css:begin */
 .image {
   border: 0;
 }
-/* ../../common.blocks/image/image.styl:end */
-/* ../../common.blocks/menu/menu.styl:begin */
+/* ../../common.blocks/image/image.css:end */
+/* ../../common.blocks/input/input.css:begin */
+.input {
+  touch-action: manipulation;
+}
+/* ../../common.blocks/input/input.css:end */
+/* ../../common.blocks/menu/menu.css:begin */
 .menu {
   overflow-y: auto;
 }
-/* ../../common.blocks/menu/menu.styl:end */
-/* ../../common.blocks/modal/modal.styl:begin */
+/* ../../common.blocks/menu/menu.css:end */
+/* ../../common.blocks/menu-item/menu-item.css:begin */
+.menu-item {
+  touch-action: manipulation;
+}
+/* ../../common.blocks/menu-item/menu-item.css:end */
+/* ../../common.blocks/modal/modal.css:begin */
 .modal {
   position: fixed;
   top: 0;
@@ -81,19 +109,29 @@
   display: inline-block;
   text-align: left;
 }
-/* ../../common.blocks/modal/modal.styl:end */
-/* ../../common.blocks/radio/_type/radio_type_button.styl:begin */
+/* ../../common.blocks/modal/modal.css:end */
+/* ../../common.blocks/radio/radio.css:begin */
+.radio {
+  touch-action: manipulation;
+}
+/* ../../common.blocks/radio/radio.css:end */
+/* ../../common.blocks/radio/_type/radio_type_button.css:begin */
 .radio.radio_type_button .radio__control {
   position: absolute;
   visibility: hidden;
 }
-/* ../../common.blocks/radio/_type/radio_type_button.styl:end */
-/* ../../common.blocks/select/select.styl:begin */
+/* ../../common.blocks/radio/_type/radio_type_button.css:end */
+/* ../../common.blocks/select/select.css:begin */
 .select {
   display: inline-block;
 }
-/* ../../common.blocks/select/select.styl:end */
-/* ../../common.blocks/z-index-group/z-index-group.styl:begin */
+/* ../../common.blocks/select/select.css:end */
+/* ../../common.blocks/textarea/textarea.css:begin */
+.textarea {
+  touch-action: manipulation;
+}
+/* ../../common.blocks/textarea/textarea.css:end */
+/* ../../common.blocks/z-index-group/z-index-group.css:begin */
 .z-index-group_level_0 {
   z-index: 1000;
 }
@@ -124,8 +162,8 @@
 .z-index-group_level_9 {
   z-index: 10000;
 }
-/* ../../common.blocks/z-index-group/z-index-group.styl:end */
-/* ../../design/common.blocks/attach/_theme/attach_theme_islands.styl:begin */
+/* ../../common.blocks/z-index-group/z-index-group.css:end */
+/* ../../design/common.blocks/attach/_theme/attach_theme_islands.css:begin */
 .attach_theme_islands {
   font-family: Arial, Helvetica, sans-serif;
   display: inline-block;
@@ -153,7 +191,7 @@
   margin-left: 0.4em;
   cursor: pointer;
   -webkit-transition: opacity 0.1s ease-out;
-          transition: opacity 0.1s ease-out;
+  transition: opacity 0.1s ease-out;
   vertical-align: middle;
   opacity: 0.3;
   background: center no-repeat;
@@ -181,13 +219,13 @@
 .attach_theme_islands.attach_size_m .attach__clear {
   width: 10px;
   height: 14px;
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHBhdGggZD0iTTEwIC43TDkuMyAwIDUgNC4zLjcgMCAwIC43IDQuMyA1IDAgOS4zbC43LjdMNSA1LjcgOS4zIDEwbC43LS43TDUuNyA1eiIvPjwvc3ZnPg==");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%2210%22 height%3D%2210%22%3E%3Cpath d%3D%22M10 .7L9.3 0 5 4.3.7 0 0 .7 4.3 5 0 9.3l.7.7L5 5.7 9.3 10l.7-.7L5.7 5z%22%2F%3E%3C%2Fsvg%3E");
 }
 .attach_theme_islands.attach_size_l .attach__clear,
 .attach_theme_islands.attach_size_xl .attach__clear {
   width: 14px;
   height: 14px;
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCI+PHBhdGggZD0iTTE0IC43bC0uNy0uN0w3IDYuMy43IDAgMCAuNyA2LjMgNyAwIDEzLjNsLjcuN0w3IDcuN2w2LjMgNi4zLjctLjdMNy43IDd6Ii8+PC9zdmc+");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%2214%22 height%3D%2214%22%3E%3Cpath d%3D%22M14 .7l-.7-.7L7 6.3.7 0 0 .7 6.3 7 0 13.3l.7.7L7 7.7l6.3 6.3.7-.7L7.7 7z%22%2F%3E%3C%2Fsvg%3E");
 }
 .attach_theme_islands .button {
   position: relative;
@@ -196,8 +234,8 @@
   display: inline;
   z-index: 1;
 }
-/* ../../design/common.blocks/attach/_theme/attach_theme_islands.styl:end */
-/* ../../design/common.blocks/button/_theme/button_theme_islands.styl:begin */
+/* ../../design/common.blocks/attach/_theme/attach_theme_islands.css:end */
+/* ../../design/common.blocks/button/_theme/button_theme_islands.css:begin */
 .button_theme_islands {
   font-family: Arial, Helvetica, sans-serif;
   position: relative;
@@ -409,11 +447,13 @@
   left: 1px;
 }
 .control-group > .button_theme_islands:first-child,
-.control-group > :first-child .button_theme_islands {
+.control-group > :first-child .button_theme_islands,
+.control-group > :first-child.popup + .button_theme_islands {
   border-radius: 3px 0 0 3px;
 }
 .control-group > .button_theme_islands:first-child:before,
-.control-group > :first-child .button_theme_islands:before {
+.control-group > :first-child .button_theme_islands:before,
+.control-group > :first-child.popup + .button_theme_islands:before {
   border-radius: 2px 0 0 2px;
 }
 .control-group > .button_theme_islands:last-child,
@@ -431,8 +471,8 @@
 .control-group > :only-child .button_theme_islands:before {
   border-radius: 2px;
 }
-/* ../../design/common.blocks/button/_theme/button_theme_islands.styl:end */
-/* ../../design/common.blocks/attach/_theme/attach_theme_simple.styl:begin */
+/* ../../design/common.blocks/button/_theme/button_theme_islands.css:end */
+/* ../../design/common.blocks/attach/_theme/attach_theme_simple.css:begin */
 .attach_theme_simple {
   display: inline-block;
   white-space: nowrap;
@@ -471,8 +511,8 @@
   display: inline;
   z-index: 1;
 }
-/* ../../design/common.blocks/attach/_theme/attach_theme_simple.styl:end */
-/* ../../design/common.blocks/button/_theme/button_theme_simple.styl:begin */
+/* ../../design/common.blocks/attach/_theme/attach_theme_simple.css:end */
+/* ../../design/common.blocks/button/_theme/button_theme_simple.css:begin */
 .button_theme_simple {
   font-family: inherit;
   font-size: 100%;
@@ -531,8 +571,8 @@
 .button_theme_simple .icon:last-child {
   margin-right: -0.7em;
 }
-/* ../../design/common.blocks/button/_theme/button_theme_simple.styl:end */
-/* ../../design/common.blocks/checkbox/_theme/checkbox_theme_islands.styl:begin */
+/* ../../design/common.blocks/button/_theme/button_theme_simple.css:end */
+/* ../../design/common.blocks/checkbox/_theme/checkbox_theme_islands.css:begin */
 .checkbox_theme_islands {
   position: relative;
   font-family: Arial, Helvetica, sans-serif;
@@ -568,12 +608,14 @@
   top: -5px;
   left: 2px;
   content: '';
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNSIgaGVpZ2h0PSIxNiI+PHBhdGggZD0iTTEzLjUuNWwtOCAxMkwxLjcgOGwtMSAxLjZMNS42IDE1bDkuMS0xMy40eiIvPjwvc3ZnPg==");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%2215%22 height%3D%2216%22%3E%3Cpath d%3D%22M13.5.5l-8 12L1.7 8l-1 1.6L5.6 15l9.1-13.4z%22%2F%3E%3C%2Fsvg%3E");
   background-size: 100%;
   visibility: hidden;
   opacity: 0;
-  -webkit-transition: -webkit-transform 0.05s ease-out, opacity 0.05s ease-out, visibility 0s linear 0.05s;
-          transition: transform 0.05s ease-out, opacity 0.05s ease-out, visibility 0s linear 0.05s;
+  -webkit-transition: opacity 0.05s ease-out, visibility 0s linear 0.05s, -webkit-transform 0.05s ease-out;
+  transition: opacity 0.05s ease-out, visibility 0s linear 0.05s, -webkit-transform 0.05s ease-out;
+  transition: transform 0.05s ease-out, opacity 0.05s ease-out, visibility 0s linear 0.05s;
+  transition: transform 0.05s ease-out, opacity 0.05s ease-out, visibility 0s linear 0.05s, -webkit-transform 0.05s ease-out;
 }
 .checkbox_theme_islands.checkbox_size_m {
   font-size: 13px;
@@ -660,8 +702,8 @@ _:future,
 :root .checkbox_theme_islands .checkbox__box {
   pointer-events: none;
 }
-/* ../../design/common.blocks/checkbox/_theme/checkbox_theme_islands.styl:end */
-/* ../../design/common.blocks/checkbox/_theme/checkbox_theme_simple.styl:begin */
+/* ../../design/common.blocks/checkbox/_theme/checkbox_theme_islands.css:end */
+/* ../../design/common.blocks/checkbox/_theme/checkbox_theme_simple.css:begin */
 .checkbox_theme_simple {
   position: relative;
 }
@@ -697,8 +739,8 @@ _:future,
 :root .checkbox_theme_islands .checkbox__box {
   pointer-events: none;
 }
-/* ../../design/common.blocks/checkbox/_theme/checkbox_theme_simple.styl:end */
-/* ../../design/common.blocks/checkbox-group/_theme/checkbox-group_theme_islands.styl:begin */
+/* ../../design/common.blocks/checkbox/_theme/checkbox_theme_simple.css:end */
+/* ../../design/common.blocks/checkbox-group/_theme/checkbox-group_theme_islands.css:begin */
 .checkbox-group_theme_islands {
   display: inline-block;
 }
@@ -712,8 +754,8 @@ _:future,
   display: inline-block;
   white-space: nowrap;
 }
-/* ../../design/common.blocks/checkbox-group/_theme/checkbox-group_theme_islands.styl:end */
-/* ../../design/common.blocks/checkbox-group/_theme/checkbox-group_theme_simple.styl:begin */
+/* ../../design/common.blocks/checkbox-group/_theme/checkbox-group_theme_islands.css:end */
+/* ../../design/common.blocks/checkbox-group/_theme/checkbox-group_theme_simple.css:begin */
 .checkbox-group_theme_simple .checkbox_type_button:first-of-type .button_togglable_check,
 .checkbox-group_theme_simple .checkbox_type_button~ .checkbox_type_button .button_togglable_check {
   border-right-width: 0;
@@ -730,8 +772,8 @@ _:future,
   border-top-right-radius: 3px;
   border-bottom-right-radius: 3px;
 }
-/* ../../design/common.blocks/checkbox-group/_theme/checkbox-group_theme_simple.styl:end */
-/* ../../design/common.blocks/popup/_theme/popup_theme_islands.styl:begin */
+/* ../../design/common.blocks/checkbox-group/_theme/checkbox-group_theme_simple.css:end */
+/* ../../design/common.blocks/popup/_theme/popup_theme_islands.css:begin */
 .popup_theme_islands {
   display: none;
   visibility: hidden;
@@ -1096,13 +1138,13 @@ _:future,
             transform: translateX(0);
   }
 }
-/* ../../design/common.blocks/popup/_theme/popup_theme_islands.styl:end */
-/* ../../design/common.blocks/link/_theme/link_theme_islands.styl:begin */
+/* ../../design/common.blocks/popup/_theme/popup_theme_islands.css:end */
+/* ../../design/common.blocks/link/_theme/link_theme_islands.css:begin */
 .link_theme_islands {
   color: #44b;
   cursor: pointer;
   -webkit-transition: color 0.15s ease-out;
-          transition: color 0.15s ease-out;
+  transition: color 0.15s ease-out;
   text-decoration: none;
   -webkit-tap-highlight-color: rgba(0,0,0,0.1);
 }
@@ -1130,8 +1172,8 @@ _:future,
 .link_theme_islands.link_disabled {
   -webkit-tap-highlight-color: rgba(0,0,0,0);
 }
-/* ../../design/common.blocks/link/_theme/link_theme_islands.styl:end */
-/* ../../design/common.blocks/popup/_theme/popup_theme_simple.styl:begin */
+/* ../../design/common.blocks/link/_theme/link_theme_islands.css:end */
+/* ../../design/common.blocks/popup/_theme/popup_theme_simple.css:begin */
 .popup_theme_simple {
   display: none;
   background: #fff;
@@ -1140,8 +1182,8 @@ _:future,
 .popup_theme_simple.popup_visible {
   display: block;
 }
-/* ../../design/common.blocks/popup/_theme/popup_theme_simple.styl:end */
-/* ../../design/common.blocks/link/_theme/link_theme_simple.styl:begin */
+/* ../../design/common.blocks/popup/_theme/popup_theme_simple.css:end */
+/* ../../design/common.blocks/link/_theme/link_theme_simple.css:begin */
 .link_theme_simple {
   cursor: pointer;
   text-decoration: underline;
@@ -1156,8 +1198,8 @@ _:future,
 .link_theme_simple:hover {
   color: #c00;
 }
-/* ../../design/common.blocks/link/_theme/link_theme_simple.styl:end */
-/* ../../design/common.blocks/input/_theme/input_theme_islands.styl:begin */
+/* ../../design/common.blocks/link/_theme/link_theme_simple.css:end */
+/* ../../design/common.blocks/input/_theme/input_theme_islands.css:begin */
 .input_theme_islands {
   font-family: Arial, Helvetica, sans-serif;
   position: relative;
@@ -1224,7 +1266,7 @@ _:future,
   right: 0;
   cursor: text;
   -webkit-transition: opacity 0.1s ease-out;
-          transition: opacity 0.1s ease-out;
+  transition: opacity 0.1s ease-out;
   opacity: 0;
   background: 50% 50% no-repeat;
 }
@@ -1258,7 +1300,7 @@ _:future,
 .input_theme_islands.input_size_m .input__clear {
   width: 24px;
   height: 24px;
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHBhdGggZD0iTTEwIC43TDkuMyAwIDUgNC4zLjcgMCAwIC43IDQuMyA1IDAgOS4zbC43LjdMNSA1LjcgOS4zIDEwbC43LS43TDUuNyA1eiIvPjwvc3ZnPg==");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%2210%22 height%3D%2210%22%3E%3Cpath d%3D%22M10 .7L9.3 0 5 4.3.7 0 0 .7 4.3 5 0 9.3l.7.7L5 5.7 9.3 10l.7-.7L5.7 5z%22%2F%3E%3C%2Fsvg%3E");
   background-position: 7px 50%;
 }
 .input_theme_islands.input_size_s {
@@ -1292,7 +1334,7 @@ _:future,
 .input_theme_islands.input_size_xl .input__clear {
   width: 32px;
   height: 32px;
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCI+PHBhdGggZD0iTTE0IC43bC0uNy0uN0w3IDYuMy43IDAgMCAuNyA2LjMgNyAwIDEzLjNsLjcuN0w3IDcuN2w2LjMgNi4zLjctLjdMNy43IDd6Ii8+PC9zdmc+");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%2214%22 height%3D%2214%22%3E%3Cpath d%3D%22M14 .7l-.7-.7L7 6.3.7 0 0 .7 6.3 7 0 13.3l.7.7L7 7.7l6.3 6.3.7-.7L7.7 7z%22%2F%3E%3C%2Fsvg%3E");
   background-position: 9px 50%;
 }
 .input_theme_islands.input_size_l {
@@ -1341,8 +1383,8 @@ _:future,
 .control-group > :last-child .input_theme_islands:before {
   right: 1px;
 }
-/* ../../design/common.blocks/input/_theme/input_theme_islands.styl:end */
-/* ../../design/common.blocks/input/_theme/input_theme_simple.styl:begin */
+/* ../../design/common.blocks/input/_theme/input_theme_islands.css:end */
+/* ../../design/common.blocks/input/_theme/input_theme_simple.css:begin */
 .input_theme_simple {
   display: inline-block;
 }
@@ -1423,8 +1465,8 @@ _:future,
 .input_theme_simple.input_focused .input__control:focus {
   outline: none;
 }
-/* ../../design/common.blocks/input/_theme/input_theme_simple.styl:end */
-/* ../../design/common.blocks/menu/_theme/menu_theme_islands.styl:begin */
+/* ../../design/common.blocks/input/_theme/input_theme_simple.css:end */
+/* ../../design/common.blocks/menu/_theme/menu_theme_islands.css:begin */
 .menu_theme_islands {
   box-sizing: border-box;
   -webkit-user-select: none;
@@ -1526,8 +1568,8 @@ _:future,
   padding-top: 0;
   border-top: 0;
 }
-/* ../../design/common.blocks/menu/_theme/menu_theme_islands.styl:end */
-/* ../../design/common.blocks/menu-item/_theme/menu-item_theme_islands.styl:begin */
+/* ../../design/common.blocks/menu/_theme/menu_theme_islands.css:end */
+/* ../../design/common.blocks/menu-item/_theme/menu-item_theme_islands.css:begin */
 .menu-item_theme_islands {
   position: relative;
   white-space: nowrap;
@@ -1539,7 +1581,7 @@ _:future,
   cursor: text;
 }
 .menu-item_theme_islands.menu-item_checked {
-  background: 0 50% no-repeat url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNSIgaGVpZ2h0PSIxNiI+PHBhdGggZD0iTTEzLjUuNWwtOCAxMkwxLjcgOGwtMSAxLjZMNS42IDE1bDkuMS0xMy40eiIvPjwvc3ZnPg==");
+  background: 0 50% no-repeat url("data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%2215%22 height%3D%2216%22%3E%3Cpath d%3D%22M13.5.5l-8 12L1.7 8l-1 1.6L5.6 15l9.1-13.4z%22%2F%3E%3C%2Fsvg%3E");
 }
 .menu-item_theme_islands.menu-item_hovered {
   cursor: pointer;
@@ -1606,8 +1648,8 @@ _:future,
 .menu_size_xl .menu__group-title ~ .menu-item_theme_islands {
   padding: 0 40px;
 }
-/* ../../design/common.blocks/menu-item/_theme/menu-item_theme_islands.styl:end */
-/* ../../design/common.blocks/menu/_theme/menu_theme_simple.styl:begin */
+/* ../../design/common.blocks/menu-item/_theme/menu-item_theme_islands.css:end */
+/* ../../design/common.blocks/menu/_theme/menu_theme_simple.css:begin */
 .menu_theme_simple {
   outline: 0;
 }
@@ -1619,8 +1661,8 @@ _:future,
   font-style: italic;
   padding: 4px 10px;
 }
-/* ../../design/common.blocks/menu/_theme/menu_theme_simple.styl:end */
-/* ../../design/common.blocks/menu-item/_theme/menu-item_theme_simple.styl:begin */
+/* ../../design/common.blocks/menu/_theme/menu_theme_simple.css:end */
+/* ../../design/common.blocks/menu-item/_theme/menu-item_theme_simple.css:begin */
 .menu-item_theme_simple {
   padding: 4px 10px;
   white-space: nowrap;
@@ -1643,8 +1685,8 @@ _:future,
   cursor: pointer;
   background: #ffc7c7;
 }
-/* ../../design/common.blocks/menu-item/_theme/menu-item_theme_simple.styl:end */
-/* ../../design/common.blocks/modal/_theme/modal_theme_islands.styl:begin */
+/* ../../design/common.blocks/menu-item/_theme/menu-item_theme_simple.css:end */
+/* ../../design/common.blocks/modal/_theme/modal_theme_islands.css:begin */
 .modal_theme_islands {
   display: none;
   visibility: hidden;
@@ -1774,8 +1816,8 @@ _:future,
             transform: scale(1);
   }
 }
-/* ../../design/common.blocks/modal/_theme/modal_theme_islands.styl:end */
-/* ../../design/common.blocks/modal/_theme/modal_theme_simple.styl:begin */
+/* ../../design/common.blocks/modal/_theme/modal_theme_islands.css:end */
+/* ../../design/common.blocks/modal/_theme/modal_theme_simple.css:begin */
 .modal_theme_simple {
   display: none;
   background: rgba(50,50,50,0.2);
@@ -1787,8 +1829,8 @@ _:future,
   background: #fff;
   border: 1px solid #bfbfbf;
 }
-/* ../../design/common.blocks/modal/_theme/modal_theme_simple.styl:end */
-/* ../../design/common.blocks/page/_theme/page_theme_islands.styl:begin */
+/* ../../design/common.blocks/modal/_theme/modal_theme_simple.css:end */
+/* ../../design/common.blocks/page/_theme/page_theme_islands.css:begin */
 html {
   min-height: 100%;
 }
@@ -1799,8 +1841,8 @@ html {
   color: #000;
   background: #fff;
 }
-/* ../../design/common.blocks/page/_theme/page_theme_islands.styl:end */
-/* ../../design/common.blocks/progressbar/_theme/progressbar_theme_islands.styl:begin */
+/* ../../design/common.blocks/page/_theme/page_theme_islands.css:end */
+/* ../../design/common.blocks/progressbar/_theme/progressbar_theme_islands.css:begin */
 .progressbar_theme_islands {
   overflow: hidden;
 }
@@ -1808,8 +1850,8 @@ html {
   height: 2px;
   background: #fc0;
 }
-/* ../../design/common.blocks/progressbar/_theme/progressbar_theme_islands.styl:end */
-/* ../../design/common.blocks/progressbar/_theme/progressbar_theme_simple.styl:begin */
+/* ../../design/common.blocks/progressbar/_theme/progressbar_theme_islands.css:end */
+/* ../../design/common.blocks/progressbar/_theme/progressbar_theme_simple.css:begin */
 .progressbar_theme_simple {
   font-size: 12px;
   display: -webkit-box;
@@ -1843,8 +1885,8 @@ html {
 .progressbar_theme_simple .progressbar__text:after {
   content: '%';
 }
-/* ../../design/common.blocks/progressbar/_theme/progressbar_theme_simple.styl:end */
-/* ../../design/common.blocks/radio/_theme/radio_theme_islands.styl:begin */
+/* ../../design/common.blocks/progressbar/_theme/progressbar_theme_simple.css:end */
+/* ../../design/common.blocks/radio/_theme/radio_theme_islands.css:begin */
 .radio_theme_islands {
   font-family: Arial, Helvetica, sans-serif;
   -webkit-tap-highlight-color: rgba(0,0,0,0);
@@ -1952,8 +1994,8 @@ html {
 .radio_theme_islands.radio_type_line:last-child {
   margin-right: 0;
 }
-/* ../../design/common.blocks/radio/_theme/radio_theme_islands.styl:end */
-/* ../../design/common.blocks/radio/_theme/radio_theme_simple.styl:begin */
+/* ../../design/common.blocks/radio/_theme/radio_theme_islands.css:end */
+/* ../../design/common.blocks/radio/_theme/radio_theme_simple.css:begin */
 .radio_theme_simple .radio__control {
   position: absolute;
   z-index: -1;
@@ -1982,8 +2024,8 @@ html {
   content: '\2022';
   background: #fff7db;
 }
-/* ../../design/common.blocks/radio/_theme/radio_theme_simple.styl:end */
-/* ../../design/common.blocks/radio-group/_theme/radio-group_theme_islands.styl:begin */
+/* ../../design/common.blocks/radio/_theme/radio_theme_simple.css:end */
+/* ../../design/common.blocks/radio-group/_theme/radio-group_theme_islands.css:begin */
 .radio-group_theme_islands {
   display: inline-block;
 }
@@ -1997,8 +2039,8 @@ html {
   display: inline-block;
   white-space: nowrap;
 }
-/* ../../design/common.blocks/radio-group/_theme/radio-group_theme_islands.styl:end */
-/* ../../design/common.blocks/radio-group/_theme/radio-group_theme_simple.styl:begin */
+/* ../../design/common.blocks/radio-group/_theme/radio-group_theme_islands.css:end */
+/* ../../design/common.blocks/radio-group/_theme/radio-group_theme_simple.css:begin */
 .radio-group_theme_simple .radio_type_button:first-of-type .button_togglable_radio,
 .radio-group_theme_simple .radio_type_button~ .radio_type_button .button_togglable_radio {
   border-right-width: 0;
@@ -2015,8 +2057,8 @@ html {
   border-top-right-radius: 3px;
   border-bottom-right-radius: 3px;
 }
-/* ../../design/common.blocks/radio-group/_theme/radio-group_theme_simple.styl:end */
-/* ../../design/common.blocks/select/_theme/select_theme_islands.styl:begin */
+/* ../../design/common.blocks/radio-group/_theme/radio-group_theme_simple.css:end */
+/* ../../design/common.blocks/select/_theme/select_theme_islands.css:begin */
 .select_theme_islands {
   max-width: 100%;
   vertical-align: bottom;
@@ -2060,12 +2102,14 @@ html {
   position: absolute;
   top: 0;
   right: 0;
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMSIgaGVpZ2h0PSI2Ij48cGF0aCBkPSJNMTAuMyAwTDUuNSA0LjcuNyAwIDAgLjcgNS41IDYgMTEgLjd6Ii8+PC9zdmc+");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%2211%22 height%3D%226%22%3E%3Cpath d%3D%22M10.3 0L5.5 4.7.7 0 0 .7 5.5 6 11 .7z%22%2F%3E%3C%2Fsvg%3E");
   -webkit-transition: -webkit-transform 0.1s ease-out;
-          transition: transform 0.1s ease-out;
+  transition: -webkit-transform 0.1s ease-out;
+  transition: transform 0.1s ease-out;
+  transition: transform 0.1s ease-out, -webkit-transform 0.1s ease-out;
 }
 .select_theme_islands.select_size_s .select__tick {
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5IiBoZWlnaHQ9IjUiPjxwYXRoIGQ9Ik04LjIgMGwtMy43IDMuNi0zLjgtMy42LS43LjcgMy43IDMuNi44LjcgNC41LTQuM3oiLz48L3N2Zz4=");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%229%22 height%3D%225%22%3E%3Cpath d%3D%22M8.2 0l-3.7 3.6-3.8-3.6-.7.7 3.7 3.6.8.7 4.5-4.3z%22%2F%3E%3C%2Fsvg%3E");
 }
 .select_theme_islands.select_opened .select__tick {
   -webkit-transform: rotate(-180deg);
@@ -2074,8 +2118,8 @@ html {
 .select_theme_islands.select_width_available {
   width: 100%;
 }
-/* ../../design/common.blocks/select/_theme/select_theme_islands.styl:end */
-/* ../../design/common.blocks/spin/_theme/spin_theme_islands.styl:begin */
+/* ../../design/common.blocks/select/_theme/select_theme_islands.css:end */
+/* ../../design/common.blocks/spin/_theme/spin_theme_islands.css:begin */
 .spin_theme_islands {
   position: absolute;
   display: inline-block;
@@ -2156,8 +2200,8 @@ html {
             transform: rotate(360deg);
   }
 }
-/* ../../design/common.blocks/spin/_theme/spin_theme_islands.styl:end */
-/* ../../design/common.blocks/spin/_theme/spin_theme_simple.styl:begin */
+/* ../../design/common.blocks/spin/_theme/spin_theme_islands.css:end */
+/* ../../design/common.blocks/spin/_theme/spin_theme_simple.css:begin */
 .spin_theme_simple {
   display: none;
   width: 20px;
@@ -2190,8 +2234,8 @@ html {
             transform: rotate(360deg);
   }
 }
-/* ../../design/common.blocks/spin/_theme/spin_theme_simple.styl:end */
-/* ../../design/common.blocks/textarea/_theme/textarea_theme_islands.styl:begin */
+/* ../../design/common.blocks/spin/_theme/spin_theme_simple.css:end */
+/* ../../design/common.blocks/textarea/_theme/textarea_theme_islands.css:begin */
 .textarea_theme_islands {
   font-family: Arial, Helvetica, sans-serif;
   display: inline-block;
@@ -2248,8 +2292,8 @@ html {
   line-height: 22px;
   padding-left: 11px;
 }
-/* ../../design/common.blocks/textarea/_theme/textarea_theme_islands.styl:end */
-/* ../../design/common.blocks/textarea/_theme/textarea_theme_simple.styl:begin */
+/* ../../design/common.blocks/textarea/_theme/textarea_theme_islands.css:end */
+/* ../../design/common.blocks/textarea/_theme/textarea_theme_simple.css:begin */
 .textarea_theme_simple {
   font-family: inherit;
   font-size: 100%;
@@ -2274,4 +2318,4 @@ html {
 .textarea_theme_simple.textarea_width_available {
   width: 100%;
 }
-/* ../../design/common.blocks/textarea/_theme/textarea_theme_simple.styl:end */
+/* ../../design/common.blocks/textarea/_theme/textarea_theme_simple.css:end */
