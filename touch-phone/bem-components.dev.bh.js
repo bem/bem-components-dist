@@ -61,6 +61,7 @@ function BH() {
     this._optNobaseMods = false;
     this._optDelimElem = '__';
     this._optDelimMod = '_';
+    this._optShortTagCloser = '/>';
     this.utils = {
         _expandoId: new Date().getTime(),
         bh: this,
@@ -169,7 +170,7 @@ function BH() {
             var keyName = '__tp_' + key;
             var node = this.node;
             if (arguments.length > 1) {
-                if (force || !node.hasOwnProperty(keyName))
+                if (force || !this.tParam(key))
                     node[keyName] = value;
                 return this;
             } else {
@@ -549,6 +550,7 @@ function BH() {
 }
 
 BH.prototype = {
+    constructor: BH,
 
     /**
      * Задает опции шаблонизации.
@@ -589,6 +591,9 @@ BH.prototype = {
         }
         if (options.delimMod) {
             this._optDelimMod = options.delimMod;
+        }
+        if (options.xhtml === false) {
+            this._optShortTagCloser = '>';
         }
         if (options.shortTags) {
             for (var j = 0; j < options.shortTags.length; j++) {
@@ -1099,7 +1104,7 @@ BH.prototype = {
             this._buf += '<' + tag + (cls ? ' class="' + cls + '"' : '') + (attrs ? attrs : '');
 
             if (this._shortTags[tag]) {
-                this._buf += '/>';
+                this._buf += this._optShortTagCloser;
             } else {
                 this._buf += '>';
                 if (json.html) {
@@ -1153,7 +1158,7 @@ if (typeof module !== 'undefined') {
 }
 
 var bh = new BH();
-bh.setOptions({"jsAttrName":"data-bem","jsAttrScheme":"json"});
+bh.setOptions({"jsAttrName":"data-bem","jsAttrScheme":"json","xhtml":false});
 var init = function (global, BH) {
 (function () {
 // begin: ../../libs/bem-core/common.blocks/page/page.bh.js
@@ -1169,9 +1174,10 @@ var init = function (global, BH) {
             ], true);
 
         return [
-            json.doctype || '<!DOCTYPE html>',
+            { html : json.doctype || '<!DOCTYPE html>', tag : false },
             {
                 tag : 'html',
+                attrs : { lang : json.lang },
                 cls : 'ua_js_no',
                 content : [
                     {
@@ -1324,18 +1330,21 @@ var init = function (global, BH) {
 (function () {
 // begin: ../../libs/bem-core/common.blocks/ua/__svg/ua__svg.bh.js
 
-
     bh.match('ua', function(ctx, json) {
         ctx.applyBase();
         ctx.content([
             json.content,
-            '(function(d,n){',
-                'd.documentElement.className+=',
-                '" ua_svg_"+(d[n]&&d[n]("http://www.w3.org/2000/svg","svg").createSVGRect?"yes":"no");',
-            '})(document,"createElementNS");'
+            {
+                tag : false,
+                html : [
+                    '(function(d,n){',
+                        'd.documentElement.className+=',
+                        '" ua_svg_"+(d[n]&&d[n]("http://www.w3.org/2000/svg","svg").createSVGRect?"yes":"no");',
+                    '})(document,"createElementNS");'
+                ].join('')
+            }
         ], true);
     });
-
 
 // end: ../../libs/bem-core/common.blocks/ua/__svg/ua__svg.bh.js
 }());
@@ -1439,7 +1448,8 @@ var init = function (global, BH) {
         var content = ctx.content();
         if(typeof content === 'undefined') {
             content = [json.icon];
-            'text' in json && content.push({ elem : 'text', content : json.text });
+            /* jshint eqnull: true */
+            json.text != null && content.push({ elem : 'text', content : json.text });
             ctx.content(content);
         }
     });
@@ -2842,4 +2852,4 @@ if (defineAsGlobal) {
     global["bh"] = bh;
     global["BEMHTML"] = bh;
 }
-}(typeof window !== "undefined" ? window : global));
+}(typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : this));

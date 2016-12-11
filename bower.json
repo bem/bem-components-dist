@@ -1,7 +1,6 @@
 {
   "name": "bem-components-dist",
   "description": "Set of components for sites development built with BEM",
-  "version": "3.0.0",
   "keywords": [
     "bem",
     "бэм",

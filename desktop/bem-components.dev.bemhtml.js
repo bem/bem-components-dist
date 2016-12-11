@@ -26,13 +26,12 @@ function Entity(bemxjst) {
   this.jsClass = null;
 
   // "Fast modes"
-  this.tag = new Match(this);
-  this.attrs = new Match(this);
-  this.mod = new Match(this);
-  this.js = new Match(this);
-  this.mix = new Match(this);
-  this.bem = new Match(this);
-  this.cls = new Match(this);
+  this.tag = new Match(this, 'tag');
+  this.attrs = new Match(this, 'attrs');
+  this.js = new Match(this, 'js');
+  this.mix = new Match(this, 'mix');
+  this.bem = new Match(this, 'bem');
+  this.cls = new Match(this, 'cls');
 
   BemxjstEntity.apply(this, arguments);
 }
@@ -61,14 +60,12 @@ Entity.prototype._initRest = function _initRest(key) {
     this.rest[key] = this[key];
   } else {
     if (!this.rest.hasOwnProperty(key))
-      this.rest[key] = new Match(this);
+      this.rest[key] = new Match(this, key);
   }
 };
 
 Entity.prototype.defaultBody = function defaultBody(context) {
   var tag = this.tag.exec(context);
-  if (tag === undefined)
-    tag = context.ctx.tag;
 
   var js;
   if (context.ctx.js !== false)
@@ -79,10 +76,6 @@ Entity.prototype.defaultBody = function defaultBody(context) {
   var mix = this.mix.exec(context);
   var attrs = this.attrs.exec(context);
   var content = this.content.exec(context);
-
-  // Default content
-  if (this.content.count === 0 && content === undefined)
-    content = context.ctx.content;
 
   return this.bemxjst.render(context,
                              this,
@@ -104,10 +97,14 @@ var BEMXJST = require('../bemxjst');
 function BEMHTML(options) {
   BEMXJST.apply(this, arguments);
 
-  var xhtml = typeof options.xhtml === 'undefined' ? true : options.xhtml;
+  var xhtml = typeof options.xhtml === 'undefined' ? false : options.xhtml;
   this._shortTagCloser = xhtml ? '/>' : '>';
 
   this._elemJsInstances = options.elemJsInstances;
+  this._omitOptionalEndTags = options.omitOptionalEndTags;
+  this._unquotedAttrs = typeof options.unquotedAttrs === 'undefined' ?
+    false :
+    options.unquotedAttrs;
 }
 
 inherits(BEMHTML, BEMXJST);
@@ -167,13 +164,11 @@ BEMHTML.prototype.render = function render(context,
     if (js === true)
       js = {};
 
-    if (js) {
+    if (js && js !== ctx.js) {
       if (ctxJS !== true)
         js = utils.extend(ctxJS, js);
     }  else if (ctxJS === true) {
       js = {};
-    } else {
-      js = ctxJS;
     }
   }
 
@@ -205,44 +200,55 @@ BEMHTML.prototype.render = function render(context,
     return this.renderClose(out, context, tag, attrs, isBEM, ctx, content);
   }
 
-  out += ' class="';
+  out += ' class=';
+  var classValue = '';
   if (isBEM) {
-    var mods = entity.elem ? context.elemMods : context.mods;
+    classValue += entity.jsClass;
+    classValue += this.buildModsClasses(entity.block, entity.elem,
+                                        entity.elem ?
+                                          context.elemMods :
+                                          context.mods);
 
-    out += entity.jsClass;
-    out += this.buildModsClasses(entity.block, entity.elem, mods);
+    if (ctx.mix && mix && mix !== ctx.mix)
+      mix = [].concat(mix, ctx.mix);
 
-    var totalMix = mix;
-    if (ctx.mix) {
-      if (totalMix)
-        totalMix = [].concat(totalMix, ctx.mix);
-      else
-        totalMix = ctx.mix;
-    }
-
-    if (totalMix) {
-      var m = this.renderMix(entity, totalMix, jsParams, addJSInitClass);
-      out += m.out;
+    if (mix) {
+      var m = this.renderMix(entity, mix, jsParams, addJSInitClass);
+      classValue += m.out;
       jsParams = m.jsParams;
       addJSInitClass = m.addJSInitClass;
     }
 
     if (cls)
-      out += ' ' + cls;
+      classValue += ' ' + (typeof cls === 'string' ?
+                    utils.attrEscape(cls).trim() : cls);
   } else {
     if (cls)
-      out += cls;
+      classValue += cls.trim ? utils.attrEscape(cls).trim() : cls;
   }
 
   if (addJSInitClass)
-    out += ' i-bem"';
-  else
-    out += '"';
+    classValue += ' i-bem';
+
+  if (this._unquotedAttrs && utils.isUnquotedAttr(classValue)) {
+    out += classValue;
+  } else {
+    out += '"' + classValue + '"';
+  }
 
   if (isBEM && jsParams)
     out += ' data-bem=\'' + utils.jsAttrEscape(JSON.stringify(jsParams)) + '\'';
 
   return this.renderClose(out, context, tag, attrs, isBEM, ctx, content);
+};
+
+var OPTIONAL_END_TAGS = {
+  // html4 https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
+  html: 1, head: 1, body: 1, p: 1, ul: 1, ol: 1, li: 1, dt: 1, dd: 1,
+  colgroup: 1, thead: 1, tbody: 1, tfoot: 1, tr: 1, th: 1, td: 1, option: 1,
+
+  // html5 https://www.w3.org/TR/html5/syntax.html#optional-tags
+  /* dl — Neither tag is omissible */ rb: 1, rt: 1, rtc: 1, rp: 1, optgroup: 1
 };
 
 BEMHTML.prototype.renderClose = function renderClose(prefix,
@@ -254,26 +260,7 @@ BEMHTML.prototype.renderClose = function renderClose(prefix,
                                                      content) {
   var out = prefix;
 
-  // NOTE: maybe we need to make an array for quicker serialization
-  attrs = utils.extend(attrs, ctx.attrs);
-  if (attrs) {
-    var name; // TODO: do something with OmetaJS and YUI Compressor
-    /* jshint forin : false */
-    for (name in attrs) {
-      var attr = attrs[name];
-      if (attr === undefined || attr === false || attr === null)
-        continue;
-
-      if (attr === true)
-        out += ' ' + name;
-      else
-        out += ' ' + name + '="' +
-          utils.attrEscape(utils.isSimple(attr) ?
-                           attr :
-                           this.context.reapply(attr)) +
-                           '"';
-    }
-  }
+  out += this.renderAttrs(attrs, ctx);
 
   if (utils.isShortTag(tag)) {
     out += this._shortTagCloser;
@@ -288,11 +275,44 @@ BEMHTML.prototype.renderClose = function renderClose(prefix,
     if (content || content === 0)
       out += this.renderContent(content, isBEM);
 
-    out += '</' + tag + '>';
+    if (!this._omitOptionalEndTags || !OPTIONAL_END_TAGS.hasOwnProperty(tag))
+      out += '</' + tag + '>';
   }
 
   if (this.canFlush)
     out = context._flush(out);
+  return out;
+};
+
+BEMHTML.prototype.renderAttrs = function renderAttrs(attrs, ctx) {
+  var out = '';
+
+  // NOTE: maybe we need to make an array for quicker serialization
+  if (utils.isObj(attrs) || utils.isObj(ctx.attrs)) {
+    attrs = utils.extend(attrs, ctx.attrs);
+
+    /* jshint forin : false */
+    for (var name in attrs) {
+      var attr = attrs[name];
+      if (attr === undefined || attr === false || attr === null)
+        continue;
+
+      if (attr === true) {
+        out += ' ' + name;
+      } else {
+        var attrVal = utils.isSimple(attr) ? attr : this.context.reapply(attr);
+        out += ' ' + name + '=';
+
+        if (this._unquotedAttrs)
+          out += utils.isUnquotedAttr(attrVal) ?
+            attrVal :
+            ('"' + attrVal + '"');
+        else
+          out += '"' + utils.attrEscape(attrVal) + '"';
+      }
+    }
+  }
+
   return out;
 };
 
@@ -308,7 +328,7 @@ BEMHTML.prototype.renderMix = function renderMix(entity,
   visited[entity.jsClass] = true;
 
   // Transform mix to the single-item array if it's not array
-  if (!utils.isArray(mix))
+  if (!Array.isArray(mix))
     mix = [ mix ];
 
   var classBuilder = this.classBuilder;
@@ -375,9 +395,13 @@ BEMHTML.prototype.renderMix = function renderMix(entity,
 
     for (var j = 0; j < nestedMix.length; j++) {
       var nestedItem = nestedMix[j];
+      if (!nestedItem) continue;
+
       if (!nestedItem.block &&
           !nestedItem.elem ||
           !visited[classBuilder.build(nestedItem.block, nestedItem.elem)]) {
+        if (nestedItem.block) continue;
+
         nestedItem._block = block;
         nestedItem._elem = elem;
         mix = mix.slice(0, i + 1).concat(
@@ -509,7 +533,6 @@ function Context(bemxjst) {
 exports.Context = Context;
 
 Context.prototype._flush = null;
-Context.prototype.isArray = utils.isArray;
 
 Context.prototype.isSimple = utils.isSimple;
 
@@ -559,7 +582,7 @@ function Entity(bemxjst, block, elem, templates) {
 
   // "Fast modes"
   this.def = new Match(this);
-  this.content = new Match(this);
+  this.content = new Match(this, 'content');
 
   // "Slow modes"
   this.rest = {};
@@ -681,6 +704,7 @@ var inherits = require('inherits');
 
 var Tree = require('./tree').Tree;
 var PropertyMatch = require('./tree').PropertyMatch;
+var AddMatch = require('./tree').AddMatch;
 var Context = require('./context').Context;
 var ClassBuilder = require('./class-builder').ClassBuilder;
 var utils = require('./utils');
@@ -754,7 +778,8 @@ BEMXJST.prototype.compile = function compile(code) {
   var tree = new Tree({
     refs: {
       applyCtx: applyCtxWrap,
-      local: localWrap
+      local: localWrap,
+      apply: apply
     }
   });
 
@@ -793,12 +818,12 @@ BEMXJST.prototype.compile = function compile(code) {
 };
 
 BEMXJST.prototype.recompileInput = function recompileInput(code) {
-  var out = code.toString();
-
   var args = BEMXJST.prototype.locals;
   // Reuse function if it already has right arguments
   if (typeof code === 'function' && code.length === args.length)
     return code;
+
+  var out = code.toString();
 
   // Strip the function
   out = out.replace(/^function[^{]+{|}$/g, '');
@@ -820,7 +845,8 @@ BEMXJST.prototype.groupEntities = function groupEntities(tree) {
     elem = undefined;
     for (var j = 0; j < template.predicates.length; j++) {
       var pred = template.predicates[j];
-      if (!(pred instanceof PropertyMatch))
+      if (!(pred instanceof PropertyMatch) &&
+        !(pred instanceof AddMatch))
         continue;
 
       if (pred.key === 'block')
@@ -951,20 +977,19 @@ BEMXJST.prototype._run = function _run(context) {
   var res;
   if (context === undefined || context === '' || context === null)
     res = this.runEmpty();
-  else if (utils.isArray(context))
+  else if (Array.isArray(context))
     res = this.runMany(context);
-  else if (utils.isSimple(context))
-    res = this.runSimple(context);
   else if (
-    context.html &&
     typeof context.html === 'string' &&
+    !context.tag &&
     typeof context.block === 'undefined' &&
     typeof context.elem === 'undefined' &&
-    typeof context.tag === 'undefined' &&
     typeof context.cls === 'undefined' &&
     typeof context.attrs === 'undefined'
   )
     res = this.runUnescaped(context.html);
+  else if (utils.isSimple(context))
+    res = this.runSimple(context);
   else
     res = this.runOne(context);
   return res;
@@ -1008,6 +1033,7 @@ BEMXJST.prototype.runSimple = function runSimple(simple) {
       utils.xmlEscape(simple) :
       simple;
   }
+
   return res;
 };
 
@@ -1032,7 +1058,7 @@ BEMXJST.prototype.runOne = function runOne(json) {
 
     if (json.mods)
       context.mods = json.mods;
-    else if (json.block !== oldBlock)
+    else if (json.block !== oldBlock || !json.elem)
       context.mods = {};
   } else {
     if (!json.elem)
@@ -1077,7 +1103,10 @@ BEMXJST.prototype.runOne = function runOne(json) {
     ent.init(block, elem);
   }
 
-  var res = ent.run(context);
+  var res = this.options.production === true ?
+    this.tryRun(context, ent) :
+    ent.run(context);
+
   context.ctx = oldCtx;
   context.block = oldBlock;
   context.elem = oldElem;
@@ -1089,6 +1118,21 @@ BEMXJST.prototype.runOne = function runOne(json) {
     this.canFlush = true;
 
   return res;
+};
+
+BEMXJST.prototype.tryRun = function tryRun(context, ent) {
+  try {
+    return ent.run(context);
+  } catch (e) {
+    console.error('BEMXJST ERROR: cannot render ' +
+      [
+        'block ' + context.block,
+        'elem ' + context.elem,
+        'mods ' + JSON.stringify(context.mods),
+        'elemMods ' + JSON.stringify(context.elemMods)
+      ].join(', '), e);
+    return '';
+  }
 };
 
 BEMXJST.prototype.renderContent = function renderContent(content, isBEM) {
@@ -1151,7 +1195,7 @@ BEMXJST.prototype.applyNext = function applyNext() {
 BEMXJST.prototype.applyMode = function applyMode(mode, changes) {
   var match = this.match.entity.rest[mode];
   if (!match)
-    return;
+    return this.context.ctx[mode];
 
   if (!changes)
     return match.exec(this.context);
@@ -1190,12 +1234,11 @@ BEMXJST.prototype.exportApply = function exportApply(exports) {
 };
 
 },{"./class-builder":3,"./context":4,"./error":6,"./tree":9,"./utils":10,"inherits":11}],8:[function(require,module,exports){
-var utils = require('./utils');
 var tree = require('./tree');
 var PropertyMatch = tree.PropertyMatch;
-var OnceMatch = tree.OnceMatch;
+var AddMatch = tree.AddMatch;
 var WrapMatch = tree.WrapMatch;
-var PropertyAbsent = tree.PropertyAbsent;
+var ExtendMatch = tree.ExtendMatch;
 var CustomMatch = tree.CustomMatch;
 
 function MatchProperty(template, pred) {
@@ -1216,22 +1259,19 @@ function MatchNested(template, pred) {
 
 MatchNested.prototype.exec = function exec(context) {
   var val = context;
+
   for (var i = 0; i < this.keys.length - 1; i++) {
     val = val[this.keys[i]];
     if (!val)
       return false;
   }
 
-  return val[this.keys[i]] === this.value;
-};
+  val = val[this.keys[i]];
 
-function MatchAbsent(template, pred) {
-  this.template = template;
-  this.key = pred.key;
-}
+  if (this.value === true)
+    return val !== undefined && val !== '' && val !== false && val !== null;
 
-MatchAbsent.prototype.exec = function exec(context) {
-  return !context[this.key];
+  return String(val) === this.value;
 };
 
 function MatchCustom(template, pred) {
@@ -1241,17 +1281,6 @@ function MatchCustom(template, pred) {
 
 MatchCustom.prototype.exec = function exec(context) {
   return this.body.call(context, context, context.ctx);
-};
-
-function MatchOnce(template) {
-  this.template = template;
-  this.once = null;
-}
-
-MatchOnce.prototype.exec = function exec(context) {
-  var res = this.once !== context._onceRef;
-  this.once = context._onceRef;
-  return res;
 };
 
 function MatchWrap(template) {
@@ -1265,6 +1294,27 @@ MatchWrap.prototype.exec = function exec(context) {
   return res;
 };
 
+function MatchExtend(template) {
+  this.template = template;
+  this.wrap = null;
+}
+
+MatchExtend.prototype.exec = function exec(context) {
+  var res = this.ext !== context.ctx;
+  this.ext = context.ctx;
+  return res;
+};
+
+function AddWrap(template, pred) {
+  this.template = template;
+  this.key = pred.key;
+  this.value = pred.value;
+}
+
+AddWrap.prototype.exec = function exec(context) {
+  return context[this.key] === this.value;
+};
+
 function MatchTemplate(mode, template) {
   this.mode = mode;
   this.predicates = new Array(template.predicates.length);
@@ -1275,20 +1325,20 @@ function MatchTemplate(mode, template) {
   for (var i = 0, j = 0; i < this.predicates.length; i++, j++) {
     var pred = template.predicates[i];
     if (pred instanceof PropertyMatch) {
-      if (utils.isArray(pred.key))
+      if (Array.isArray(pred.key))
         this.predicates[j] = new MatchNested(this, pred);
       else
         this.predicates[j] = new MatchProperty(this, pred);
-    } else if (pred instanceof PropertyAbsent) {
-      this.predicates[j] = new MatchAbsent(this, pred);
+    } else if (pred instanceof ExtendMatch) {
+      j--;
+      postpone.push(new MatchExtend(this));
+    } else if (pred instanceof AddMatch) {
+      this.predicates[i] = new AddWrap(this, pred);
     } else if (pred instanceof CustomMatch) {
       this.predicates[j] = new MatchCustom(this, pred);
 
-    // Push OnceMatch and MatchWrap later, they should not be executed first.
-    // Otherwise they will set flag too early, and body might not be executed
-    } else if (pred instanceof OnceMatch) {
-      j--;
-      postpone.push(new MatchOnce(this));
+      // Push MatchWrap later, they should not be executed first.
+      // Otherwise they will set flag too early, and body might not be executed
     } else if (pred instanceof WrapMatch) {
       j--;
       postpone.push(new MatchWrap(this));
@@ -1307,8 +1357,9 @@ function MatchTemplate(mode, template) {
 }
 exports.MatchTemplate = MatchTemplate;
 
-function Match(entity) {
+function Match(entity, modeName) {
   this.entity = entity;
+  this.modeName = modeName;
   this.bemxjst = this.entity.bemxjst;
   this.templates = [];
 
@@ -1327,7 +1378,7 @@ function Match(entity) {
 exports.Match = Match;
 
 Match.prototype.clone = function clone(entity) {
-  var res = new Match(entity);
+  var res = new Match(entity, this.modeName);
 
   res.templates = this.templates.slice();
   res.mask = this.mask.slice();
@@ -1398,7 +1449,7 @@ Match.prototype.exec = function exec(context) {
   }
 
   if (i === this.count)
-    return undefined;
+    return context.ctx[this.modeName];
 
   var oldMask = mask;
   var oldMatch = this.bemxjst.match;
@@ -1452,7 +1503,7 @@ Match.prototype.restoreDepth = function restoreDepth(depth) {
   this.depth = depth;
 };
 
-},{"./tree":9,"./utils":10}],9:[function(require,module,exports){
+},{"./tree":9}],9:[function(require,module,exports){
 var assert = require('minimalistic-assert');
 var inherits = require('inherits');
 
@@ -1498,12 +1549,6 @@ function Item(tree, children) {
       this.children[i] = arg;
   }
 }
-
-function OnceMatch() {
-  MatchBase.call(this);
-}
-inherits(OnceMatch, MatchBase);
-exports.OnceMatch = OnceMatch;
 
 function WrapMatch(refs) {
   MatchBase.call(this);
@@ -1567,7 +1612,7 @@ ExtendMatch.prototype.wrapBody = function wrapBody(body) {
 
       var keys = Object.keys(body);
       for (var i = 0; i < keys.length; i++)
-        changes['ctx.' + keys[i]] = body[keys[i]];
+        changes[keys[i]] = body[keys[i]];
 
       return local(changes)(function preApplyCtx() {
         return applyCtx(this.ctx);
@@ -1581,11 +1626,58 @@ ExtendMatch.prototype.wrapBody = function wrapBody(body) {
     var obj = body.call(this);
     var keys = Object.keys(obj);
     for (var i = 0; i < keys.length; i++)
-      changes['ctx.' + keys[i]] = obj[keys[i]];
+      changes[keys[i]] = obj[keys[i]];
 
     return local(changes)(function preApplyCtx() {
       return applyCtx(this.ctx);
     });
+  };
+};
+
+function AddMatch(mode, refs) {
+  MatchBase.call(this);
+
+  this.mode = mode;
+  this.refs = refs;
+}
+inherits(AddMatch, MatchBase);
+exports.AddMatch = AddMatch;
+
+AddMatch.prototype.wrapBody = function wrapBody(body) {
+  return this[this.mode + 'WrapBody'](body);
+};
+
+AddMatch.prototype.appendContentWrapBody =
+  function appendContentWrapBody(body) {
+  var refs = this.refs;
+  var applyCtx = refs.applyCtx;
+  var apply = refs.apply;
+
+  if (typeof body !== 'function') {
+    return function inlineAppendContentAddAdaptor() {
+      return [ apply('content') , body ];
+    };
+  }
+
+  return function appendContentAddAdaptor() {
+    return [ apply('content'), applyCtx(body.call(this, this, this.ctx)) ];
+  };
+};
+
+AddMatch.prototype.prependContentWrapBody =
+  function prependContentWrapBody(body) {
+  var refs = this.refs;
+  var applyCtx = refs.applyCtx;
+  var apply = refs.apply;
+
+  if (typeof body !== 'function') {
+    return function inlinePrependContentAddAdaptor() {
+      return [ body, apply('content') ];
+    };
+  }
+
+  return function prependContentAddAdaptor() {
+    return [ applyCtx(body.call(this, this, this.ctx)), apply('content') ];
   };
 };
 
@@ -1604,14 +1696,6 @@ function PropertyMatch(key, value) {
 }
 inherits(PropertyMatch, MatchBase);
 exports.PropertyMatch = PropertyMatch;
-
-function PropertyAbsent(key) {
-  MatchBase.call(this);
-
-  this.key = key;
-}
-inherits(PropertyAbsent, MatchBase);
-exports.PropertyAbsent = PropertyAbsent;
 
 function CustomMatch(body) {
   MatchBase.call(this);
@@ -1641,10 +1725,10 @@ function Tree(options) {
 exports.Tree = Tree;
 
 Tree.methods = [
-  'match', 'once', 'wrap', 'block', 'elem', 'mode', 'mod',
+  'match', 'wrap', 'block', 'elem', 'mode', 'mod',
   'elemMod', 'def', 'tag', 'attrs', 'cls', 'js',
   'bem', 'mix', 'content', 'replace', 'extend', 'oninit',
-  'xjstOptions'
+  'xjstOptions', 'appendContent', 'prependContent'
 ];
 
 Tree.prototype.build = function build(templates, apply) {
@@ -1756,12 +1840,6 @@ Tree.prototype.match = function match() {
   return this.boundBody;
 };
 
-Tree.prototype.once = function once() {
-  if (arguments.length)
-    throw new Error('Predicate once() should not have arguments');
-  return this.match(new OnceMatch());
-};
-
 Tree.prototype.applyMode = function applyMode(args, mode) {
   if (args.length) {
     throw new Error('Predicate should not have arguments but ' +
@@ -1769,10 +1847,6 @@ Tree.prototype.applyMode = function applyMode(args, mode) {
   }
 
   return this.mode(mode);
-};
-
-Tree.prototype.wrap = function wrap() {
-  return this.def.apply(this, arguments).match(new WrapMatch(this.refs));
 };
 
 Tree.prototype.xjstOptions = function xjstOptions(options) {
@@ -1795,11 +1869,13 @@ Tree.prototype.mode = function mode(name) {
 };
 
 Tree.prototype.mod = function mod(name, value) {
-  return this.match(new PropertyMatch([ 'mods', name ], value));
+  return this.match(new PropertyMatch([ 'mods', name ],
+                                  value === undefined ? true : String(value)));
 };
 
 Tree.prototype.elemMod = function elemMod(name, value) {
-  return this.match(new PropertyMatch([ 'elemMods', name ], value));
+  return this.match(new PropertyMatch([ 'elemMods', name ],
+                                  value === undefined ?  true : String(value)));
 };
 
 Tree.prototype.def = function def() {
@@ -1834,6 +1910,21 @@ Tree.prototype.content = function content() {
   return this.applyMode(arguments, 'content');
 };
 
+Tree.prototype.appendContent = function appendContent() {
+  return this.content.apply(this, arguments)
+    .match(new AddMatch('appendContent', this.refs));
+};
+
+
+Tree.prototype.prependContent = function prependContent() {
+  return this.content.apply(this, arguments)
+    .match(new AddMatch('prependContent', this.refs));
+};
+
+Tree.prototype.wrap = function wrap() {
+  return this.def.apply(this, arguments).match(new WrapMatch(this.refs));
+};
+
 Tree.prototype.replace = function replace() {
   return this.def.apply(this, arguments).match(new ReplaceMatch(this.refs));
 };
@@ -1847,30 +1938,127 @@ Tree.prototype.oninit = function oninit(fn) {
 };
 
 },{"inherits":11,"minimalistic-assert":12}],10:[function(require,module,exports){
-var toString = Object.prototype.toString;
+var amp = '&amp;';
+var lt = '&lt;';
+var gt = '&gt;';
+var quot = '&quot;';
+var singleQuot = '&#39;';
 
-exports.isArray = Array.isArray;
-if (!exports.isArray) {
-  exports.isArray = function isArrayPolyfill(obj) {
-    return toString.call(obj) === '[object Array]';
-  };
-}
+var matchXmlRegExp = /[&<>]/;
 
-exports.xmlEscape = function(str) {
-  return (str + '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+exports.xmlEscape = function(string) {
+  var str = '' + string;
+  var match = matchXmlRegExp.exec(str);
+
+  if (!match)
+    return str;
+
+  var escape;
+  var html = '';
+  var index = 0;
+  var lastIndex = 0;
+
+  for (index = match.index; index < str.length; index++) {
+    switch (str.charCodeAt(index)) {
+      case 38: // &
+        escape = amp;
+        break;
+      case 60: // <
+        escape = lt;
+        break;
+      case 62: // >
+        escape = gt;
+        break;
+      default:
+        continue;
+    }
+
+    if (lastIndex !== index)
+      html += str.substring(lastIndex, index);
+
+    lastIndex = index + 1;
+    html += escape;
+  }
+
+  return lastIndex !== index ?
+    html + str.substring(lastIndex, index) :
+    html;
 };
-exports.attrEscape = function(str) {
-  return (str + '')
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;');
+
+var matchAttrRegExp = /["&]/;
+
+exports.attrEscape = function(string) {
+  var str = '' + string;
+  var match = matchAttrRegExp.exec(str);
+
+  if (!match)
+    return str;
+
+  var escape;
+  var html = '';
+  var index = 0;
+  var lastIndex = 0;
+
+  for (index = match.index; index < str.length; index++) {
+    switch (str.charCodeAt(index)) {
+      case 34: // "
+        escape = quot;
+        break;
+      case 38: // &
+        escape = amp;
+        break;
+      default:
+        continue;
+    }
+
+    if (lastIndex !== index)
+      html += str.substring(lastIndex, index);
+
+    lastIndex = index + 1;
+    html += escape;
+  }
+
+  return lastIndex !== index ?
+    html + str.substring(lastIndex, index) :
+    html;
 };
-exports.jsAttrEscape = function(str) {
-  return (str + '')
-    .replace(/&/g, '&amp;')
-    .replace(/'/g, '&#39;');
+
+var matchJsAttrRegExp = /['&]/;
+
+exports.jsAttrEscape = function(string) {
+  var str = '' + string;
+  var match = matchJsAttrRegExp.exec(str);
+
+  if (!match)
+    return str;
+
+  var escape;
+  var html = '';
+  var index = 0;
+  var lastIndex = 0;
+
+  for (index = match.index; index < str.length; index++) {
+    switch (str.charCodeAt(index)) {
+      case 38: // &
+        escape = amp;
+        break;
+      case 39: // '
+        escape = singleQuot;
+        break;
+      default:
+        continue;
+    }
+
+    if (lastIndex !== index)
+      html += str.substring(lastIndex, index);
+
+    lastIndex = index + 1;
+    html += escape;
+  }
+
+  return lastIndex !== index ?
+    html + str.substring(lastIndex, index) :
+    html;
 };
 
 exports.extend = function extend(o1, o2) {
@@ -1889,7 +2077,7 @@ exports.extend = function extend(o1, o2) {
   return res;
 };
 
-var SHORT_TAGS = { // хэш для быстрого определения, является ли тэг коротким
+var SHORT_TAGS = { // hash for quick check if tag short
   area: 1, base: 1, br: 1, col: 1, command: 1, embed: 1, hr: 1, img: 1,
   input: 1, keygen: 1, link: 1, meta: 1, param: 1, source: 1, wbr: 1
 };
@@ -1900,7 +2088,20 @@ exports.isShortTag = function isShortTag(t) {
 
 exports.isSimple = function isSimple(obj) {
   if (!obj || obj === true) return true;
+  if (!obj.block &&
+      !obj.elem &&
+      !obj.tag &&
+      !obj.cls &&
+      !obj.attrs &&
+      obj.hasOwnProperty('html') &&
+      isSimple(obj.html))
+    return true;
   return typeof obj === 'string' || typeof obj === 'number';
+};
+
+exports.isObj = function isObj(val) {
+  return val && typeof val === 'object' && !Array.isArray(val) &&
+    val !== null;
 };
 
 var uniqCount = 0;
@@ -1922,6 +2123,46 @@ exports.identify = function identify(obj, onlyGet) {
   var u = getUniq();
   obj[uniqExpando] = u;
   return u;
+};
+
+exports.fnToString = function fnToString(code) {
+  // It is fine to compile without templates at first
+  if (!code)
+    return '';
+
+  if (typeof code === 'function') {
+    // Examples:
+    //   function () { … }
+    //   function name() { … }
+    //   function (a, b) { … }
+    //   function name(a, b) { … }
+    var regularFunction = /^function\s*[^{]+{|}$/g;
+
+    // Examples:
+    //   () => { … }
+    //   (a, b) => { … }
+    //   _ => { … }
+    var arrowFunction = /^(_|\(\w|[^=>]+\))\s=>\s{|}$/g;
+
+    code = code.toString();
+    code = code.replace(
+      code.indexOf('function') === 0 ? regularFunction : arrowFunction,
+    '');
+  }
+
+  return code;
+};
+
+/**
+ * regexp for check may attribute be unquoted
+ *
+ * https://www.w3.org/TR/html4/intro/sgmltut.html#h-3.2.2
+ * https://www.w3.org/TR/html5/syntax.html#attributes
+ */
+var UNQUOTED_ATTR_REGEXP = /^[:\w.-]+$/;
+
+exports.isUnquotedAttr = function isUnquotedAttr(str) {
+  return str && UNQUOTED_ATTR_REGEXP.exec(str);
 };
 
 },{}],11:[function(require,module,exports){
@@ -1975,8 +2216,8 @@ var api = new BEMHTML({});
 /// -------------------------------------
 /// ------ BEM-XJST User-code Start -----
 /// -------------------------------------
-api.compile(function(match, once, wrap, block, elem, mode, mod, elemMod, def, tag, attrs, cls, js, bem, mix, content, replace, extend, oninit, xjstOptions, local, applyCtx, applyNext, apply) {
-/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/ua.bemhtml.js */
+api.compile(function(match, wrap, block, elem, mode, mod, elemMod, def, tag, attrs, cls, js, bem, mix, content, replace, extend, oninit, xjstOptions, appendContent, prependContent, local, applyCtx, applyNext, apply) {
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/ua/ua.bemhtml.js */
 block('ua')(
     tag()('script'),
     bem()(false),
@@ -1987,18 +2228,23 @@ block('ua')(
     ])
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/ua.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/page.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/ua/ua.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/page.bemhtml.js */
 block('page')(
+
+    mode('doctype')(function() {
+        return { html : this.ctx.doctype || '<!DOCTYPE html>' };
+    }),
 
     wrap()(function() {
         var ctx = this.ctx;
         this._nonceCsp = ctx.nonce;
 
         return [
-            ctx.doctype || '<!DOCTYPE html>',
+            apply('doctype'),
             {
                 tag : 'html',
+                attrs : { lang : ctx.lang },
                 cls : 'ua_js_no',
                 content : [
                     {
@@ -2057,8 +2303,8 @@ block('page')(
 
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/page.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__css/page__css.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/page.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/__css/page__css.bemhtml.js */
 block('page').elem('css')(
     bem()(false),
     tag()('style'),
@@ -2068,8 +2314,8 @@ block('page').elem('css')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__css/page__css.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/desktop.blocks/page/__css/page__css.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/__css/page__css.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/desktop.blocks/page/__css/page__css.bemhtml.js */
 block('page').elem('css').match(function() {
     return this.ctx.hasOwnProperty('ie');
 })(
@@ -2082,21 +2328,21 @@ block('page').elem('css').match(function() {
                     [ie, '', ''];
 
         return [
-            '<!--[if ' + hideRule[0] + ']>' + hideRule[1],
+            { html : '<!--[if ' + hideRule[0] + ']>' + hideRule[1] },
             this.ctx,
-            hideRule[2] + '<![endif]-->'
+            { html : hideRule[2] + '<![endif]-->' }
         ];
     }),
-    def().match(function() { return this.ctx.ie === true; })(function() {
+    replace().match(function() { return this.ctx.ie === true; })(function() {
         var url = this.ctx.url;
-        return applyCtx([6, 7, 8, 9].map(function(v) {
+        return [6, 7, 8, 9].map(function(v) {
             return { elem : 'css', url : url + '.ie' + v + '.css', ie : 'IE ' + v };
-        }));
+        });
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/desktop.blocks/page/__css/page__css.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__js/page__js.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/desktop.blocks/page/__css/page__css.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/__js/page__js.bemhtml.js */
 block('page').elem('js')(
     bem()(false),
     tag()('script'),
@@ -2112,20 +2358,24 @@ block('page').elem('js')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__js/page__js.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/__js/page__js.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml.js */
 block('ua').content()(function() {
     return [
         applyNext(),
-        '(function(d,n){',
-            'd.documentElement.className+=',
-            '" ua_svg_"+(d[n]&&d[n]("http://www.w3.org/2000/svg","svg").createSVGRect?"yes":"no");',
-        '})(document,"createElementNS");'
+        {
+            html : [
+                '(function(d,n){',
+                    'd.documentElement.className+=',
+                    '" ua_svg_"+(d[n]&&d[n]("http://www.w3.org/2000/svg","svg").createSVGRect?"yes":"no");',
+                '})(document,"createElementNS");'
+            ].join('')
+        }
     ];
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/desktop.blocks/page/__conditional-comment/page__conditional-comment.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/desktop.blocks/page/__conditional-comment/page__conditional-comment.bemhtml.js */
 block('page').elem('conditional-comment')(
     tag()(false),
 
@@ -2140,18 +2390,18 @@ block('page').elem('conditional-comment')(
             hasNegationOrIncludeOthers = hasNegation || includeOthers;
 
         return [
-            '<!--[if ' + cond + ']>',
-            includeOthers? '<!' : '',
-            hasNegationOrIncludeOthers? '-->' : '',
+            { html : '<!--[if ' + cond + ']>' },
+            includeOthers? { html : '<!' } : '',
+            hasNegationOrIncludeOthers? { html : '-->' } : '',
             applyNext(),
-            hasNegationOrIncludeOthers? '<!--' : '',
-            '<![endif]-->'
+            hasNegationOrIncludeOthers? { html : '<!--' } : '',
+            { html : '<![endif]-->' }
         ];
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/desktop.blocks/page/__conditional-comment/page__conditional-comment.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/attach.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/desktop.blocks/page/__conditional-comment/page__conditional-comment.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/attach.bemhtml.js */
 block('attach')(
     def()(function() { return applyNext({ _attach : this.ctx }); }),
 
@@ -2187,8 +2437,8 @@ block('attach')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/attach.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/attach.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/button.bemhtml.js */
 block('button')(
     def()(function() {
         var tag = apply('tag'),
@@ -2243,7 +2493,8 @@ block('button')(
             var ctx = this.ctx,
                 content = [ctx.icon];
             // NOTE: wasn't moved to separate template for optimization
-            'text' in ctx && content.push({ elem : 'text', content : ctx.text });
+            /* jshint eqnull: true */
+            ctx.text != null && content.push({ elem : 'text', content : ctx.text });
             return content;
         },
         match(function() { return typeof this.ctx.content !== 'undefined'; })(function() {
@@ -2252,18 +2503,18 @@ block('button')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/__text/button__text.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/__text/button__text.bemhtml.js */
 block('button').elem('text').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/__text/button__text.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_focused/button_focused.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/__text/button__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_focused/button_focused.bemhtml.js */
 block('button').mod('focused', true).js()(function() {
     return this.extend(applyNext(), { live : false });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_focused/button_focused.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/icon/icon.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_focused/button_focused.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/icon/icon.bemhtml.js */
 block('icon')(
     tag()('span'),
     attrs()(function() {
@@ -2274,8 +2525,8 @@ block('icon')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/icon/icon.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__button/attach__button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/icon/icon.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__button/attach__button.bemhtml.js */
 block('button').match(function() { return this._attach; })(
     tag()('span'),
     content()(function() {
@@ -2286,8 +2537,8 @@ block('button').match(function() { return this._attach; })(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__button/attach__button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__control/attach__control.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__button/attach__button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__control/attach__control.bemhtml.js */
 block('attach').elem('control')(
 
     tag()('input'),
@@ -2308,36 +2559,36 @@ block('attach').elem('control')(
 
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__control/attach__control.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__no-file/attach__no-file.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__control/attach__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__no-file/attach__no-file.bemhtml.js */
 block('attach').elem('no-file').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__no-file/attach__no-file.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__file/attach__file.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__no-file/attach__no-file.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__file/attach__file.bemhtml.js */
 block('attach').elem('file').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__file/attach__file.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__text/attach__text.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__file/attach__file.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__text/attach__text.bemhtml.js */
 block('attach').elem('text').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__text/attach__text.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__clear/attach__clear.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__text/attach__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__clear/attach__clear.bemhtml.js */
 block('attach').elem('clear').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__clear/attach__clear.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__clear/attach__clear.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
 block('button').mod('togglable', 'check').attrs()(function() {
     return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
 block('button').mod('togglable', 'radio').attrs()(function() {
     return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_type/button_type_link.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_type/button_type_link.bemhtml.js */
 block('button').mod('type', 'link')(
     tag()('a'),
 
@@ -2359,8 +2610,8 @@ block('button').mod('type', 'link')(
         })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_type/button_type_link.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/checkbox.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_type/button_type_link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/checkbox.bemhtml.js */
 block('checkbox')(
     tag()('label'),
 
@@ -2389,12 +2640,12 @@ block('checkbox')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/checkbox.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__box/checkbox__box.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/checkbox.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__box/checkbox__box.bemhtml.js */
 block('checkbox').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__box/checkbox__box.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__control/checkbox__control.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__box/checkbox__box.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__control/checkbox__control.bemhtml.js */
 block('checkbox').elem('control')(
     tag()('input'),
 
@@ -2412,15 +2663,15 @@ block('checkbox').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__control/checkbox__control.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__control/checkbox__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
 block('checkbox').elem('text')(
     tag()('span'),
     attrs()({ role : 'presentation' })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/_type/checkbox_type_button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/_type/checkbox_type_button.bemhtml.js */
 block('checkbox').mod('type', 'button')(
     content()(function() {
         var ctx = this.ctx,
@@ -2458,8 +2709,8 @@ block('checkbox').mod('type', 'button')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/_type/checkbox_type_button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox-group/checkbox-group.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/_type/checkbox_type_button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox-group/checkbox-group.bemhtml.js */
 block('checkbox-group')(
     tag()('span'),
 
@@ -2500,12 +2751,12 @@ block('checkbox-group')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox-group/checkbox-group.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/control-group/control-group.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox-group/checkbox-group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/control-group/control-group.bemhtml.js */
 block('control-group').attrs()({ role : 'group' });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/control-group/control-group.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/dropdown.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/control-group/control-group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/dropdown.bemhtml.js */
 block('dropdown')(
     replace()(function() {
         return [{ elem : 'popup' }, { elem : 'switcher' }];
@@ -2554,8 +2805,8 @@ block('dropdown')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/dropdown.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/popup/popup.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/dropdown.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/popup/popup.bemhtml.js */
 block('popup')(
     js()(function() {
         var ctx = this.ctx;
@@ -2570,8 +2821,8 @@ block('popup')(
     attrs()({ 'aria-hidden' : 'true' })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/popup/popup.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/popup/popup.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml.js */
 block('dropdown').mod('switcher', 'button').elem('switcher').replace()(function() {
     var dropdown = this._dropdown,
         switcher = dropdown.switcher;
@@ -2600,8 +2851,8 @@ block('dropdown').mod('switcher', 'button').elem('switcher').replace()(function(
     return res;
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml.js */
 block('dropdown').mod('switcher', 'link').elem('switcher').replace()(function() {
     var dropdown = this._dropdown,
         switcher = dropdown.switcher;
@@ -2629,8 +2880,8 @@ block('dropdown').mod('switcher', 'link').elem('switcher').replace()(function() 
     return res;
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/link.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/link/link.bemhtml.js */
 block('link')(
     def()(function() {
         var ctx = this.ctx;
@@ -2676,8 +2927,8 @@ block('link')(
         })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/link.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/link/link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
 block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
     tag()('span'),
     attrs()(function() {
@@ -2685,8 +2936,8 @@ block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/image/image.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/image/image.bemhtml.js */
 block('image')(
     attrs()({ role : 'img' }),
 
@@ -2709,8 +2960,8 @@ block('image')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/image/image.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/input.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/image/image.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/input.bemhtml.js */
 block('input')(
     tag()('span'),
     js()(true),
@@ -2720,12 +2971,12 @@ block('input')(
     content()({ elem : 'box', content : { elem : 'control' } })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/input.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__box/input__box.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/input.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__box/input__box.bemhtml.js */
 block('input').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__box/input__box.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__control/input__control.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__box/input__box.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__control/input__control.bemhtml.js */
 block('input').elem('control')(
     tag()('input'),
 
@@ -2747,31 +2998,31 @@ block('input').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__control/input__control.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_has-clear/input_has-clear.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__control/input__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_has-clear/input_has-clear.bemhtml.js */
 block('input').mod('has-clear', true).elem('box')
     .content()(function() {
         return [this.ctx.content, { elem : 'clear' }];
     });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_has-clear/input_has-clear.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__clear/input__clear.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_has-clear/input_has-clear.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__clear/input__clear.bemhtml.js */
 block('input').elem('clear').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__clear/input__clear.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_password.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__clear/input__clear.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_type/input_type_password.bemhtml.js */
 block('input').mod('type', 'password').elem('control').attrs()(function() {
     return this.extend(applyNext(), { type : 'password' });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_password.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_search.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_type/input_type_password.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_type/input_type_search.bemhtml.js */
 block('input').mod('type', 'search').elem('control').attrs()(function() {
     return this.extend(applyNext(), { type : 'search' });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_search.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/menu.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_type/input_type_search.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/menu.bemhtml.js */
 block('menu')(
     def()(function() {
         var ctx = this.ctx,
@@ -2802,7 +3053,7 @@ block('menu')(
                     }
                 };
 
-            if(!this.isArray(ctx.content)) throw Error('menu: content must be an array of the menu items');
+            if(!Array.isArray(ctx.content)) throw Error('menu: content must be an array of the menu items');
 
             iterateItems(ctx.content);
         }
@@ -2830,8 +3081,8 @@ block('menu')(
         })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/menu.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu-item/menu-item.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/menu.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu-item/menu-item.bemhtml.js */
 block('menu-item')(
     def().match(function() { return this._menuMods; })(function() {
         var mods = this.mods;
@@ -2859,14 +3110,14 @@ block('menu-item')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu-item/menu-item.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_focused/menu_focused.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu-item/menu-item.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/_focused/menu_focused.bemhtml.js */
 block('menu').mod('focused', true).js()(function() {
     return this.extend(applyNext(), { live : false });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_focused/menu_focused.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__group/menu__group.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/_focused/menu_focused.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/__group/menu__group.bemhtml.js */
 block('menu').elem('group')(
     attrs()({ role : 'group' }),
     match(function() { return typeof this.ctx.title !== 'undefined'; })(
@@ -2892,8 +3143,8 @@ block('menu').elem('group')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__group/menu__group.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_mode/menu_mode_radio.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/__group/menu__group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/_mode/menu_mode_radio.bemhtml.js */
 block('menu')
     .mod('mode', 'radio')
     .match(function() {
@@ -2904,8 +3155,8 @@ block('menu')
         return applyNext();
     });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_mode/menu_mode_radio.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu-item/_type/menu-item_type_link.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/_mode/menu_mode_radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu-item/_type/menu-item_type_link.bemhtml.js */
 block('menu-item').mod('type', 'link').mod('disabled', true).match(function() {
     return !this._menuItemDisabled;
 }).def()(function() {
@@ -2920,8 +3171,8 @@ block('link').match(function() {
     return applyNext();
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu-item/_type/menu-item_type_link.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/modal/modal.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu-item/_type/menu-item_type_link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/modal/modal.bemhtml.js */
 block('modal')(
     js()(true),
 
@@ -2952,8 +3203,8 @@ block('modal')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/modal/modal.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/progressbar/progressbar.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/modal/modal.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/progressbar/progressbar.bemhtml.js */
 block('progressbar')(
     def()(function() {
         return applyNext({ _val : this.ctx.val || 0 });
@@ -2983,8 +3234,8 @@ block('progressbar')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/progressbar/progressbar.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/radio.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/progressbar/progressbar.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/radio.bemhtml.js */
 block('radio')(
     tag()('label'),
     js()(true),
@@ -3009,12 +3260,12 @@ block('radio')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/radio.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__box/radio__box.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__box/radio__box.bemhtml.js */
 block('radio').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__box/radio__box.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__control/radio__control.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__box/radio__box.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__control/radio__control.bemhtml.js */
 block('radio').elem('control')(
     tag()('input'),
 
@@ -3035,8 +3286,8 @@ block('radio').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__control/radio__control.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__text/radio__text.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__control/radio__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__text/radio__text.bemhtml.js */
 block('radio').elem('text')(
     tag()('span'),
     attrs()(function() {
@@ -3044,8 +3295,8 @@ block('radio').elem('text')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__text/radio__text.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/_type/radio_type_button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__text/radio__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/_type/radio_type_button.bemhtml.js */
 block('radio').mod('type', 'button')(
     content()(function() {
         var ctx = this.ctx,
@@ -3080,8 +3331,8 @@ block('radio').mod('type', 'button')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/_type/radio_type_button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/radio-group.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/_type/radio_type_button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio-group/radio-group.bemhtml.js */
 block('radio-group')(
     tag()('span'),
 
@@ -3120,8 +3371,8 @@ block('radio-group')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/radio-group.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio-group/radio-group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml.js */
 block('radio-group').mod('mode', 'radio-check')(
     def()(function() {
         if(this.mods.type !== 'button')
@@ -3131,8 +3382,8 @@ block('radio-group').mod('mode', 'radio-check')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/select.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/select.bemhtml.js */
 block('select')(
     def().match(function() { return !this._select; })(function() { // TODO: check BEM-XJST for proper applyNext
         if(!this.mods.mode) throw Error('Can\'t build select without mode modifier');
@@ -3196,14 +3447,14 @@ block('select')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/select.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_focused/select_focused.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/select.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_focused/select_focused.bemhtml.js */
 block('select').mod('focused', true).js()(function() {
     return this.extend(applyNext(), { live : false });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_focused/select_focused.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__control/select__control.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_focused/select_focused.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__control/select__control.bemhtml.js */
 block('select').elem('control')(
     tag()('input'),
     attrs()(function() {
@@ -3217,8 +3468,8 @@ block('select').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__control/select__control.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__button/select__button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__control/select__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__button/select__button.bemhtml.js */
 block('select').elem('button')(
     replace()(function() {
         var select = this._select,
@@ -3260,8 +3511,8 @@ block('button').elem('text').match(function() { return this._select; })(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__button/select__button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__menu/select__menu.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__button/select__button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__menu/select__menu.bemhtml.js */
 block('select').elem('menu')(
     replace()(function() {
         var mods = this.mods,
@@ -3311,8 +3562,8 @@ block('select').elem('menu')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__menu/select__menu.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_check.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__menu/select__menu.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_check.bemhtml.js */
 block('select').mod('mode', 'check')(
     js()(function() {
         return this.extend(applyNext(), { text : this.ctx.text });
@@ -3346,8 +3597,8 @@ block('select').mod('mode', 'check')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_check.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio-check.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_radio-check.bemhtml.js */
 block('select').mod('mode', 'radio-check')(
     js()(function() {
         return this.extend(applyNext(), { text : this.ctx.text });
@@ -3373,8 +3624,8 @@ block('select').mod('mode', 'radio-check')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio-check.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_radio-check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_radio.bemhtml.js */
 block('select').mod('mode', 'radio')(
     def().match(function() { return this._checkedOptions; })(function() {
         var checkedOptions = this._checkedOptions,
@@ -3404,14 +3655,14 @@ block('select').mod('mode', 'radio')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/spin/spin.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/spin/spin.bemhtml.js */
 block('spin')(
     tag()('span')
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/spin/spin.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/textarea/textarea.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/spin/spin.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/textarea/textarea.bemhtml.js */
 block('textarea')(
     js()(true),
     tag()('textarea'),
@@ -3438,8 +3689,8 @@ block('textarea')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/textarea/textarea.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/textarea/textarea.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components-clean/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml.js */
 block('progressbar').mod('theme', 'simple').content()(function() {
     return [
         {
@@ -3453,7 +3704,7 @@ block('progressbar').mod('theme', 'simple').content()(function() {
     ];
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components-clean/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml.js */
 oninit(function(exports, context) {
     var BEMContext = exports.BEMContext || context.BEMContext;
     // Provides third-party libraries from different modular systems
@@ -3511,4 +3762,4 @@ api.exportApply(exports);
 );
         global['BEMHTML'] = BEMHTML;
     }
-})(typeof window !== "undefined" ? window : global || this);
+})(typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : this);

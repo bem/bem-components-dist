@@ -416,7 +416,7 @@ else {
 }
 
 })(typeof window !== 'undefined' ? window : global);
-if(typeof module !== 'undefined') {modules = module.exports;}
+if(/* hack electron env */ typeof window === 'undefined' && /* commonJs */ typeof module !== 'undefined') {modules = module.exports;}
 /* ../../libs/bem-core/common.blocks/cookie/cookie.js begin */
 /**
  * @module cookie
@@ -1724,18 +1724,18 @@ var BEM = inherit(events.Emitter, /** @lends BEM.prototype */ {
      */
     getMods : function(elem) {
         var hasElem = elem && typeof elem !== 'string',
-            modNames = [].slice.call(arguments, hasElem? 1 : 0),
-            res = this._extractMods(modNames, hasElem? elem : undef);
+            modCache = this._modCache,
+            modNames = [].slice.call(arguments, hasElem? 1 : 0);
 
-        if(!hasElem) { // caching
-            modNames.length?
-                modNames.forEach(function(name) {
-                    this._modCache[name] = res[name];
-                }, this) :
-                this._modCache = res;
-        }
+        return !modNames.length?
+            modCache :
+            modNames.reduce(function(res, mod) {
+                if(mod in modCache) {
+                    res[mod] = modCache[mod];
+                }
 
-        return res;
+                return res;
+            }, {});
     },
 
     /**
@@ -1916,17 +1916,6 @@ var BEM = inherit(events.Emitter, /** @lends BEM.prototype */ {
      */
     _extractModVal : function(modName, elem) {
         return '';
-    },
-
-    /**
-     * Retrieves name/value for a list of modifiers
-     * @private
-     * @param {Array} modNames Names of modifiers
-     * @param {Object} [elem] Element
-     * @returns {Object} Hash of modifier values by name
-     */
-    _extractMods : function(modNames, elem) {
-        return {};
     },
 
     /**
@@ -2304,7 +2293,8 @@ modules.define('next-tick', function(provide) {
 var global = this.global,
     fns = [],
     enqueueFn = function(fn) {
-        return fns.push(fn) === 1;
+        fns.push(fn);
+        return fns.length === 1;
     },
     callFns = function() {
         var fnsToCall = fns, i = 0, len = fns.length;
@@ -3137,6 +3127,29 @@ DOM = BEM.decl('i-bem__dom',/** @lends BEMDOM.prototype */{
                 ctx = ctx.parentNode || domNodesToParents[ctxId];
             }
         });
+    },
+
+    /**
+     * Returns values of modifiers of the block/nested element
+     * @param {Object} [elem] Nested element
+     * @param {String} [...modNames] Modifier names
+     * @returns {Object} Hash of modifier values
+     */
+    getMods : function(elem) {
+        var hasElem = elem && typeof elem !== 'string',
+            modCache = this._modCache,
+            modNames = [].slice.call(arguments, hasElem? 1 : 0),
+            res = this._extractMods(modNames, hasElem? elem : undef);
+
+        if(!hasElem) { // Caching
+            modNames.length?
+                modNames.forEach(function(name) {
+                    modCache[name] = res[name];
+                }) :
+                modCache = res;
+        }
+
+        return res;
     },
 
     /**
@@ -4065,15 +4078,19 @@ provide(DOM);
 
 (function() {
 
-var origDefine = modules.define;
+var origDefine = modules.define,
+    storedDeps = []; // NOTE: see https://github.com/bem/bem-core/issues/1446
 
 modules.define = function(name, deps, decl) {
     origDefine.apply(modules, arguments);
 
-    name !== 'i-bem__dom_init' && arguments.length > 2 && ~deps.indexOf('i-bem__dom') &&
-        modules.define('i-bem__dom_init', [name], function(provide, _, prev) {
-            provide(prev);
+    if(name !== 'i-bem__dom_init' && arguments.length > 2 && ~deps.indexOf('i-bem__dom')) {
+        storedDeps.push(name);
+        storedDeps.length === 1 && modules.define('i-bem__dom_init', storedDeps, function(provide) {
+            provide(arguments[arguments.length - 1]);
+            storedDeps = [];
         });
+    }
 };
 
 })();
@@ -6352,7 +6369,7 @@ tick.start();
 /**
  * @module vow
  * @author Filatov Dmitry <dfilatov@yandex-team.ru>
- * @version 0.4.10
+ * @version 0.4.13
  * @license
  * Dual licensed under the MIT and GPL licenses:
  *   * http://www.opensource.org/licenses/mit-license.php
@@ -6365,7 +6382,8 @@ var undef,
     nextTick = (function() {
         var fns = [],
             enqueueFn = function(fn) {
-                return fns.push(fn) === 1;
+                fns.push(fn);
+                return fns.length === 1;
             },
             callFns = function() {
                 var fnsToCall = fns, i = 0, len = fns.length;
@@ -6411,7 +6429,7 @@ var undef,
             }
 
             if(isPostMessageAsync) {
-                var msg = '__promise' + +new Date,
+                var msg = '__promise' + Math.random() + '_' +new Date,
                     onMessage = function(e) {
                         if(e.data === msg) {
                             e.stopPropagation && e.stopPropagation();
@@ -7046,7 +7064,8 @@ Promise.prototype = /** @lends Promise.prototype */ {
         }
 
         var isResolved = this.isResolved(),
-            isFulfilled = this.isFulfilled();
+            isFulfilled = this.isFulfilled(),
+            isRejected = this.isRejected();
 
         nextTick(function() {
             var i = 0, cb, defer, fn;
@@ -7070,12 +7089,14 @@ Promise.prototype = /** @lends Promise.prototype */ {
                         defer.resolve(res) :
                         defer.notify(res);
                 }
+                else if(isFulfilled) {
+                    defer.resolve(arg);
+                }
+                else if(isRejected) {
+                    defer.reject(arg);
+                }
                 else {
-                    isResolved?
-                        isFulfilled?
-                            defer.resolve(arg) :
-                            defer.reject(arg) :
-                        defer.notify(arg);
+                    defer.notify(arg);
                 }
             }
         });
@@ -7676,7 +7697,7 @@ if(typeof define === 'function') {
 
 defineAsGlobal && (global.vow = vow);
 
-})(this);
+})(typeof window !== 'undefined'? window : global);
 
 /* ../../libs/bem-core/common.blocks/vow/vow.vanilla.js end */
 
@@ -7897,9 +7918,9 @@ provide(BEMDOM.decl(this.name, /** @lends control.prototype */{
     },
 
     _blur : function() {
-        dom.isFocusable(this.elem('control'))?
-            this.elem('control').blur() :
-            this._onBlur();
+        // force both `blur` and `_onBlur` for FF which can have disabled element as `document.activeElement`
+        this.elem('control').blur();
+        this._onBlur();
     }
 }, /** @lends control */{
     live : function() {
@@ -8045,14 +8066,19 @@ provide(BEMDOM.decl({ block : this.name, baseBlock : Control }, /** @lends butto
             this._focusedByPointer = true;
             this._focus();
             this._focusedByPointer = false;
-            this
-                ._updateChecked()
-                .emit('click');
+            this.bindTo('pointerclick', this._onPointerClick);
         } else {
             this._blur();
         }
 
         this.delMod('pressed');
+    },
+
+    _onPointerClick : function() {
+        this
+            .unbindFrom('pointerclick', this._onPointerClick)
+            ._updateChecked()
+            .emit('click');
     },
 
     _onKeyDown : function(e) {
@@ -10457,9 +10483,11 @@ provide(Modal.decl({ modName : 'autoclosable', modVal : true }, /** @lends modal
             'true' : function() {
                 this.__base.apply(this, arguments);
 
-                this
-                    .bindTo('pointerclick', this._onPointerClick)
-                    ._popup.on({ modName : 'visible', modVal : '' }, this._onPopupHide, this);
+                this.nextTick(function() {
+                    this.bindTo('pointerclick', this._onPointerClick);
+                });
+
+                this._popup.on({ modName : 'visible', modVal : '' }, this._onPopupHide, this);
             },
 
             '' : function() {
@@ -11505,6 +11533,7 @@ function BH() {
     this._optNobaseMods = false;
     this._optDelimElem = '__';
     this._optDelimMod = '_';
+    this._optShortTagCloser = '/>';
     this.utils = {
         _expandoId: new Date().getTime(),
         bh: this,
@@ -11613,7 +11642,7 @@ function BH() {
             var keyName = '__tp_' + key;
             var node = this.node;
             if (arguments.length > 1) {
-                if (force || !node.hasOwnProperty(keyName))
+                if (force || !this.tParam(key))
                     node[keyName] = value;
                 return this;
             } else {
@@ -11993,6 +12022,7 @@ function BH() {
 }
 
 BH.prototype = {
+    constructor: BH,
 
     /**
      * Задает опции шаблонизации.
@@ -12033,6 +12063,9 @@ BH.prototype = {
         }
         if (options.delimMod) {
             this._optDelimMod = options.delimMod;
+        }
+        if (options.xhtml === false) {
+            this._optShortTagCloser = '>';
         }
         if (options.shortTags) {
             for (var j = 0; j < options.shortTags.length; j++) {
@@ -12543,7 +12576,7 @@ BH.prototype = {
             this._buf += '<' + tag + (cls ? ' class="' + cls + '"' : '') + (attrs ? attrs : '');
 
             if (this._shortTags[tag]) {
-                this._buf += '/>';
+                this._buf += this._optShortTagCloser;
             } else {
                 this._buf += '>';
                 if (json.html) {
@@ -12597,7 +12630,7 @@ if (typeof module !== 'undefined') {
 }
 
 var bh = new BH();
-bh.setOptions({"jsAttrName":"data-bem","jsAttrScheme":"json"});
+bh.setOptions({"jsAttrName":"data-bem","jsAttrScheme":"json","xhtml":false});
 var init = function (global, BH) {
 (function () {
 // begin: ../../libs/bem-core/common.blocks/page/page.bh.js
@@ -12613,9 +12646,10 @@ var init = function (global, BH) {
             ], true);
 
         return [
-            json.doctype || '<!DOCTYPE html>',
+            { html : json.doctype || '<!DOCTYPE html>', tag : false },
             {
                 tag : 'html',
+                attrs : { lang : json.lang },
                 cls : 'ua_js_no',
                 content : [
                     {
@@ -12768,18 +12802,21 @@ var init = function (global, BH) {
 (function () {
 // begin: ../../libs/bem-core/common.blocks/ua/__svg/ua__svg.bh.js
 
-
     bh.match('ua', function(ctx, json) {
         ctx.applyBase();
         ctx.content([
             json.content,
-            '(function(d,n){',
-                'd.documentElement.className+=',
-                '" ua_svg_"+(d[n]&&d[n]("http://www.w3.org/2000/svg","svg").createSVGRect?"yes":"no");',
-            '})(document,"createElementNS");'
+            {
+                tag : false,
+                html : [
+                    '(function(d,n){',
+                        'd.documentElement.className+=',
+                        '" ua_svg_"+(d[n]&&d[n]("http://www.w3.org/2000/svg","svg").createSVGRect?"yes":"no");',
+                    '})(document,"createElementNS");'
+                ].join('')
+            }
         ], true);
     });
-
 
 // end: ../../libs/bem-core/common.blocks/ua/__svg/ua__svg.bh.js
 }());
@@ -12883,7 +12920,8 @@ var init = function (global, BH) {
         var content = ctx.content();
         if(typeof content === 'undefined') {
             content = [json.icon];
-            'text' in json && content.push({ elem : 'text', content : json.text });
+            /* jshint eqnull: true */
+            json.text != null && content.push({ elem : 'text', content : json.text });
             ctx.content(content);
         }
     });
@@ -14286,4 +14324,4 @@ if (defineAsGlobal) {
     global["bh"] = bh;
     global["BEMHTML"] = bh;
 }
-}(typeof window !== "undefined" ? window : global));
+}(typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : this));
