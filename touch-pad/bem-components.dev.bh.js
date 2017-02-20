@@ -1471,7 +1471,7 @@ var init = function (global, BH) {
 
 
     bh.match('button_focused', function(ctx, json) {
-        ctx.js(ctx.extend(json.js, { live : false }), true);
+        ctx.js(ctx.extend(json.js, { lazyInit : false }), true);
     });
 
 
@@ -2114,10 +2114,10 @@ var init = function (global, BH) {
                 iterateItems = function(content) {
                     var i = 0, itemOrGroup;
                     while(itemOrGroup = content[i++]) {
-                        if(itemOrGroup.block === 'menu-item') {
+                        if(itemOrGroup.elem === 'item') {
                             firstItem || (firstItem = itemOrGroup);
                             if(containsVal(itemOrGroup.val)) {
-                                (itemOrGroup.mods = itemOrGroup.mods || {}).checked = true;
+                                (itemOrGroup.elemMods = itemOrGroup.elemMods || {}).checked = true;
                                 checkedItems.push(itemOrGroup);
                             }
                         } else if(itemOrGroup.content) { // menu__group
@@ -2139,9 +2139,19 @@ var init = function (global, BH) {
 // end: ../../common.blocks/menu/menu.bh.js
 }());
 (function () {
-// begin: ../../common.blocks/menu-item/menu-item.bh.js
+// begin: ../../common.blocks/menu/_focused/menu_focused.bh.js
 
-    bh.match('menu-item', function(ctx, json) {
+    bh.match('menu_focused', function(ctx) {
+        var js = ctx.extend(ctx.js() || {}, { lazyInit : false });
+        ctx.js(js);
+    });
+
+// end: ../../common.blocks/menu/_focused/menu_focused.bh.js
+}());
+(function () {
+// begin: ../../common.blocks/menu/__item/menu__item.bh.js
+
+    bh.match('menu__item', function(ctx, json) {
         var menuMods = ctx.tParam('menuMods'),
             menuMode = menuMods && menuMods.mode,
             role = menuMode?
@@ -2163,17 +2173,7 @@ var init = function (global, BH) {
             });
     });
 
-// end: ../../common.blocks/menu-item/menu-item.bh.js
-}());
-(function () {
-// begin: ../../common.blocks/menu/_focused/menu_focused.bh.js
-
-    bh.match('menu_focused', function(ctx) {
-        var js = ctx.extend(ctx.js() || {}, { live : false });
-        ctx.js(js);
-    });
-
-// end: ../../common.blocks/menu/_focused/menu_focused.bh.js
+// end: ../../common.blocks/menu/__item/menu__item.bh.js
 }());
 (function () {
 // begin: ../../common.blocks/menu/__group/menu__group.bh.js
@@ -2212,17 +2212,17 @@ var init = function (global, BH) {
         ctx.applyBase();
         var firstItem = ctx.tParam('firstItem');
         if(firstItem && !ctx.tParam('checkedItems').length) {
-            (firstItem.mods = firstItem.mods || {}).checked = true;
+            (firstItem.elemMods = firstItem.elemMods || {}).checked = true;
         }
     });
 
 // end: ../../common.blocks/menu/_mode/menu_mode_radio.bh.js
 }());
 (function () {
-// begin: ../../common.blocks/menu-item/_type/menu-item_type_link.bh.js
+// begin: ../../common.blocks/menu/__item/_type/menu__item_type_link.bh.js
 
 
-    bh.match('menu-item_type_link', function(ctx) {
+    bh.match('menu__item_type_link', function(ctx) {
         ctx.applyBase();
 
         ctx.mod('disabled') && ctx.tParam('_menuItemDisabled', true);
@@ -2233,7 +2233,7 @@ var init = function (global, BH) {
     });
 
 
-// end: ../../common.blocks/menu-item/_type/menu-item_type_link.bh.js
+// end: ../../common.blocks/menu/__item/_type/menu__item_type_link.bh.js
 }());
 (function () {
 // begin: ../../common.blocks/modal/modal.bh.js
@@ -2517,7 +2517,7 @@ var init = function (global, BH) {
     bh.match('select_focused', function(ctx) {
         ctx
             .applyBase()
-            .extend(ctx.js(), { live : false });
+            .extend(ctx.js(), { lazyInit : false });
     });
 
 
@@ -2599,8 +2599,9 @@ var init = function (global, BH) {
             select = ctx.tParam('select'),
             optionToMenuItem = function(option) {
                 var res = {
-                        block : 'menu-item',
-                        mods : { disabled : mods.disabled || option.disabled },
+                        block : 'menu',
+                        elem : 'item',
+                        elemMods : { disabled : mods.disabled || option.disabled },
                         attrs : { role : 'option' },
                         id : option.id,
                         val : option.val,

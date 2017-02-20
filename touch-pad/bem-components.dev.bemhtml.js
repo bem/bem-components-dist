@@ -2212,12 +2212,12 @@ assert.equal = function assertEqual(l, r, msg) {
 /// --------- BEM-XJST Runtime End ------
 /// -------------------------------------
 
-var api = new BEMHTML({});
+var api = new BEMHTML({"elemJsInstances":true});
 /// -------------------------------------
 /// ------ BEM-XJST User-code Start -----
 /// -------------------------------------
 api.compile(function(match, wrap, block, elem, mode, mod, elemMod, def, tag, attrs, cls, js, bem, mix, content, replace, extend, oninit, xjstOptions, appendContent, prependContent, local, applyCtx, applyNext, apply) {
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/page.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/page.bemhtml.js */
 block('page')(
 
     mode('doctype')(function() {
@@ -2291,8 +2291,8 @@ block('page')(
 
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/page.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/touch.blocks/page/page.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/page.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/touch.blocks/page/page.bemhtml.js */
 block('page')(
 
     def()(function() {
@@ -2325,8 +2325,8 @@ block('page')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/touch.blocks/page/page.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/ua/ua.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/touch.blocks/page/page.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/ua.bemhtml.js */
 block('ua')(
     tag()('script'),
     bem()(false),
@@ -2337,12 +2337,12 @@ block('ua')(
     ])
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/ua/ua.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/touch.blocks/ua/ua.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/ua.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/touch.blocks/ua/ua.bemhtml.js */
 block('ua').js()(true);
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/touch.blocks/ua/ua.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/__css/page__css.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/touch.blocks/ua/ua.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__css/page__css.bemhtml.js */
 block('page').elem('css')(
     bem()(false),
     tag()('style'),
@@ -2352,8 +2352,8 @@ block('page').elem('css')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/__css/page__css.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/__js/page__js.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__css/page__css.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__js/page__js.bemhtml.js */
 block('page').elem('js')(
     bem()(false),
     tag()('script'),
@@ -2369,8 +2369,8 @@ block('page').elem('js')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/page/__js/page__js.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/__js/page__js.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml.js */
 block('ua').content()(function() {
     return [
         applyNext(),
@@ -2385,8 +2385,8 @@ block('ua').content()(function() {
     ];
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/touch.blocks/page/__icon/page__icon.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/ua/__svg/ua__svg.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/touch.blocks/page/__icon/page__icon.bemhtml.js */
 block('page').elem('icon').def()(function() {
     var ctx = this.ctx;
     return applyCtx([
@@ -2417,8 +2417,8 @@ block('page').elem('icon').def()(function() {
     ]);
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/libs/bem-core/touch.blocks/page/__icon/page__icon.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/attach.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/touch.blocks/page/__icon/page__icon.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/attach.bemhtml.js */
 block('attach')(
     def()(function() { return applyNext({ _attach : this.ctx }); }),
 
@@ -2454,8 +2454,8 @@ block('attach')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/attach.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/attach.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/button.bemhtml.js */
 block('button')(
     def()(function() {
         var tag = apply('tag'),
@@ -2520,18 +2520,18 @@ block('button')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/__text/button__text.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/__text/button__text.bemhtml.js */
 block('button').elem('text').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/__text/button__text.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_focused/button_focused.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/__text/button__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_focused/button_focused.bemhtml.js */
 block('button').mod('focused', true).js()(function() {
-    return this.extend(applyNext(), { live : false });
+    return this.extend(applyNext(), { lazyInit : false });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_focused/button_focused.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/icon/icon.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_focused/button_focused.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/icon/icon.bemhtml.js */
 block('icon')(
     tag()('span'),
     attrs()(function() {
@@ -2542,8 +2542,8 @@ block('icon')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/icon/icon.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__button/attach__button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/icon/icon.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__button/attach__button.bemhtml.js */
 block('button').match(function() { return this._attach; })(
     tag()('span'),
     content()(function() {
@@ -2554,8 +2554,8 @@ block('button').match(function() { return this._attach; })(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__button/attach__button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__control/attach__control.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__button/attach__button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__control/attach__control.bemhtml.js */
 block('attach').elem('control')(
 
     tag()('input'),
@@ -2576,36 +2576,36 @@ block('attach').elem('control')(
 
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__control/attach__control.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__no-file/attach__no-file.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__control/attach__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__no-file/attach__no-file.bemhtml.js */
 block('attach').elem('no-file').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__no-file/attach__no-file.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__file/attach__file.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__no-file/attach__no-file.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__file/attach__file.bemhtml.js */
 block('attach').elem('file').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__file/attach__file.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__text/attach__text.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__file/attach__file.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__text/attach__text.bemhtml.js */
 block('attach').elem('text').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__text/attach__text.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__clear/attach__clear.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__text/attach__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__clear/attach__clear.bemhtml.js */
 block('attach').elem('clear').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/attach/__clear/attach__clear.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__clear/attach__clear.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
 block('button').mod('togglable', 'check').attrs()(function() {
     return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
 block('button').mod('togglable', 'radio').attrs()(function() {
     return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_type/button_type_link.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_type/button_type_link.bemhtml.js */
 block('button').mod('type', 'link')(
     tag()('a'),
 
@@ -2627,8 +2627,8 @@ block('button').mod('type', 'link')(
         })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/button/_type/button_type_link.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/checkbox.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_type/button_type_link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/checkbox.bemhtml.js */
 block('checkbox')(
     tag()('label'),
 
@@ -2657,12 +2657,12 @@ block('checkbox')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/checkbox.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__box/checkbox__box.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/checkbox.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__box/checkbox__box.bemhtml.js */
 block('checkbox').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__box/checkbox__box.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__control/checkbox__control.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__box/checkbox__box.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__control/checkbox__control.bemhtml.js */
 block('checkbox').elem('control')(
     tag()('input'),
 
@@ -2680,15 +2680,15 @@ block('checkbox').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__control/checkbox__control.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__control/checkbox__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
 block('checkbox').elem('text')(
     tag()('span'),
     attrs()({ role : 'presentation' })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/_type/checkbox_type_button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/_type/checkbox_type_button.bemhtml.js */
 block('checkbox').mod('type', 'button')(
     content()(function() {
         var ctx = this.ctx,
@@ -2726,8 +2726,8 @@ block('checkbox').mod('type', 'button')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox/_type/checkbox_type_button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox-group/checkbox-group.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/_type/checkbox_type_button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox-group/checkbox-group.bemhtml.js */
 block('checkbox-group')(
     tag()('span'),
 
@@ -2768,12 +2768,12 @@ block('checkbox-group')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/checkbox-group/checkbox-group.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/control-group/control-group.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox-group/checkbox-group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/control-group/control-group.bemhtml.js */
 block('control-group').attrs()({ role : 'group' });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/control-group/control-group.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/dropdown.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/control-group/control-group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/dropdown.bemhtml.js */
 block('dropdown')(
     replace()(function() {
         return [{ elem : 'popup' }, { elem : 'switcher' }];
@@ -2822,8 +2822,8 @@ block('dropdown')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/dropdown.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/popup/popup.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/dropdown.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/popup/popup.bemhtml.js */
 block('popup')(
     js()(function() {
         var ctx = this.ctx;
@@ -2838,8 +2838,8 @@ block('popup')(
     attrs()({ 'aria-hidden' : 'true' })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/popup/popup.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/popup/popup.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml.js */
 block('dropdown').mod('switcher', 'button').elem('switcher').replace()(function() {
     var dropdown = this._dropdown,
         switcher = dropdown.switcher;
@@ -2868,8 +2868,8 @@ block('dropdown').mod('switcher', 'button').elem('switcher').replace()(function(
     return res;
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml.js */
 block('dropdown').mod('switcher', 'link').elem('switcher').replace()(function() {
     var dropdown = this._dropdown,
         switcher = dropdown.switcher;
@@ -2897,8 +2897,8 @@ block('dropdown').mod('switcher', 'link').elem('switcher').replace()(function() 
     return res;
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/link/link.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/_switcher/dropdown_switcher_link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/link.bemhtml.js */
 block('link')(
     def()(function() {
         var ctx = this.ctx;
@@ -2944,8 +2944,8 @@ block('link')(
         })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/link/link.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
 block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
     tag()('span'),
     attrs()(function() {
@@ -2953,8 +2953,8 @@ block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/image/image.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/image/image.bemhtml.js */
 block('image')(
     attrs()({ role : 'img' }),
 
@@ -2977,8 +2977,8 @@ block('image')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/image/image.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/input.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/image/image.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/input.bemhtml.js */
 block('input')(
     tag()('span'),
     js()(true),
@@ -2988,12 +2988,12 @@ block('input')(
     content()({ elem : 'box', content : { elem : 'control' } })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/input.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__box/input__box.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/input.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__box/input__box.bemhtml.js */
 block('input').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__box/input__box.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__control/input__control.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__box/input__box.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__control/input__control.bemhtml.js */
 block('input').elem('control')(
     tag()('input'),
 
@@ -3015,8 +3015,8 @@ block('input').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__control/input__control.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/touch.blocks/input/__control/input__control.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__control/input__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/touch.blocks/input/__control/input__control.bemhtml.js */
 block('input').elem('control')(
 
     attrs()(function() {
@@ -3030,31 +3030,31 @@ block('input').elem('control')(
 
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/touch.blocks/input/__control/input__control.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_has-clear/input_has-clear.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/touch.blocks/input/__control/input__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_has-clear/input_has-clear.bemhtml.js */
 block('input').mod('has-clear', true).elem('box')
     .content()(function() {
         return [this.ctx.content, { elem : 'clear' }];
     });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_has-clear/input_has-clear.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__clear/input__clear.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_has-clear/input_has-clear.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__clear/input__clear.bemhtml.js */
 block('input').elem('clear').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/__clear/input__clear.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_type/input_type_password.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/__clear/input__clear.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_password.bemhtml.js */
 block('input').mod('type', 'password').elem('control').attrs()(function() {
     return this.extend(applyNext(), { type : 'password' });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_type/input_type_password.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_type/input_type_search.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_password.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_search.bemhtml.js */
 block('input').mod('type', 'search').elem('control').attrs()(function() {
     return this.extend(applyNext(), { type : 'search' });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/input/_type/input_type_search.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/menu.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/input/_type/input_type_search.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/menu.bemhtml.js */
 block('menu')(
     def()(function() {
         var ctx = this.ctx,
@@ -3073,10 +3073,10 @@ block('menu')(
                 iterateItems = function(content) {
                     var i = 0, itemOrGroup;
                     while(itemOrGroup = content[i++]) {
-                        if(itemOrGroup.block === 'menu-item') {
+                        if(itemOrGroup.elem === 'item') {
                             firstItem || (firstItem = itemOrGroup);
                             if(containsVal(itemOrGroup.val)) {
-                                (itemOrGroup.mods = itemOrGroup.mods || {}).checked = true;
+                                (itemOrGroup.elemMods = itemOrGroup.elemMods || {}).checked = true;
                                 checkedItems.push(itemOrGroup);
                             }
                         } else if(itemOrGroup.content) { // menu__group
@@ -3113,20 +3113,26 @@ block('menu')(
         })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/menu.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu-item/menu-item.bemhtml.js */
-block('menu-item')(
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/menu.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_focused/menu_focused.bemhtml.js */
+block('menu').mod('focused', true).js()(function() {
+    return this.extend(applyNext(), { lazyInit : false });
+});
+
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_focused/menu_focused.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__item/menu__item.bemhtml.js */
+block('menu').elem('item')(
     def().match(function() { return this._menuMods; })(function() {
-        var mods = this.mods;
-        mods.theme = mods.theme || this._menuMods.theme;
-        mods.disabled = mods.disabled || this._menuMods.disabled;
+        var elemMods = this.elemMods;
+        elemMods.theme = elemMods.theme || this._menuMods.theme;
+        elemMods.disabled = elemMods.disabled || this._menuMods.disabled;
         return applyNext();
     }),
     js()(function() {
         return { val : this.ctx.val };
     }),
     attrs()(function(){
-        var mods = this.mods,
+        var elemMods = this.elemMods,
             menuMode = this._menuMods && this._menuMods.mode,
             role = menuMode?
                         (menuMode === 'check'? 'menuitemcheckbox' : 'menuitemradio') :
@@ -3134,22 +3140,16 @@ block('menu-item')(
             attrs = {
                 role : role,
                 id : this.ctx.id || this.generateId(),
-                'aria-disabled' : mods.disabled && 'true',
-                'aria-checked' : menuMode && String(!!mods.checked)
+                'aria-disabled' : elemMods.disabled && 'true',
+                'aria-checked' : menuMode && String(!!elemMods.checked)
             };
 
         return attrs;
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu-item/menu-item.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/_focused/menu_focused.bemhtml.js */
-block('menu').mod('focused', true).js()(function() {
-    return this.extend(applyNext(), { live : false });
-});
-
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/_focused/menu_focused.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/__group/menu__group.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__item/menu__item.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__group/menu__group.bemhtml.js */
 block('menu').elem('group')(
     attrs()({ role : 'group' }),
     match(function() { return typeof this.ctx.title !== 'undefined'; })(
@@ -3175,21 +3175,21 @@ block('menu').elem('group')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/__group/menu__group.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/_mode/menu_mode_radio.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__group/menu__group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_mode/menu_mode_radio.bemhtml.js */
 block('menu')
     .mod('mode', 'radio')
     .match(function() {
         return this._firstItem && this._checkedItems && !this._checkedItems.length;
     })
     .def()(function() {
-        (this._firstItem.mods || (this._firstItem.mods = {})).checked = true;
+        (this._firstItem.elemMods || (this._firstItem.elemMods = {})).checked = true;
         return applyNext();
     });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu/_mode/menu_mode_radio.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu-item/_type/menu-item_type_link.bemhtml.js */
-block('menu-item').mod('type', 'link').mod('disabled', true).match(function() {
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/_mode/menu_mode_radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__item/_type/menu__item_type_link.bemhtml.js */
+block('menu').elem('item').elemMod('type', 'link').elemMod('disabled', true).match(function() {
     return !this._menuItemDisabled;
 }).def()(function() {
     return applyNext({ _menuItemDisabled : true });
@@ -3203,8 +3203,8 @@ block('link').match(function() {
     return applyNext();
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/menu-item/_type/menu-item_type_link.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/modal/modal.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__item/_type/menu__item_type_link.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/modal/modal.bemhtml.js */
 block('modal')(
     js()(true),
 
@@ -3235,8 +3235,8 @@ block('modal')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/modal/modal.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/progressbar/progressbar.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/modal/modal.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/progressbar/progressbar.bemhtml.js */
 block('progressbar')(
     def()(function() {
         return applyNext({ _val : this.ctx.val || 0 });
@@ -3266,8 +3266,8 @@ block('progressbar')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/progressbar/progressbar.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/radio.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/progressbar/progressbar.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/radio.bemhtml.js */
 block('radio')(
     tag()('label'),
     js()(true),
@@ -3292,12 +3292,12 @@ block('radio')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/radio.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__box/radio__box.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__box/radio__box.bemhtml.js */
 block('radio').elem('box').tag()('span');
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__box/radio__box.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__control/radio__control.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__box/radio__box.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__control/radio__control.bemhtml.js */
 block('radio').elem('control')(
     tag()('input'),
 
@@ -3318,8 +3318,8 @@ block('radio').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__control/radio__control.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__text/radio__text.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__control/radio__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__text/radio__text.bemhtml.js */
 block('radio').elem('text')(
     tag()('span'),
     attrs()(function() {
@@ -3327,8 +3327,8 @@ block('radio').elem('text')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/__text/radio__text.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/_type/radio_type_button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__text/radio__text.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/_type/radio_type_button.bemhtml.js */
 block('radio').mod('type', 'button')(
     content()(function() {
         var ctx = this.ctx,
@@ -3363,8 +3363,8 @@ block('radio').mod('type', 'button')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio/_type/radio_type_button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio-group/radio-group.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/_type/radio_type_button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/radio-group.bemhtml.js */
 block('radio-group')(
     tag()('span'),
 
@@ -3403,8 +3403,8 @@ block('radio-group')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio-group/radio-group.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/radio-group.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml.js */
 block('radio-group').mod('mode', 'radio-check')(
     def()(function() {
         if(this.mods.type !== 'button')
@@ -3414,8 +3414,8 @@ block('radio-group').mod('mode', 'radio-check')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/select.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio-group/_mode/radio-group_mode_radio-check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/select.bemhtml.js */
 block('select')(
     def().match(function() { return !this._select; })(function() { // TODO: check BEM-XJST for proper applyNext
         if(!this.mods.mode) throw Error('Can\'t build select without mode modifier');
@@ -3479,14 +3479,14 @@ block('select')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/select.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_focused/select_focused.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/select.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_focused/select_focused.bemhtml.js */
 block('select').mod('focused', true).js()(function() {
-    return this.extend(applyNext(), { live : false });
+    return this.extend(applyNext(), { lazyInit : false });
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_focused/select_focused.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__control/select__control.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_focused/select_focused.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__control/select__control.bemhtml.js */
 block('select').elem('control')(
     tag()('input'),
     attrs()(function() {
@@ -3500,8 +3500,8 @@ block('select').elem('control')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__control/select__control.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__button/select__button.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__control/select__control.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__button/select__button.bemhtml.js */
 block('select').elem('button')(
     replace()(function() {
         var select = this._select,
@@ -3543,15 +3543,16 @@ block('button').elem('text').match(function() { return this._select; })(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__button/select__button.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__menu/select__menu.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__button/select__button.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__menu/select__menu.bemhtml.js */
 block('select').elem('menu')(
     replace()(function() {
         var mods = this.mods,
             optionToMenuItem = function(option) {
                 var res = {
-                        block : 'menu-item',
-                        mods : { disabled : mods.disabled || option.disabled },
+                        block : 'menu',
+                        elem : 'item',
+                        elemMods : { disabled : mods.disabled || option.disabled },
                         attrs : { role : 'option' },
                         id : option.id,
                         val : option.val,
@@ -3594,8 +3595,8 @@ block('select').elem('menu')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/__menu/select__menu.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_check.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__menu/select__menu.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_check.bemhtml.js */
 block('select').mod('mode', 'check')(
     js()(function() {
         return this.extend(applyNext(), { text : this.ctx.text });
@@ -3629,8 +3630,8 @@ block('select').mod('mode', 'check')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_check.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_radio-check.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio-check.bemhtml.js */
 block('select').mod('mode', 'radio-check')(
     js()(function() {
         return this.extend(applyNext(), { text : this.ctx.text });
@@ -3656,8 +3657,8 @@ block('select').mod('mode', 'radio-check')(
     )
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_radio-check.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_radio.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio-check.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio.bemhtml.js */
 block('select').mod('mode', 'radio')(
     def().match(function() { return this._checkedOptions; })(function() {
         var checkedOptions = this._checkedOptions,
@@ -3687,14 +3688,14 @@ block('select').mod('mode', 'radio')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/select/_mode/select_mode_radio.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/spin/spin.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/_mode/select_mode_radio.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/spin/spin.bemhtml.js */
 block('spin')(
     tag()('span')
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/spin/spin.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/textarea/textarea.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/spin/spin.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/textarea/textarea.bemhtml.js */
 block('textarea')(
     js()(true),
     tag()('textarea'),
@@ -3721,8 +3722,8 @@ block('textarea')(
     })
 );
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/common.blocks/textarea/textarea.bemhtml.js */
-/* begin: /Users/tadatuta/projects/bem/bem-components-clean/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/textarea/textarea.bemhtml.js */
+/* begin: /Users/tadatuta/projects/bem/bem-components/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml.js */
 block('progressbar').mod('theme', 'simple').content()(function() {
     return [
         {
@@ -3736,7 +3737,7 @@ block('progressbar').mod('theme', 'simple').content()(function() {
     ];
 });
 
-/* end: /Users/tadatuta/projects/bem/bem-components-clean/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml.js */
+/* end: /Users/tadatuta/projects/bem/bem-components/design/common.blocks/progressbar/_theme/progressbar_theme_simple.bemhtml.js */
 oninit(function(exports, context) {
     var BEMContext = exports.BEMContext || context.BEMContext;
     // Provides third-party libraries from different modular systems
