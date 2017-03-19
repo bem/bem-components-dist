@@ -39,7 +39,7 @@ function Entity(bemxjst) {
 inherits(Entity, BemxjstEntity);
 exports.Entity = Entity;
 
-Entity.prototype.init = function init(block, elem) {
+Entity.prototype.init = function(block, elem) {
   this.block = block;
   this.elem = elem;
 
@@ -47,7 +47,7 @@ Entity.prototype.init = function init(block, elem) {
   this.jsClass = this.bemxjst.classBuilder.build(this.block, this.elem);
 };
 
-Entity.prototype._initRest = function _initRest(key) {
+Entity.prototype._initRest = function(key) {
   if (key === 'default') {
     this.rest[key] = this.def;
   } else if (key === 'tag' ||
@@ -64,28 +64,18 @@ Entity.prototype._initRest = function _initRest(key) {
   }
 };
 
-Entity.prototype.defaultBody = function defaultBody(context) {
-  var tag = this.tag.exec(context);
-
-  var js;
-  if (context.ctx.js !== false)
-    js = this.js.exec(context);
-
-  var bem = this.bem.exec(context);
-  var cls = this.cls.exec(context);
-  var mix = this.mix.exec(context);
-  var attrs = this.attrs.exec(context);
-  var content = this.content.exec(context);
-
+Entity.prototype.defaultBody = function(context) {
   return this.bemxjst.render(context,
                              this,
-                             tag,
-                             js,
-                             bem,
-                             cls,
-                             mix,
-                             attrs,
-                             content);
+                             this.tag.exec(context),
+                             context.ctx.js !== false ?
+                               this.js.exec(context) :
+                               undefined,
+                             this.bem.exec(context),
+                             this.cls.exec(context),
+                             this.mix.exec(context),
+                             this.attrs.exec(context),
+                             this.content.exec(context));
 };
 
 },{"../bemxjst/entity":5,"../bemxjst/match":8,"inherits":11}],2:[function(require,module,exports){
@@ -97,8 +87,8 @@ var BEMXJST = require('../bemxjst');
 function BEMHTML(options) {
   BEMXJST.apply(this, arguments);
 
-  var xhtml = typeof options.xhtml === 'undefined' ? false : options.xhtml;
-  this._shortTagCloser = xhtml ? '/>' : '>';
+  this._shortTagCloser = typeof options.xhtml !== 'undefined' &&
+                            options.xhtml ? '/>' : '>';
 
   this._elemJsInstances = options.elemJsInstances;
   this._omitOptionalEndTags = options.omitOptionalEndTags;
@@ -112,7 +102,7 @@ module.exports = BEMHTML;
 
 BEMHTML.prototype.Entity = Entity;
 
-BEMHTML.prototype.runMany = function runMany(arr) {
+BEMHTML.prototype.runMany = function(arr) {
   var out = '';
   var context = this.context;
   var prevPos = context.position;
@@ -140,22 +130,21 @@ BEMHTML.prototype.runMany = function runMany(arr) {
   return out;
 };
 
-BEMHTML.prototype.render = function render(context,
-                                           entity,
-                                           tag,
-                                           js,
-                                           bem,
-                                           cls,
-                                           mix,
-                                           attrs,
-                                           content) {
+BEMHTML.prototype.render = function(context,
+                                   entity,
+                                   tag,
+                                   js,
+                                   bem,
+                                   cls,
+                                   mix,
+                                   attrs,
+                                   content) {
   var ctx = context.ctx;
 
   if (tag === undefined)
     tag = 'div';
-
-  if (!tag)
-    return this.renderNoTag(context, js, bem, cls, mix, attrs, content);
+  else if (!tag)
+    return (content || content === 0) ? this._run(content) : '';
 
   var out = '<' + tag;
 
@@ -178,17 +167,8 @@ BEMHTML.prototype.render = function render(context,
     jsParams[entity.jsClass] = js;
   }
 
-  var isBEM = bem;
-  if (isBEM === undefined) {
-    if (ctx.bem === undefined)
-      isBEM = entity.block || entity.elem;
-    else
-      isBEM = ctx.bem;
-  }
+  var isBEM = typeof bem !== 'undefined' ? bem : entity.block || entity.elem;
   isBEM = !!isBEM;
-
-  if (cls === undefined)
-    cls = ctx.cls;
 
   var addJSInitClass = jsParams && (
     this._elemJsInstances ?
@@ -196,9 +176,8 @@ BEMHTML.prototype.render = function render(context,
       (entity.block && !entity.elem)
   );
 
-  if (!isBEM && !cls) {
+  if (!isBEM && !cls)
     return this.renderClose(out, context, tag, attrs, isBEM, ctx, content);
-  }
 
   out += ' class=';
   var classValue = '';
@@ -223,18 +202,17 @@ BEMHTML.prototype.render = function render(context,
       classValue += ' ' + (typeof cls === 'string' ?
                     utils.attrEscape(cls).trim() : cls);
   } else {
-    if (cls)
-      classValue += cls.trim ? utils.attrEscape(cls).trim() : cls;
+    classValue += typeof cls === 'string' ?
+      utils.attrEscape(cls).trim() :
+      cls;
   }
 
   if (addJSInitClass)
     classValue += ' i-bem';
 
-  if (this._unquotedAttrs && utils.isUnquotedAttr(classValue)) {
-    out += classValue;
-  } else {
-    out += '"' + classValue + '"';
-  }
+  out += this._unquotedAttrs && utils.isUnquotedAttr(classValue) ?
+    classValue :
+    ('"' + classValue + '"');
 
   if (isBEM && jsParams)
     out += ' data-bem=\'' + utils.jsAttrEscape(JSON.stringify(jsParams)) + '\'';
@@ -251,13 +229,13 @@ var OPTIONAL_END_TAGS = {
   /* dl — Neither tag is omissible */ rb: 1, rt: 1, rtc: 1, rp: 1, optgroup: 1
 };
 
-BEMHTML.prototype.renderClose = function renderClose(prefix,
-                                                     context,
-                                                     tag,
-                                                     attrs,
-                                                     isBEM,
-                                                     ctx,
-                                                     content) {
+BEMHTML.prototype.renderClose = function(prefix,
+                                         context,
+                                         tag,
+                                         attrs,
+                                         isBEM,
+                                         ctx,
+                                         content) {
   var out = prefix;
 
   out += this.renderAttrs(attrs, ctx);
@@ -284,7 +262,7 @@ BEMHTML.prototype.renderClose = function renderClose(prefix,
   return out;
 };
 
-BEMHTML.prototype.renderAttrs = function renderAttrs(attrs, ctx) {
+BEMHTML.prototype.renderAttrs = function(attrs, ctx) {
   var out = '';
 
   // NOTE: maybe we need to make an array for quicker serialization
@@ -303,12 +281,9 @@ BEMHTML.prototype.renderAttrs = function renderAttrs(attrs, ctx) {
         var attrVal = utils.isSimple(attr) ? attr : this.context.reapply(attr);
         out += ' ' + name + '=';
 
-        if (this._unquotedAttrs)
-          out += utils.isUnquotedAttr(attrVal) ?
-            attrVal :
-            ('"' + attrVal + '"');
-        else
-          out += '"' + utils.attrEscape(attrVal) + '"';
+        out += this._unquotedAttrs && utils.isUnquotedAttr(attrVal) ?
+          attrVal :
+          ('"' + utils.attrEscape(attrVal) + '"');
       }
     }
   }
@@ -316,10 +291,7 @@ BEMHTML.prototype.renderAttrs = function renderAttrs(attrs, ctx) {
   return out;
 };
 
-BEMHTML.prototype.renderMix = function renderMix(entity,
-                                                 mix,
-                                                 jsParams,
-                                                 addJSInitClass) {
+BEMHTML.prototype.renderMix = function(entity, mix, jsParams, addJSInitClass) {
   var visited = {};
   var context = this.context;
   var js = jsParams;
@@ -419,9 +391,7 @@ BEMHTML.prototype.renderMix = function renderMix(entity,
   };
 };
 
-BEMHTML.prototype.buildModsClasses = function buildModsClasses(block,
-                                                               elem,
-                                                               mods) {
+BEMHTML.prototype.buildModsClasses = function(block, elem, mods) {
   if (!mods)
     return '';
 
@@ -448,20 +418,6 @@ BEMHTML.prototype.buildModsClasses = function buildModsClasses(block,
   return res;
 };
 
-BEMHTML.prototype.renderNoTag = function renderNoTag(context,
-                                                     js,
-                                                     bem,
-                                                     cls,
-                                                     mix,
-                                                     attrs,
-                                                     content) {
-
-  // TODO(indutny): skip apply next flags
-  if (content || content === 0)
-    return this._run(content);
-  return '';
-};
-
 },{"../bemxjst":7,"../bemxjst/utils":10,"./entity":1,"inherits":11}],3:[function(require,module,exports){
 function ClassBuilder(options) {
   this.modDelim = options.mod || '_';
@@ -469,38 +425,33 @@ function ClassBuilder(options) {
 }
 exports.ClassBuilder = ClassBuilder;
 
-ClassBuilder.prototype.build = function build(block, elem) {
+ClassBuilder.prototype.build = function(block, elem) {
   if (!elem)
     return block;
   else
     return block + this.elemDelim + elem;
 };
 
-ClassBuilder.prototype.buildModPostfix = function buildModPostfix(modName,
-                                                                  modVal) {
+ClassBuilder.prototype.buildModPostfix = function(modName, modVal) {
   var res = this.modDelim + modName;
   if (modVal !== true) res += this.modDelim + modVal;
   return res;
 };
 
-ClassBuilder.prototype.buildBlockClass = function buildBlockClass(name,
-                                                                  modName,
-                                                                  modVal) {
+ClassBuilder.prototype.buildBlockClass = function(name, modName, modVal) {
   var res = name;
   if (modVal) res += this.buildModPostfix(modName, modVal);
   return res;
 };
 
-ClassBuilder.prototype.buildElemClass = function buildElemClass(block,
-                                                                name,
-                                                                modName,
-                                                                modVal) {
-  var res = this.buildBlockClass(block) + this.elemDelim + name;
-  if (modVal) res += this.buildModPostfix(modName, modVal);
-  return res;
+ClassBuilder.prototype.buildElemClass = function(block, name, modName, modVal) {
+  return this.buildBlockClass(block) +
+    this.elemDelim +
+    name +
+    this.buildModPostfix(modName, modVal);
 };
 
-ClassBuilder.prototype.split = function split(key) {
+ClassBuilder.prototype.split = function(key) {
   return key.split(this.elemDelim, 2);
 };
 
@@ -524,11 +475,7 @@ function Context(bemxjst) {
   this._listLength = 0;
   this._notNewList = false;
 
-  // (miripiruni) this will be changed in next major release
   this.escapeContent = bemxjst.options.escapeContent === true;
-
-  // Used in `OnceMatch` check to detect context change
-  this._onceRef = {};
 }
 exports.Context = Context;
 
@@ -544,19 +491,19 @@ Context.prototype.xmlEscape = utils.xmlEscape;
 Context.prototype.attrEscape = utils.attrEscape;
 Context.prototype.jsAttrEscape = utils.jsAttrEscape;
 
-Context.prototype.isFirst = function isFirst() {
+Context.prototype.isFirst = function() {
   return this.position === 1;
 };
 
-Context.prototype.isLast = function isLast() {
+Context.prototype.isLast = function() {
   return this.position === this._listLength;
 };
 
-Context.prototype.generateId = function generateId() {
+Context.prototype.generateId = function() {
   return utils.identify(this.ctx);
 };
 
-Context.prototype.reapply = function reapply(ctx) {
+Context.prototype.reapply = function(ctx) {
   return this._bemxjst.run(ctx);
 };
 
@@ -593,7 +540,7 @@ function Entity(bemxjst, block, elem, templates) {
 }
 exports.Entity = Entity;
 
-Entity.prototype.init = function init(block, elem) {
+Entity.prototype.init = function(block, elem) {
   this.block = block;
   this.elem = elem;
 };
@@ -602,7 +549,7 @@ function contentMode() {
   return this.ctx.content;
 }
 
-Entity.prototype.initModes = function initModes(templates) {
+Entity.prototype.initModes = function(templates) {
   /* jshint maxdepth : false */
   for (var i = 0; i < templates.length; i++) {
     var template = templates[i];
@@ -637,7 +584,7 @@ Entity.prototype.initModes = function initModes(templates) {
   }
 };
 
-Entity.prototype.prepend = function prepend(other) {
+Entity.prototype.prepend = function(other) {
   // Prepend to the slow modes, fast modes are in this hashmap too anyway
   var keys = Object.keys(this.rest);
   for (var i = 0; i < keys.length; i++) {
@@ -661,14 +608,14 @@ Entity.prototype.prepend = function prepend(other) {
 };
 
 // NOTE: This could be potentially compiled into inlined invokations
-Entity.prototype.run = function run(context) {
+Entity.prototype.run = function(context) {
   if (this.def.count !== 0)
     return this.def.exec(context);
 
   return this.defaultBody(context);
 };
 
-Entity.prototype.setDefaults = function setDefaults() {
+Entity.prototype.setDefaults = function() {
   // Default .content() template for applyNext()
   if (this.content.count !== 0)
     this.content.push(new Template([], contentMode));
@@ -748,7 +695,7 @@ module.exports = BEMXJST;
 BEMXJST.prototype.locals = Tree.methods
     .concat('local', 'applyCtx', 'applyNext', 'apply');
 
-BEMXJST.prototype.compile = function compile(code) {
+BEMXJST.prototype.compile = function(code) {
   var self = this;
 
   function applyCtx() {
@@ -817,7 +764,7 @@ BEMXJST.prototype.compile = function compile(code) {
   this.oninit = out.oninit;
 };
 
-BEMXJST.prototype.recompileInput = function recompileInput(code) {
+BEMXJST.prototype.recompileInput = function(code) {
   var args = BEMXJST.prototype.locals;
   // Reuse function if it already has right arguments
   if (typeof code === 'function' && code.length === args.length)
@@ -834,7 +781,7 @@ BEMXJST.prototype.recompileInput = function recompileInput(code) {
   return out;
 };
 
-BEMXJST.prototype.groupEntities = function groupEntities(tree) {
+BEMXJST.prototype.groupEntities = function(tree) {
   var res = {};
   for (var i = 0; i < tree.length; i++) {
     // Make sure to change only the copy, the original is cached in `this.tree`
@@ -907,7 +854,7 @@ BEMXJST.prototype.groupEntities = function groupEntities(tree) {
   return res;
 };
 
-BEMXJST.prototype.transformEntities = function transformEntities(entities) {
+BEMXJST.prototype.transformEntities = function(entities) {
   var wildcardElems = [];
 
   var keys = Object.keys(entities);
@@ -973,12 +920,11 @@ BEMXJST.prototype.transformEntities = function transformEntities(entities) {
   return entities;
 };
 
-BEMXJST.prototype._run = function _run(context) {
-  var res;
+BEMXJST.prototype._run = function(context) {
   if (context === undefined || context === '' || context === null)
-    res = this.runEmpty();
+    return this.runEmpty();
   else if (Array.isArray(context))
-    res = this.runMany(context);
+    return this.runMany(context);
   else if (
     typeof context.html === 'string' &&
     !context.tag &&
@@ -987,15 +933,14 @@ BEMXJST.prototype._run = function _run(context) {
     typeof context.cls === 'undefined' &&
     typeof context.attrs === 'undefined'
   )
-    res = this.runUnescaped(context.html);
+    return this.runUnescaped(context);
   else if (utils.isSimple(context))
-    res = this.runSimple(context);
-  else
-    res = this.runOne(context);
-  return res;
+    return this.runSimple(context);
+
+  return this.runOne(context);
 };
 
-BEMXJST.prototype.run = function run(json) {
+BEMXJST.prototype.run = function(json) {
   var match = this.match;
   var context = this.context;
 
@@ -1015,29 +960,28 @@ BEMXJST.prototype.run = function run(json) {
 };
 
 
-BEMXJST.prototype.runEmpty = function runEmpty() {
+BEMXJST.prototype.runEmpty = function() {
   this.context._listLength--;
   return '';
 };
 
-BEMXJST.prototype.runUnescaped = function runUnescaped(context) {
+BEMXJST.prototype.runUnescaped = function(context) {
   this.context._listLength--;
-  return '' + context;
+  return '' + context.html;
 };
 
-BEMXJST.prototype.runSimple = function runSimple(simple) {
+BEMXJST.prototype.runSimple = function(simple) {
   this.context._listLength--;
-  var res = '';
-  if (simple && simple !== true || simple === 0) {
-    res += typeof simple === 'string' && this.context.escapeContent ?
-      utils.xmlEscape(simple) :
-      simple;
-  }
 
-  return res;
+  if (!simple && simple !== 0 || simple === true)
+    return '';
+
+  return typeof simple === 'string' && this.context.escapeContent ?
+    utils.xmlEscape(simple) :
+    simple;
 };
 
-BEMXJST.prototype.runOne = function runOne(json) {
+BEMXJST.prototype.runOne = function(json) {
   var context = this.context;
 
   var oldCtx = context.ctx;
@@ -1085,10 +1029,8 @@ BEMXJST.prototype.runOne = function runOne(json) {
   // To invalidate `applyNext` flags
   this.depth++;
 
-  var key = this.classBuilder.build(block, elem);
-
   var restoreFlush = false;
-  var ent = this.entities[key];
+  var ent = this.entities[this.classBuilder.build(block, elem)];
   if (ent) {
     if (this.canFlush && !ent.canFlush) {
       // Entity does not support flushing, do not flush anything nested
@@ -1120,7 +1062,7 @@ BEMXJST.prototype.runOne = function runOne(json) {
   return res;
 };
 
-BEMXJST.prototype.tryRun = function tryRun(context, ent) {
+BEMXJST.prototype.tryRun = function(context, ent) {
   try {
     return ent.run(context);
   } catch (e) {
@@ -1135,7 +1077,7 @@ BEMXJST.prototype.tryRun = function tryRun(context, ent) {
   }
 };
 
-BEMXJST.prototype.renderContent = function renderContent(content, isBEM) {
+BEMXJST.prototype.renderContent = function(content, isBEM) {
   var context = this.context;
   var oldPos = context.position;
   var oldListLength = context._listLength;
@@ -1156,7 +1098,7 @@ BEMXJST.prototype.renderContent = function renderContent(content, isBEM) {
   return res;
 };
 
-BEMXJST.prototype.local = function local(changes, body) {
+BEMXJST.prototype.local = function(changes, body) {
   var keys = Object.keys(changes);
   var restore = [];
   for (var i = 0; i < keys.length; i++) {
@@ -1188,11 +1130,11 @@ BEMXJST.prototype.local = function local(changes, body) {
   return res;
 };
 
-BEMXJST.prototype.applyNext = function applyNext() {
+BEMXJST.prototype.applyNext = function() {
   return this.match.exec(this.context);
 };
 
-BEMXJST.prototype.applyMode = function applyMode(mode, changes) {
+BEMXJST.prototype.applyMode = function(mode, changes) {
   var match = this.match.entity.rest[mode];
   if (!match)
     return this.context.ctx[mode];
@@ -1204,32 +1146,29 @@ BEMXJST.prototype.applyMode = function applyMode(mode, changes) {
 
   // Allocate function this way, to prevent allocation at the top of the
   // `applyMode`
-  var fn = function localBody() {
+  var fn = function() {
     return match.exec(self.context);
   };
   return this.local(changes, fn);
 };
 
-BEMXJST.prototype.exportApply = function exportApply(exports) {
+BEMXJST.prototype.exportApply = function(exports) {
   var self = this;
-  exports.apply = function apply(context) {
+  exports.apply = function(context) {
     return self.run(context);
   };
 
   // Add templates at run time
-  exports.compile = function compile(templates) {
+  exports.compile = function(templates) {
     return self.compile(templates);
   };
 
-  var sharedContext = {};
+  exports.BEMContext = self.contextConstructor;
 
-  exports.BEMContext = this.contextConstructor;
-  sharedContext.BEMContext = exports.BEMContext;
-
-  for (var i = 0; i < this.oninit.length; i++) {
-    var oninit = this.oninit[i];
-
-    oninit(exports, sharedContext);
+  for (var i = 0; i < self.oninit.length; i++) {
+    // NOTE: oninit has global context instead of BEMXJST
+    var oninit = self.oninit[i];
+    oninit(exports, { BEMContext: exports.BEMContext });
   }
 };
 
@@ -1241,23 +1180,13 @@ var WrapMatch = tree.WrapMatch;
 var ExtendMatch = tree.ExtendMatch;
 var CustomMatch = tree.CustomMatch;
 
-function MatchProperty(template, pred) {
-  this.template = template;
-  this.key = pred.key;
-  this.value = pred.value;
-}
-
-MatchProperty.prototype.exec = function exec(context) {
-  return context[this.key] === this.value;
-};
-
 function MatchNested(template, pred) {
   this.template = template;
   this.keys = pred.key;
   this.value = pred.value;
 }
 
-MatchNested.prototype.exec = function exec(context) {
+MatchNested.prototype.exec = function(context) {
   var val = context;
 
   for (var i = 0; i < this.keys.length - 1; i++) {
@@ -1279,7 +1208,7 @@ function MatchCustom(template, pred) {
   this.body = pred.body;
 }
 
-MatchCustom.prototype.exec = function exec(context) {
+MatchCustom.prototype.exec = function(context) {
   return this.body.call(context, context, context.ctx);
 };
 
@@ -1288,7 +1217,7 @@ function MatchWrap(template) {
   this.wrap = null;
 }
 
-MatchWrap.prototype.exec = function exec(context) {
+MatchWrap.prototype.exec = function(context) {
   var res = this.wrap !== context.ctx;
   this.wrap = context.ctx;
   return res;
@@ -1299,7 +1228,7 @@ function MatchExtend(template) {
   this.wrap = null;
 }
 
-MatchExtend.prototype.exec = function exec(context) {
+MatchExtend.prototype.exec = function(context) {
   var res = this.ext !== context.ctx;
   this.ext = context.ctx;
   return res;
@@ -1311,7 +1240,7 @@ function AddWrap(template, pred) {
   this.value = pred.value;
 }
 
-AddWrap.prototype.exec = function exec(context) {
+AddWrap.prototype.exec = function(context) {
   return context[this.key] === this.value;
 };
 
@@ -1325,10 +1254,7 @@ function MatchTemplate(mode, template) {
   for (var i = 0, j = 0; i < this.predicates.length; i++, j++) {
     var pred = template.predicates[i];
     if (pred instanceof PropertyMatch) {
-      if (Array.isArray(pred.key))
-        this.predicates[j] = new MatchNested(this, pred);
-      else
-        this.predicates[j] = new MatchProperty(this, pred);
+      this.predicates[j] = new MatchNested(this, pred);
     } else if (pred instanceof ExtendMatch) {
       j--;
       postpone.push(new MatchExtend(this));
@@ -1377,18 +1303,7 @@ function Match(entity, modeName) {
 }
 exports.Match = Match;
 
-Match.prototype.clone = function clone(entity) {
-  var res = new Match(entity, this.modeName);
-
-  res.templates = this.templates.slice();
-  res.mask = this.mask.slice();
-  res.maskSize = this.maskSize;
-  res.count = this.count;
-
-  return res;
-};
-
-Match.prototype.prepend = function prepend(other) {
+Match.prototype.prepend = function(other) {
   this.templates = other.templates.concat(this.templates);
   this.count += other.count;
 
@@ -1398,7 +1313,7 @@ Match.prototype.prepend = function prepend(other) {
   this.maskSize = this.mask.length;
 };
 
-Match.prototype.push = function push(template) {
+Match.prototype.push = function(template) {
   this.templates.push(new MatchTemplate(this, template));
   this.count++;
 
@@ -1408,7 +1323,7 @@ Match.prototype.push = function push(template) {
   this.maskSize = this.mask.length;
 };
 
-Match.prototype.tryCatch = function tryCatch(fn, ctx) {
+Match.prototype.tryCatch = function(fn, ctx) {
   try {
     return fn.call(ctx, ctx, ctx.ctx);
   } catch (e) {
@@ -1416,7 +1331,7 @@ Match.prototype.tryCatch = function tryCatch(fn, ctx) {
   }
 };
 
-Match.prototype.exec = function exec(context) {
+Match.prototype.exec = function(context) {
   var save = this.checkDepth();
 
   var template;
@@ -1477,7 +1392,7 @@ Match.prototype.exec = function exec(context) {
   return out;
 };
 
-Match.prototype.checkDepth = function checkDepth() {
+Match.prototype.checkDepth = function() {
   if (this.depth === -1) {
     this.depth = this.bemxjst.depth;
     return -1;
@@ -1497,7 +1412,7 @@ Match.prototype.checkDepth = function checkDepth() {
   return depth;
 };
 
-Match.prototype.restoreDepth = function restoreDepth(depth) {
+Match.prototype.restoreDepth = function(depth) {
   if (depth !== -1 && depth !== this.depth)
     this.maskOffset -= this.maskSize;
   this.depth = depth;
@@ -1514,7 +1429,7 @@ function Template(predicates, body) {
 }
 exports.Template = Template;
 
-Template.prototype.wrap = function wrap() {
+Template.prototype.wrap = function() {
   var body = this.body;
   for (var i = 0; i < this.predicates.length; i++) {
     var pred = this.predicates[i];
@@ -1523,7 +1438,7 @@ Template.prototype.wrap = function wrap() {
   this.body = body;
 };
 
-Template.prototype.clone = function clone() {
+Template.prototype.clone = function() {
   return new Template(this.predicates.slice(), this.body);
 };
 
@@ -1531,7 +1446,7 @@ function MatchBase() {
 }
 exports.MatchBase = MatchBase;
 
-MatchBase.prototype.wrapBody = function wrapBody(body) {
+MatchBase.prototype.wrapBody = function(body) {
   return body;
 };
 
@@ -1558,16 +1473,16 @@ function WrapMatch(refs) {
 inherits(WrapMatch, MatchBase);
 exports.WrapMatch = WrapMatch;
 
-WrapMatch.prototype.wrapBody = function wrapBody(body) {
+WrapMatch.prototype.wrapBody = function(body) {
   var applyCtx = this.refs.applyCtx;
 
   if (typeof body !== 'function') {
-    return function inlineAdaptor() {
+    return function() {
       return applyCtx(body);
     };
   }
 
-  return function wrapAdaptor() {
+  return function() {
     return applyCtx(body.call(this, this, this.ctx));
   };
 };
@@ -1580,16 +1495,16 @@ function ReplaceMatch(refs) {
 inherits(ReplaceMatch, MatchBase);
 exports.ReplaceMatch = ReplaceMatch;
 
-ReplaceMatch.prototype.wrapBody = function wrapBody(body) {
+ReplaceMatch.prototype.wrapBody = function(body) {
   var applyCtx = this.refs.applyCtx;
 
   if (typeof body !== 'function') {
-    return function inlineAdaptor() {
+    return function() {
       return applyCtx(body);
     };
   }
 
-  return function replaceAdaptor() {
+  return function() {
     return applyCtx(body.call(this, this, this.ctx));
   };
 };
@@ -1602,33 +1517,33 @@ function ExtendMatch(refs) {
 inherits(ExtendMatch, MatchBase);
 exports.ExtendMatch = ExtendMatch;
 
-ExtendMatch.prototype.wrapBody = function wrapBody(body) {
+ExtendMatch.prototype.wrapBody = function(body) {
   var applyCtx = this.refs.applyCtx;
   var local = this.refs.local;
 
   if (typeof body !== 'function') {
-    return function inlineAdaptor() {
+    return function() {
       var changes = {};
 
       var keys = Object.keys(body);
       for (var i = 0; i < keys.length; i++)
         changes[keys[i]] = body[keys[i]];
 
-      return local(changes)(function preApplyCtx() {
+      return local(changes)(function() {
         return applyCtx(this.ctx);
       });
     };
   }
 
-  return function localAdaptor() {
+  return function() {
     var changes = {};
 
-    var obj = body.call(this);
+    var obj = body.call(this, this, this.ctx);
     var keys = Object.keys(obj);
     for (var i = 0; i < keys.length; i++)
       changes[keys[i]] = obj[keys[i]];
 
-    return local(changes)(function preApplyCtx() {
+    return local(changes)(function() {
       return applyCtx(this.ctx);
     });
   };
@@ -1643,40 +1558,38 @@ function AddMatch(mode, refs) {
 inherits(AddMatch, MatchBase);
 exports.AddMatch = AddMatch;
 
-AddMatch.prototype.wrapBody = function wrapBody(body) {
+AddMatch.prototype.wrapBody = function(body) {
   return this[this.mode + 'WrapBody'](body);
 };
 
-AddMatch.prototype.appendContentWrapBody =
-  function appendContentWrapBody(body) {
+AddMatch.prototype.appendContentWrapBody = function(body) {
   var refs = this.refs;
   var applyCtx = refs.applyCtx;
   var apply = refs.apply;
 
   if (typeof body !== 'function') {
-    return function inlineAppendContentAddAdaptor() {
+    return function() {
       return [ apply('content') , body ];
     };
   }
 
-  return function appendContentAddAdaptor() {
+  return function() {
     return [ apply('content'), applyCtx(body.call(this, this, this.ctx)) ];
   };
 };
 
-AddMatch.prototype.prependContentWrapBody =
-  function prependContentWrapBody(body) {
+AddMatch.prototype.prependContentWrapBody = function(body) {
   var refs = this.refs;
   var applyCtx = refs.applyCtx;
   var apply = refs.apply;
 
   if (typeof body !== 'function') {
-    return function inlinePrependContentAddAdaptor() {
+    return function() {
       return [ body, apply('content') ];
     };
   }
 
-  return function prependContentAddAdaptor() {
+  return function() {
     return [ applyCtx(body.call(this, this, this.ctx)), apply('content') ];
   };
 };
@@ -1731,7 +1644,7 @@ Tree.methods = [
   'xjstOptions', 'appendContent', 'prependContent'
 ];
 
-Tree.prototype.build = function build(templates, apply) {
+Tree.prototype.build = function(templates, apply) {
   var methods = this.methods('global').concat(apply);
   methods[0] = this.match.bind(this);
 
@@ -1749,18 +1662,18 @@ function methodFactory(self, kind, name) {
 
   if (kind !== 'body') {
     if (name === 'replace' || name === 'extend' || name === 'wrap') {
-      return function wrapExtended() {
+      return function() {
         return method.apply(self, arguments);
       };
     }
 
-    return function wrapNotBody() {
+    return function() {
       method.apply(self, arguments);
       return boundBody;
     };
   }
 
-  return function wrapBody() {
+  return function() {
     var res = method.apply(self, arguments);
 
     // Insert body into last item
@@ -1775,7 +1688,7 @@ function methodFactory(self, kind, name) {
   };
 }
 
-Tree.prototype.methods = function methods(kind) {
+Tree.prototype.methods = function(kind) {
   var out = new Array(Tree.methods.length);
 
   for (var i = 0; i < out.length; i++) {
@@ -1787,7 +1700,7 @@ Tree.prototype.methods = function methods(kind) {
 };
 
 // Called after all matches
-Tree.prototype.flush = function flush(conditions, item) {
+Tree.prototype.flush = function(conditions, item) {
   var subcond;
 
   if (item.conditions)
@@ -1811,7 +1724,7 @@ Tree.prototype.flush = function flush(conditions, item) {
   }
 };
 
-Tree.prototype.body = function body() {
+Tree.prototype.body = function() {
   var children = new Array(arguments.length);
   for (var i = 0; i < arguments.length; i++)
     children[i] = arguments[i];
@@ -1825,7 +1738,7 @@ Tree.prototype.body = function body() {
   return this.boundBody;
 };
 
-Tree.prototype.match = function match() {
+Tree.prototype.match = function() {
   var children = new Array(arguments.length);
   for (var i = 0; i < arguments.length; i++) {
     var arg = arguments[i];
@@ -1840,7 +1753,7 @@ Tree.prototype.match = function match() {
   return this.boundBody;
 };
 
-Tree.prototype.applyMode = function applyMode(args, mode) {
+Tree.prototype.applyMode = function(args, mode) {
   if (args.length) {
     throw new Error('Predicate should not have arguments but ' +
       JSON.stringify(args) + ' passed');
@@ -1849,91 +1762,66 @@ Tree.prototype.applyMode = function applyMode(args, mode) {
   return this.mode(mode);
 };
 
-Tree.prototype.xjstOptions = function xjstOptions(options) {
+Tree.prototype.xjstOptions = function(options) {
   this.queue.push(new Item(this, [
     new CompilerOptions(options)
   ]));
   return this.boundBody;
 };
 
-Tree.prototype.block = function block(name) {
+Tree.prototype.block = function(name) {
   return this.match(new PropertyMatch('block', name));
 };
 
-Tree.prototype.elem = function elem(name) {
+Tree.prototype.elem = function(name) {
   return this.match(new PropertyMatch('elem', name));
 };
 
-Tree.prototype.mode = function mode(name) {
+Tree.prototype.mode = function(name) {
   return this.match(new PropertyMatch('_mode', name));
 };
 
-Tree.prototype.mod = function mod(name, value) {
+Tree.prototype.mod = function(name, value) {
   return this.match(new PropertyMatch([ 'mods', name ],
                                   value === undefined ? true : String(value)));
 };
 
-Tree.prototype.elemMod = function elemMod(name, value) {
+Tree.prototype.elemMod = function(name, value) {
   return this.match(new PropertyMatch([ 'elemMods', name ],
                                   value === undefined ?  true : String(value)));
 };
 
-Tree.prototype.def = function def() {
+Tree.prototype.def = function() {
   return this.applyMode(arguments, 'default');
 };
 
-Tree.prototype.tag = function tag() {
-  return this.applyMode(arguments, 'tag');
-};
+[ 'tag', 'attrs', 'cls', 'js', 'bem', 'mix', 'content' ]
+  .forEach(function(method) {
+    Tree.prototype[method] = function() {
+      return this.applyMode(arguments, method);
+    };
+  });
 
-Tree.prototype.attrs = function attrs() {
-  return this.applyMode(arguments, 'attrs');
-};
+[ 'appendContent', 'prependContent' ].forEach(function(method) {
+  Tree.prototype[method] = function() {
+    return this.content.apply(this, arguments)
+      .match(new AddMatch(method, this.refs));
+  };
+});
 
-Tree.prototype.cls = function cls() {
-  return this.applyMode(arguments, 'cls');
-};
-
-Tree.prototype.js = function js() {
-  return this.applyMode(arguments, 'js');
-};
-
-Tree.prototype.bem = function bem() {
-  return this.applyMode(arguments, 'bem');
-};
-
-Tree.prototype.mix = function mix() {
-  return this.applyMode(arguments, 'mix');
-};
-
-Tree.prototype.content = function content() {
-  return this.applyMode(arguments, 'content');
-};
-
-Tree.prototype.appendContent = function appendContent() {
-  return this.content.apply(this, arguments)
-    .match(new AddMatch('appendContent', this.refs));
-};
-
-
-Tree.prototype.prependContent = function prependContent() {
-  return this.content.apply(this, arguments)
-    .match(new AddMatch('prependContent', this.refs));
-};
-
-Tree.prototype.wrap = function wrap() {
+Tree.prototype.wrap = function() {
   return this.def.apply(this, arguments).match(new WrapMatch(this.refs));
 };
 
-Tree.prototype.replace = function replace() {
+Tree.prototype.replace = function() {
   return this.def.apply(this, arguments).match(new ReplaceMatch(this.refs));
 };
 
-Tree.prototype.extend = function extend() {
+Tree.prototype.extend = function() {
   return this.def.apply(this, arguments).match(new ExtendMatch(this.refs));
 };
 
-Tree.prototype.oninit = function oninit(fn) {
+Tree.prototype.oninit = function(fn) {
   this.initializers.push(fn);
 };
 
@@ -2061,7 +1949,7 @@ exports.jsAttrEscape = function(string) {
     html;
 };
 
-exports.extend = function extend(o1, o2) {
+exports.extend = function(o1, o2) {
   if (!o1 || !o2)
     return o1 || o2;
 
@@ -2082,7 +1970,7 @@ var SHORT_TAGS = { // hash for quick check if tag short
   input: 1, keygen: 1, link: 1, meta: 1, param: 1, source: 1, wbr: 1
 };
 
-exports.isShortTag = function isShortTag(t) {
+exports.isShortTag = function(t) {
   return SHORT_TAGS.hasOwnProperty(t);
 };
 
@@ -2099,7 +1987,7 @@ exports.isSimple = function isSimple(obj) {
   return typeof obj === 'string' || typeof obj === 'number';
 };
 
-exports.isObj = function isObj(val) {
+exports.isObj = function(val) {
   return val && typeof val === 'object' && !Array.isArray(val) &&
     val !== null;
 };
@@ -2114,7 +2002,7 @@ function getUniq() {
 }
 exports.getUniq = getUniq;
 
-exports.identify = function identify(obj, onlyGet) {
+exports.identify = function(obj, onlyGet) {
   if (!obj)
     return getUniq();
   if (onlyGet || obj[uniqExpando])
@@ -2125,7 +2013,7 @@ exports.identify = function identify(obj, onlyGet) {
   return u;
 };
 
-exports.fnToString = function fnToString(code) {
+exports.fnToString = function(code) {
   // It is fine to compile without templates at first
   if (!code)
     return '';
@@ -2161,7 +2049,7 @@ exports.fnToString = function fnToString(code) {
  */
 var UNQUOTED_ATTR_REGEXP = /^[:\w.-]+$/;
 
-exports.isUnquotedAttr = function isUnquotedAttr(str) {
+exports.isUnquotedAttr = function(str) {
   return str && UNQUOTED_ATTR_REGEXP.exec(str);
 };
 
@@ -2298,7 +2186,9 @@ block('page')(
     elem('favicon')(
         bem()(false),
         tag()('link'),
-        attrs()(function() { return { rel : 'shortcut icon', href : this.ctx.url }; })
+        attrs()(function() {
+            return this.extend(applyNext() || {}, { rel : 'shortcut icon', href : this.ctx.url });
+        })
     )
 
 );
@@ -2310,7 +2200,9 @@ block('page').elem('css')(
     tag()('style'),
     match(function() { return this.ctx.url; })(
         tag()('link'),
-        attrs()(function() { return { rel : 'stylesheet', href : this.ctx.url }; })
+        attrs()(function() {
+            return this.extend(applyNext() || {}, { rel : 'stylesheet', href : this.ctx.url });
+        })
     )
 );
 
@@ -2327,7 +2219,7 @@ block('page').elem('js')(
             attrs.nonce = this._nonceCsp;
         }
 
-        return attrs;
+        return this.extend(applyNext() || {}, attrs);
     })
 );
 
@@ -2754,7 +2646,12 @@ block('dropdown')(
     elem('switcher').mix()(function() {
         var dropdown = this._dropdown;
 
-        return [dropdown].concat(dropdown.switcher.mix || [], dropdown.mix || []);
+        return [dropdown].concat(dropdown.switcher.mix || [], dropdown.mix || [], {
+            block : this.block,
+            elem : this.elem,
+            elemMods : { switcher : this.mods.switcher },
+            js : true
+        });
     }),
     elem('popup').replace()(function() {
         var dropdown = this._dropdown,

@@ -1846,6 +1846,20 @@ function getJqueryCollection(html) {
 }
 
 /**
+ * Validates block to be class or specified description
+ * @param {*} Block Any argument passed to find*Block as Block
+ * @throws {Error} Will throw an error if the Block argument isn't correct
+ */
+function validateBlockParam(Block) {
+    if(
+        typeof Block === 'string' ||
+        typeof Block === 'object' && typeof Block.block === 'string'
+    ) {
+        throw new Error('Block must be a class or description (block, modName, modVal) of the block to find');
+    }
+}
+
+/**
  * @class BemDomEntity
  * @description Base mix for BEM entities that have DOM representation
  */
@@ -1976,7 +1990,8 @@ var BemDomEntity = inherit(/** @lends BemDomEntity.prototype */{
      * @returns {Block}
      */
     findChildBlock : function(Block) {
-        // TODO: throw if Block passed as a string
+        validateBlockParam(Block);
+
         return this._findEntities('find', Block, true);
     },
 
@@ -1986,6 +2001,8 @@ var BemDomEntity = inherit(/** @lends BemDomEntity.prototype */{
      * @returns {BemDomCollection}
      */
     findChildBlocks : function(Block) {
+        validateBlockParam(Block);
+
         return this._findEntities('find', Block);
     },
 
@@ -1995,6 +2012,8 @@ var BemDomEntity = inherit(/** @lends BemDomEntity.prototype */{
      * @returns {Block}
      */
     findParentBlock : function(Block) {
+        validateBlockParam(Block);
+
         return this._findEntities('parents', Block, true);
     },
 
@@ -2004,6 +2023,8 @@ var BemDomEntity = inherit(/** @lends BemDomEntity.prototype */{
      * @returns {BemDomCollection}
      */
     findParentBlocks : function(Block) {
+        validateBlockParam(Block);
+
         return this._findEntities('parents', Block);
     },
 
@@ -2013,6 +2034,8 @@ var BemDomEntity = inherit(/** @lends BemDomEntity.prototype */{
      * @returns {Block}
      */
     findMixedBlock : function(Block) {
+        validateBlockParam(Block);
+
         return this._findEntities('filter', Block, true);
     },
 
@@ -2022,6 +2045,8 @@ var BemDomEntity = inherit(/** @lends BemDomEntity.prototype */{
      * @returns {BemDomCollection}
      */
     findMixedBlocks : function(Block) {
+        validateBlockParam(Block);
+
         return this._findEntities('filter', Block);
     },
 
@@ -2131,7 +2156,7 @@ var BemDomEntity = inherit(/** @lends BemDomEntity.prototype */{
                         typeof entity.modVal === 'undefined'?
                             true :
                             entity.modVal) :
-                    buildClassName(entityName)) +
+                    entityName) +
                 (onlyFirst? ':first' : ''),
             domElems = this.domElem[select](selector);
 
@@ -2351,7 +2376,7 @@ var BemDomEntity = inherit(/** @lends BemDomEntity.prototype */{
  * @class Block
  * @description Base class for creating BEM blocks that have DOM representation
  * @augments i-bem:Block
- * @exports
+ * @exports i-bem-dom:Block
  */
 var Block = inherit([bem.Block, BemDomEntity], /** @lends Block.prototype */{
     /** @override */
@@ -2364,7 +2389,7 @@ var Block = inherit([bem.Block, BemDomEntity], /** @lends Block.prototype */{
  * @class Elem
  * @description Base class for creating BEM elements that have DOM representation
  * @augments i-bem:Elem
- * @exports
+ * @exports i-bem-dom:Elem
  */
 var Elem = inherit([bem.Elem, BemDomEntity], /** @lends Elem.prototype */{
     /** @override */
@@ -2419,7 +2444,7 @@ bemDom = /** @exports */{
 
     /**
      * @param {*} entity
-     * @return {Boolean}
+     * @returns {Boolean}
      */
     isEntity : function(entity) {
         return entity instanceof Block || entity instanceof Elem;
@@ -4200,7 +4225,7 @@ var BemCollection = inherit(/** @lends BemCollection.prototype */{
                 arg instanceof BemCollection?  arg._entities : arg);
         }
 
-        return new BemCollection(arrayConcat.apply(this._entities, argsForConcat));
+        return new this.__self(arrayConcat.apply(this._entities, argsForConcat));
     },
 
     /**
@@ -8294,8 +8319,8 @@ provide(bemDom.declBlock(this.name, /** @lends checkbox-group.prototype */{
 
 modules.define(
     'dropdown',
-    ['i-bem-dom', 'popup'],
-    function(provide, bemDom, Popup) {
+    ['i-bem-dom', 'popup', 'dropdown__switcher'],
+    function(provide, bemDom, Popup, Switcher) {
 
 /**
  * @exports
@@ -8367,7 +8392,7 @@ provide(bemDom.declBlock(this.name, /** @lends dropdown.prototype */{
      * @param {events:Event} e
      * @protected
      */
-    onSwitcherClick : function(e) {
+    _onSwitcherClick : function(e) {
         this._switcher || (this._switcher = e.target);
         this.toggleMod('opened');
     },
@@ -8376,12 +8401,30 @@ provide(bemDom.declBlock(this.name, /** @lends dropdown.prototype */{
         this.setMod('opened', data.modVal);
     }
 }, /** @lends dropdown */{
-    lazyInit : true
+    lazyInit : true,
+    onInit : function() {
+        this._events(Switcher).on('click', this.prototype._onSwitcherClick);
+    }
 }));
 
 });
 
 /* ../../common.blocks/dropdown/dropdown.js end */
+
+/* ../../common.blocks/dropdown/__switcher/dropdown__switcher.js begin */
+modules.define('dropdown__switcher', ['i-bem-dom'], function(provide, bemDom) {
+
+provide(bemDom.declElem('dropdown', 'switcher', {
+    _onSwitcherClick : function() {
+        this._emit('click');
+    }
+}, {
+    lazyInit : true
+}));
+
+});
+
+/* ../../common.blocks/dropdown/__switcher/dropdown__switcher.js end */
 
 /* ../../common.blocks/popup/popup.js begin */
 /**
@@ -9210,16 +9253,25 @@ provide(Dropdown.declMod({ modName : 'switcher', modVal : 'button' }, /** @lends
         return this._switcher ||
             (this._switcher = this.findMixedBlock(Button));
     }
-}, /** @lends dropdown */{
-    onInit : function() {
-        this._events(Button).on('click', this.prototype.onSwitcherClick);
-        return this.__base.apply(this, arguments);
-    }
 }));
 
 });
 
 /* ../../common.blocks/dropdown/_switcher/dropdown_switcher_button.js end */
+
+/* ../../common.blocks/dropdown/__switcher/_switcher/dropdown__switcher_switcher_button.js begin */
+modules.define('dropdown__switcher', ['button'], function(provide, Button, Switcher) {
+
+provide(Switcher.declMod({ modName : 'switcher', modVal : 'button' }, {}, {
+    onInit : function() {
+        this._events(Button).on('click', this.prototype._onSwitcherClick);
+        this.__base.apply(this, arguments);
+    }
+}));
+
+});
+
+/* ../../common.blocks/dropdown/__switcher/_switcher/dropdown__switcher_switcher_button.js end */
 
 /* ../../common.blocks/dropdown/_switcher/dropdown_switcher_link.js begin */
 /**
@@ -9238,16 +9290,25 @@ provide(Dropdown.declMod({ modName : 'switcher', modVal : 'link' }, { /** @lends
         return this._switcher ||
             (this._switcher = this.findMixedBlock(Link));
     }
-}, {
-    onInit : function() {
-        this._events(Link).on('click', this.prototype.onSwitcherClick);
-        return this.__base.apply(this, arguments);
-    }
 }));
 
 });
 
 /* ../../common.blocks/dropdown/_switcher/dropdown_switcher_link.js end */
+
+/* ../../common.blocks/dropdown/__switcher/_switcher/dropdown__switcher_switcher_link.js begin */
+modules.define('dropdown__switcher', ['link'], function(provide, Link, Switcher) {
+
+provide(Switcher.declMod({ modName : 'switcher', modVal : 'link' }, {}, {
+    onInit : function() {
+        this._events(Link).on('click', this.prototype._onSwitcherClick);
+        this.__base.apply(this, arguments);
+    }
+}));
+
+});
+
+/* ../../common.blocks/dropdown/__switcher/_switcher/dropdown__switcher_switcher_link.js end */
 
 /* ../../common.blocks/link/link.js begin */
 /**

@@ -80,7 +80,9 @@ block('page')(
     elem('favicon')(
         bem()(false),
         tag()('link'),
-        attrs()(function() { return { rel : 'shortcut icon', href : this.ctx.url }; })
+        attrs()(function() {
+            return this.extend(applyNext() || {}, { rel : 'shortcut icon', href : this.ctx.url });
+        })
     )
 
 );
@@ -93,7 +95,9 @@ block('page').elem('css')(
     tag()('style'),
     match(function() { return this.ctx.url; })(
         tag()('link'),
-        attrs()(function() { return { rel : 'stylesheet', href : this.ctx.url }; })
+        attrs()(function() {
+            return this.extend(applyNext() || {}, { rel : 'stylesheet', href : this.ctx.url });
+        })
     )
 );
 
@@ -111,7 +115,7 @@ block('page').elem('js')(
             attrs.nonce = this._nonceCsp;
         }
 
-        return attrs;
+        return this.extend(applyNext() || {}, attrs);
     })
 );
 
@@ -562,7 +566,12 @@ block('dropdown')(
     elem('switcher').mix()(function() {
         var dropdown = this._dropdown;
 
-        return [dropdown].concat(dropdown.switcher.mix || [], dropdown.mix || []);
+        return [dropdown].concat(dropdown.switcher.mix || [], dropdown.mix || [], {
+            block : this.block,
+            elem : this.elem,
+            elemMods : { switcher : this.mods.switcher },
+            js : true
+        });
     }),
     elem('popup').replace()(function() {
         var dropdown = this._dropdown,
