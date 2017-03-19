@@ -11463,11 +11463,9 @@ function Entity(bemxjst) {
 
   this.jsClass = null;
 
-  // "Fast modes"
+  // "Fast modes" about HTML
   this.tag = new Match(this, 'tag');
   this.attrs = new Match(this, 'attrs');
-  this.js = new Match(this, 'js');
-  this.mix = new Match(this, 'mix');
   this.bem = new Match(this, 'bem');
   this.cls = new Match(this, 'cls');
 
@@ -11485,35 +11483,33 @@ Entity.prototype.init = function(block, elem) {
   this.jsClass = this.bemxjst.classBuilder.build(this.block, this.elem);
 };
 
-Entity.prototype._initRest = function(key) {
-  if (key === 'default') {
-    this.rest[key] = this.def;
-  } else if (key === 'tag' ||
-    key === 'attrs' ||
-    key === 'js' ||
-    key === 'mix' ||
-    key === 'bem' ||
-    key === 'cls' ||
-    key === 'content') {
-    this.rest[key] = this[key];
-  } else {
-    if (!this.rest.hasOwnProperty(key))
-      this.rest[key] = new Match(this, key);
-  }
+Entity.prototype._keys = {
+  tag: 1,
+  content: 1,
+  attrs: 1,
+  mix: 1,
+  js: 1,
+  mods: 1,
+  elemMods: 1,
+  cls: 1,
+  bem: 1
 };
 
 Entity.prototype.defaultBody = function(context) {
+  context.mods = this.mods.exec(context);
+  if (context.ctx.elem) context.elemMods = this.elemMods.exec(context);
+
   return this.bemxjst.render(context,
                              this,
                              this.tag.exec(context),
-                             context.ctx.js !== false ?
-                               this.js.exec(context) :
-                               undefined,
+                             this.js.exec(context),
                              this.bem.exec(context),
                              this.cls.exec(context),
                              this.mix.exec(context),
                              this.attrs.exec(context),
-                             this.content.exec(context));
+                             this.content.exec(context),
+                             context.mods,
+                             context.elemMods);
 };
 
 },{"../bemxjst/entity":5,"../bemxjst/match":8,"inherits":11}],2:[function(require,module,exports){
@@ -11526,7 +11522,7 @@ function BEMHTML(options) {
   BEMXJST.apply(this, arguments);
 
   this._shortTagCloser = typeof options.xhtml !== 'undefined' &&
-                            options.xhtml ? '/>' : '>';
+                          options.xhtml ? '/>' : '>';
 
   this._elemJsInstances = options.elemJsInstances;
   this._omitOptionalEndTags = options.omitOptionalEndTags;
@@ -11568,15 +11564,8 @@ BEMHTML.prototype.runMany = function(arr) {
   return out;
 };
 
-BEMHTML.prototype.render = function(context,
-                                   entity,
-                                   tag,
-                                   js,
-                                   bem,
-                                   cls,
-                                   mix,
-                                   attrs,
-                                   content) {
+BEMHTML.prototype.render = function(context, entity, tag, js, bem, cls, mix,
+                                           attrs, content, mods, elemMods) {
   var ctx = context.ctx;
 
   if (tag === undefined)
@@ -11586,18 +11575,8 @@ BEMHTML.prototype.render = function(context,
 
   var out = '<' + tag;
 
-  var ctxJS = ctx.js;
-  if (ctxJS !== false) {
-    if (js === true)
-      js = {};
-
-    if (js && js !== ctx.js) {
-      if (ctxJS !== true)
-        js = utils.extend(ctxJS, js);
-    }  else if (ctxJS === true) {
-      js = {};
-    }
-  }
+  if (js === true)
+    js = {};
 
   var jsParams;
   if (js) {
@@ -11610,7 +11589,7 @@ BEMHTML.prototype.render = function(context,
 
   var addJSInitClass = jsParams && (
     this._elemJsInstances ?
-      (entity.block || entity.elem) :
+      entity.block :
       (entity.block && !entity.elem)
   );
 
@@ -11622,12 +11601,7 @@ BEMHTML.prototype.render = function(context,
   if (isBEM) {
     classValue += entity.jsClass;
     classValue += this.buildModsClasses(entity.block, entity.elem,
-                                        entity.elem ?
-                                          context.elemMods :
-                                          context.mods);
-
-    if (ctx.mix && mix && mix !== ctx.mix)
-      mix = [].concat(mix, ctx.mix);
+                                        entity.elem ? elemMods : mods);
 
     if (mix) {
       var m = this.renderMix(entity, mix, jsParams, addJSInitClass);
@@ -11641,8 +11615,7 @@ BEMHTML.prototype.render = function(context,
                     utils.attrEscape(cls).trim() : cls);
   } else {
     classValue += typeof cls === 'string' ?
-      utils.attrEscape(cls).trim() :
-      cls;
+                           utils.attrEscape(cls).trim() : cls;
   }
 
   if (addJSInitClass)
@@ -11667,16 +11640,11 @@ var OPTIONAL_END_TAGS = {
   /* dl — Neither tag is omissible */ rb: 1, rt: 1, rtc: 1, rp: 1, optgroup: 1
 };
 
-BEMHTML.prototype.renderClose = function(prefix,
-                                         context,
-                                         tag,
-                                         attrs,
-                                         isBEM,
-                                         ctx,
-                                         content) {
+BEMHTML.prototype.renderClose = function(prefix, context, tag, attrs, isBEM,
+                                         ctx, content) {
   var out = prefix;
 
-  out += this.renderAttrs(attrs, ctx);
+  out += this.renderAttrs(attrs);
 
   if (utils.isShortTag(tag)) {
     out += this._shortTagCloser;
@@ -11700,12 +11668,11 @@ BEMHTML.prototype.renderClose = function(prefix,
   return out;
 };
 
-BEMHTML.prototype.renderAttrs = function(attrs, ctx) {
+BEMHTML.prototype.renderAttrs = function(attrs) {
   var out = '';
 
   // NOTE: maybe we need to make an array for quicker serialization
-  if (utils.isObj(attrs) || utils.isObj(ctx.attrs)) {
-    attrs = utils.extend(attrs, ctx.attrs);
+  if (utils.isObj(attrs)) {
 
     /* jshint forin : false */
     for (var name in attrs) {
@@ -11913,7 +11880,7 @@ function Context(bemxjst) {
   this._listLength = 0;
   this._notNewList = false;
 
-  this.escapeContent = bemxjst.options.escapeContent === true;
+  this.escapeContent = bemxjst.options.escapeContent !== false;
 }
 exports.Context = Context;
 
@@ -11967,6 +11934,10 @@ function Entity(bemxjst, block, elem, templates) {
 
   // "Fast modes"
   this.def = new Match(this);
+  this.mix = new Match(this, 'mix');
+  this.js = new Match(this, 'js');
+  this.mods = new Match(this, 'mods');
+  this.elemMods = new Match(this, 'elemMods');
   this.content = new Match(this, 'content');
 
   // "Slow modes"
@@ -11983,9 +11954,23 @@ Entity.prototype.init = function(block, elem) {
   this.elem = elem;
 };
 
-function contentMode() {
-  return this.ctx.content;
-}
+Entity.prototype._keys = {
+  content: 1,
+  mix: 1,
+  js: 1,
+  mods: 1,
+  elemMods: 1
+};
+
+Entity.prototype._initRest = function(key) {
+  if (key === 'default') {
+    this.rest[key] = this.def;
+  } else if (this._keys[key]) {
+    this.rest[key] = this[key];
+  } else {
+    this.rest[key] = this.rest[key] || new Match(this, key);
+  }
+};
 
 Entity.prototype.initModes = function(templates) {
   /* jshint maxdepth : false */
@@ -12053,6 +12038,11 @@ Entity.prototype.run = function(context) {
   return this.defaultBody(context);
 };
 
+
+function contentMode() {
+  return this.ctx.content;
+}
+
 Entity.prototype.setDefaults = function() {
   // Default .content() template for applyNext()
   if (this.content.count !== 0)
@@ -12095,7 +12085,7 @@ var ClassBuilder = require('./class-builder').ClassBuilder;
 var utils = require('./utils');
 
 function BEMXJST(options) {
-  this.options = options || {};
+  this.options = options;
 
   this.entities = null;
   this.defaultEnt = null;
@@ -12163,7 +12153,6 @@ BEMXJST.prototype.compile = function(code) {
   var tree = new Tree({
     refs: {
       applyCtx: applyCtxWrap,
-      local: localWrap,
       apply: apply
     }
   });
@@ -12202,21 +12191,19 @@ BEMXJST.prototype.compile = function(code) {
   this.oninit = out.oninit;
 };
 
+BEMXJST.prototype.getTemplate = function(code, options) {
+  this.compile(code, options);
+
+  return this.exportApply();
+};
+
 BEMXJST.prototype.recompileInput = function(code) {
   var args = BEMXJST.prototype.locals;
   // Reuse function if it already has right arguments
   if (typeof code === 'function' && code.length === args.length)
     return code;
 
-  var out = code.toString();
-
-  // Strip the function
-  out = out.replace(/^function[^{]+{|}$/g, '');
-
-  // And recompile it with right arguments
-  out = new Function(args.join(', '), out);
-
-  return out;
+  return new Function(args.join(', '), utils.fnToString(code));
 };
 
 BEMXJST.prototype.groupEntities = function(tree) {
@@ -12263,10 +12250,8 @@ BEMXJST.prototype.groupEntities = function(tree) {
             msg += pred.key[0].replace('mods', 'mod')
               .replace('elemMods', 'elemMod') +
               '(\'' + pred.key[1] + '\', \'' + pred.value + '\')';
-          } else if (!pred.value || !pred.key) {
-            msg += 'match(…)';
           } else {
-            msg += pred.key + '(\'' + pred.value + '\')';
+            msg += 'match(…)';
           }
         }
       }
@@ -12336,10 +12321,7 @@ BEMXJST.prototype.transformEntities = function(entities) {
         continue;
 
       var entity = entities[key];
-      if (entity.block !== block)
-        continue;
-
-      if (entity.elem === undefined)
+      if (entity.block !== block || entity.elem === undefined)
         continue;
 
       entities[key].prepend(wildcard);
@@ -12397,7 +12379,6 @@ BEMXJST.prototype.run = function(json) {
   return res;
 };
 
-
 BEMXJST.prototype.runEmpty = function() {
   this.context._listLength--;
   return '';
@@ -12410,13 +12391,12 @@ BEMXJST.prototype.runUnescaped = function(context) {
 
 BEMXJST.prototype.runSimple = function(simple) {
   this.context._listLength--;
-
   if (!simple && simple !== 0 || simple === true)
     return '';
 
   return typeof simple === 'string' && this.context.escapeContent ?
-    utils.xmlEscape(simple) :
-    simple;
+      utils.xmlEscape(simple) :
+      simple;
 };
 
 BEMXJST.prototype.runOne = function(json) {
@@ -12573,9 +12553,25 @@ BEMXJST.prototype.applyNext = function() {
 };
 
 BEMXJST.prototype.applyMode = function(mode, changes) {
-  var match = this.match.entity.rest[mode];
-  if (!match)
+  var key;
+  var match = this.match;
+
+  if (!match) {
+    var key = this.classBuilder.build(this.context.block, this.context.elem);
+    match = this.entities[key].rest[mode];
+  } else {
+    match = this.match.entity.rest[mode];
+  }
+
+  if (!match) {
+    if (mode === 'mods')
+      return this.context.mods;
+
+    if (mode === 'elemMods')
+      return this.context.elemMods;
+
     return this.context.ctx[mode];
+  }
 
   if (!changes)
     return match.exec(this.context);
@@ -12584,30 +12580,35 @@ BEMXJST.prototype.applyMode = function(mode, changes) {
 
   // Allocate function this way, to prevent allocation at the top of the
   // `applyMode`
-  var fn = function() {
+  var localBody = function() {
     return match.exec(self.context);
   };
-  return this.local(changes, fn);
+  return this.local(changes, localBody);
 };
 
 BEMXJST.prototype.exportApply = function(exports) {
   var self = this;
-  exports.apply = function(context) {
+  var ret = exports || {};
+
+  ret.apply = function(context) {
     return self.run(context);
   };
 
   // Add templates at run time
-  exports.compile = function(templates) {
-    return self.compile(templates);
+  ret.compile = function(templates) {
+    self.compile(templates);
+    return ret;
   };
 
-  exports.BEMContext = self.contextConstructor;
+  ret.BEMContext = this.contextConstructor;
 
-  for (var i = 0; i < self.oninit.length; i++) {
+  for (var i = 0; i < this.oninit.length; i++) {
     // NOTE: oninit has global context instead of BEMXJST
     var oninit = self.oninit[i];
-    oninit(exports, { BEMContext: exports.BEMContext });
+    oninit(ret, { BEMContext: ret.BEMContext });
   }
+
+  return ret;
 };
 
 },{"./class-builder":3,"./context":4,"./error":6,"./tree":9,"./utils":10,"inherits":11}],8:[function(require,module,exports){
@@ -12697,7 +12698,7 @@ function MatchTemplate(mode, template) {
       j--;
       postpone.push(new MatchExtend(this));
     } else if (pred instanceof AddMatch) {
-      this.predicates[i] = new AddWrap(this, pred);
+      this.predicates[j] = new AddWrap(this, pred);
     } else if (pred instanceof CustomMatch) {
       this.predicates[j] = new MatchCustom(this, pred);
 
@@ -12801,8 +12802,15 @@ Match.prototype.exec = function(context) {
     }
   }
 
-  if (i === this.count)
+  if (i === this.count) {
+    if (this.modeName === 'mods')
+      return context.mods;
+
+    if (this.modeName === 'elemMods')
+      return context.elemMods;
+
     return context.ctx[this.modeName];
+  }
 
   var oldMask = mask;
   var oldMatch = this.bemxjst.match;
@@ -12857,8 +12865,8 @@ Match.prototype.restoreDepth = function(depth) {
 };
 
 },{"./tree":9}],9:[function(require,module,exports){
-var assert = require('minimalistic-assert');
 var inherits = require('inherits');
+var utils = require('./utils');
 
 function Template(predicates, body) {
   this.predicates = predicates;
@@ -12938,12 +12946,13 @@ ReplaceMatch.prototype.wrapBody = function(body) {
 
   if (typeof body !== 'function') {
     return function() {
-      return applyCtx(body);
+      return applyCtx(body, { position: this.position - 1 });
     };
   }
 
   return function() {
-    return applyCtx(body.call(this, this, this.ctx));
+    return applyCtx(body.call(this, this, this.ctx),
+                    { position: this.position - 1 });
   };
 };
 
@@ -12956,8 +12965,8 @@ inherits(ExtendMatch, MatchBase);
 exports.ExtendMatch = ExtendMatch;
 
 ExtendMatch.prototype.wrapBody = function(body) {
-  var applyCtx = this.refs.applyCtx;
-  var local = this.refs.local;
+  var refs = this.refs;
+  var applyCtx = refs.applyCtx;
 
   if (typeof body !== 'function') {
     return function() {
@@ -12967,9 +12976,7 @@ ExtendMatch.prototype.wrapBody = function(body) {
       for (var i = 0; i < keys.length; i++)
         changes[keys[i]] = body[keys[i]];
 
-      return local(changes)(function() {
-        return applyCtx(this.ctx);
-      });
+      return applyCtx(this.ctx, changes);
     };
   }
 
@@ -12981,9 +12988,7 @@ ExtendMatch.prototype.wrapBody = function(body) {
     for (var i = 0; i < keys.length; i++)
       changes[keys[i]] = obj[keys[i]];
 
-    return local(changes)(function() {
-      return applyCtx(this.ctx);
-    });
+    return applyCtx(this.ctx, changes);
   };
 };
 
@@ -13001,9 +13006,7 @@ AddMatch.prototype.wrapBody = function(body) {
 };
 
 AddMatch.prototype.appendContentWrapBody = function(body) {
-  var refs = this.refs;
-  var applyCtx = refs.applyCtx;
-  var apply = refs.apply;
+  var apply = this.refs.apply;
 
   if (typeof body !== 'function') {
     return function() {
@@ -13012,14 +13015,12 @@ AddMatch.prototype.appendContentWrapBody = function(body) {
   }
 
   return function() {
-    return [ apply('content'), applyCtx(body.call(this, this, this.ctx)) ];
+    return [ apply('content'), body.call(this, this, this.ctx) ];
   };
 };
 
 AddMatch.prototype.prependContentWrapBody = function(body) {
-  var refs = this.refs;
-  var applyCtx = refs.applyCtx;
-  var apply = refs.apply;
+  var apply = this.refs.apply;
 
   if (typeof body !== 'function') {
     return function() {
@@ -13028,9 +13029,43 @@ AddMatch.prototype.prependContentWrapBody = function(body) {
   }
 
   return function() {
-    return [ applyCtx(body.call(this, this, this.ctx)), apply('content') ];
+    return [ body.call(this, this, this.ctx), apply('content') ];
   };
 };
+
+AddMatch.prototype.mixWrapBody = function(body) {
+  var apply = this.refs.apply;
+
+  if (typeof body !== 'function') {
+    return function() {
+      var ret = apply('mix');
+      /* istanbul ignore else */
+      if (!Array.isArray(ret)) ret = [ ret ];
+      return ret.concat(body);
+    };
+  }
+
+  return function() {
+    var ret = apply('mix');
+    if (!Array.isArray(ret)) ret = [ ret ];
+    return ret.concat(body.call(this, this, this.ctx));
+  };
+};
+
+[ 'attrs', 'js', 'mods', 'elemMods' ].forEach(function(method) {
+  AddMatch.prototype[ method + 'WrapBody'] = function(body) {
+    var apply = this.refs.apply;
+
+    return typeof body !== 'function' ?
+      function() {
+        return (this[method] = utils.extend(apply(method) || {}, body));
+      } :
+      function() {
+        return (this[method] = utils.extend(apply(method) || {},
+                               body.call(this, this, this.ctx)));
+      };
+  };
+});
 
 function CompilerOptions(options) {
   MatchBase.call(this);
@@ -13076,10 +13111,16 @@ function Tree(options) {
 exports.Tree = Tree;
 
 Tree.methods = [
-  'match', 'wrap', 'block', 'elem', 'mode', 'mod',
-  'elemMod', 'def', 'tag', 'attrs', 'cls', 'js',
-  'bem', 'mix', 'content', 'replace', 'extend', 'oninit',
-  'xjstOptions', 'appendContent', 'prependContent'
+  // Subpredicates:
+  'match', 'block', 'elem', 'mod', 'elemMod',
+  // Runtime related:
+  'oninit', 'xjstOptions',
+  // Output generators:
+  'wrap', 'replace', 'extend', 'mode', 'def',
+  'content', 'appendContent', 'prependContent',
+  'attrs', 'addAttrs', 'js', 'addJs', 'mix', 'addMix',
+  'mods', 'addMods', 'addElemMods', 'elemMods',
+  'tag', 'cls', 'bem'
 ];
 
 Tree.prototype.build = function(templates, apply) {
@@ -13139,12 +13180,9 @@ Tree.prototype.methods = function(kind) {
 
 // Called after all matches
 Tree.prototype.flush = function(conditions, item) {
-  var subcond;
-
-  if (item.conditions)
-    subcond = conditions.concat(item.conditions);
-  else
-    subcond = item.conditions;
+  var subcond = item.conditions ?
+    conditions.concat(item.conditions) :
+    item.conditions;
 
   for (var i = 0; i < item.children.length; i++) {
     var arg = item.children[i];
@@ -13178,11 +13216,18 @@ Tree.prototype.body = function() {
 
 Tree.prototype.match = function() {
   var children = new Array(arguments.length);
+
+  if (!arguments.length)
+    throw new Error('.match() must have argument');
+
   for (var i = 0; i < arguments.length; i++) {
     var arg = arguments[i];
     if (typeof arg === 'function')
       arg = new CustomMatch(arg);
-    assert(arg instanceof MatchBase, 'Wrong .match() argument');
+
+    if (!(arg instanceof MatchBase))
+      throw new Error('Wrong .match() argument');
+
     children[i] = arg;
   }
 
@@ -13207,42 +13252,46 @@ Tree.prototype.xjstOptions = function(options) {
   return this.boundBody;
 };
 
-Tree.prototype.block = function(name) {
-  return this.match(new PropertyMatch('block', name));
-};
+[ 'mode', 'elem', 'block' ].forEach(function(method) {
+  Tree.prototype[method] = function(name) {
+    return this.match(new PropertyMatch(
+      method === 'mode' ? '_mode' : method, name));
+  };
+});
 
-Tree.prototype.elem = function(name) {
-  return this.match(new PropertyMatch('elem', name));
-};
-
-Tree.prototype.mode = function(name) {
-  return this.match(new PropertyMatch('_mode', name));
-};
-
-Tree.prototype.mod = function(name, value) {
-  return this.match(new PropertyMatch([ 'mods', name ],
+[ 'mod', 'elemMod' ].forEach(function(method) {
+  Tree.prototype[method] = function(name, value) {
+    return this.match(new PropertyMatch([ method + 's', name ],
                                   value === undefined ? true : String(value)));
-};
-
-Tree.prototype.elemMod = function(name, value) {
-  return this.match(new PropertyMatch([ 'elemMods', name ],
-                                  value === undefined ?  true : String(value)));
-};
+  };
+});
 
 Tree.prototype.def = function() {
   return this.applyMode(arguments, 'default');
 };
 
-[ 'tag', 'attrs', 'cls', 'js', 'bem', 'mix', 'content' ]
-  .forEach(function(method) {
-    Tree.prototype[method] = function() {
-      return this.applyMode(arguments, method);
-    };
-  });
+[
+  'content', 'mix', 'bem', 'js', 'cls', 'attrs', 'tag', 'elemMods', 'mods'
+].forEach(function(method) {
+  Tree.prototype[method] = function() {
+    return this.applyMode(arguments, method);
+  };
+});
 
 [ 'appendContent', 'prependContent' ].forEach(function(method) {
   Tree.prototype[method] = function() {
     return this.content.apply(this, arguments)
+      .match(new AddMatch(method, this.refs));
+  };
+});
+
+function capitalize(s) {
+  return s[0].toUpperCase() + s.slice(1);
+}
+
+[ 'mods', 'elemMods', 'attrs', 'js', 'mix' ].forEach(function(method) {
+  Tree.prototype['add' + capitalize(method)] = function() {
+    return this[method].apply(this, arguments)
       .match(new AddMatch(method, this.refs));
   };
 });
@@ -13263,7 +13312,7 @@ Tree.prototype.oninit = function(fn) {
   this.initializers.push(fn);
 };
 
-},{"inherits":11,"minimalistic-assert":12}],10:[function(require,module,exports){
+},{"./utils":10,"inherits":11}],10:[function(require,module,exports){
 var amp = '&amp;';
 var lt = '&lt;';
 var gt = '&gt;';
@@ -13272,7 +13321,16 @@ var singleQuot = '&#39;';
 
 var matchXmlRegExp = /[&<>]/;
 
+function isEmpty(string) {
+  return typeof string === 'undefined' ||
+     string === null ||
+     (typeof string === 'number' && isNaN(string));
+}
+
 exports.xmlEscape = function(string) {
+  if (isEmpty(string))
+    return '';
+
   var str = '' + string;
   var match = matchXmlRegExp.exec(str);
 
@@ -13314,6 +13372,9 @@ exports.xmlEscape = function(string) {
 var matchAttrRegExp = /["&]/;
 
 exports.attrEscape = function(string) {
+  if (isEmpty(string))
+    return '';
+
   var str = '' + string;
   var match = matchAttrRegExp.exec(str);
 
@@ -13352,6 +13413,9 @@ exports.attrEscape = function(string) {
 var matchJsAttrRegExp = /['&]/;
 
 exports.jsAttrEscape = function(string) {
+  if (isEmpty(string))
+    return '';
+
   var str = '' + string;
   var match = matchJsAttrRegExp.exec(str);
 
@@ -13395,9 +13459,11 @@ exports.extend = function(o1, o2) {
   var n;
 
   for (n in o1)
+    /* istanbul ignore else */
     if (o1.hasOwnProperty(n))
       res[n] = o1[n];
   for (n in o2)
+    /* istanbul ignore else */
     if (o2.hasOwnProperty(n))
       res[n] = o2[n];
   return res;
@@ -13457,22 +13523,22 @@ exports.fnToString = function(code) {
     return '';
 
   if (typeof code === 'function') {
-    // Examples:
+    // Examples for regular function
     //   function () { … }
     //   function name() { … }
     //   function (a, b) { … }
     //   function name(a, b) { … }
-    var regularFunction = /^function\s*[^{]+{|}$/g;
-
-    // Examples:
+    //
+    // Examples for arrow function
     //   () => { … }
     //   (a, b) => { … }
     //   _ => { … }
-    var arrowFunction = /^(_|\(\w|[^=>]+\))\s=>\s{|}$/g;
 
     code = code.toString();
     code = code.replace(
-      code.indexOf('function') === 0 ? regularFunction : arrowFunction,
+      code.indexOf('function') === 0 ?
+      /^function\s*[^{]+{|}$/g :
+      /^(_|\(\w|[^=>]+\))\s=>\s{|}$/g,
     '');
   }
 
@@ -13516,21 +13582,9 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],12:[function(require,module,exports){
-module.exports = assert;
-
-function assert(val, msg) {
-  if (!val)
-    throw new Error(msg || 'Assertion failed');
-}
-
-assert.equal = function assertEqual(l, r, msg) {
-  if (l != r)
-    throw new Error(msg || ('Assertion failed: ' + l + ' != ' + r));
-};
-
 },{}]},{},[2])(2)
-});;
+});
+;
   return module.exports ||
       exports.BEMHTML;
 }({}, {});
@@ -13542,7 +13596,9 @@ var api = new BEMHTML({"elemJsInstances":true});
 /// -------------------------------------
 /// ------ BEM-XJST User-code Start -----
 /// -------------------------------------
-api.compile(function(match, wrap, block, elem, mode, mod, elemMod, def, tag, attrs, cls, js, bem, mix, content, replace, extend, oninit, xjstOptions, appendContent, prependContent, local, applyCtx, applyNext, apply) {
+api.compile(function(
+match, block, elem, mod, elemMod, oninit, xjstOptions, wrap, replace, extend, mode, def, content, appendContent, prependContent, attrs, addAttrs, js, addJs, mix, addMix, mods, addMods, addElemMods, elemMods, tag, cls, bem, local, applyCtx, applyNext, apply
+) {
 /* begin: /Users/tadatuta/projects/bem/bem-components/libs/bem-core/common.blocks/page/page.bemhtml.js */
 block('page')(
 
@@ -13806,14 +13862,15 @@ block('button')(
     js()(true),
 
     // NOTE: mix below is to satisfy interface of `control`
-    mix()({ elem : 'control' }),
+    addMix()({ elem : 'control' }),
 
-    attrs()(
+    addAttrs()(
         // Common attributes
         function() {
             var ctx = this.ctx,
+                a = applyNext(),
                 attrs = {
-                    role : 'button',
+                    role : (a && a.role) || 'button',
                     tabindex : ctx.tabIndex,
                     id : ctx.id,
                     title : ctx.title
@@ -13836,7 +13893,7 @@ block('button')(
 
             this.mods.disabled && (attrs.disabled = 'disabled');
 
-            return this.extend(applyNext(), attrs);
+            return attrs;
         })
     ),
 
@@ -13869,7 +13926,7 @@ block('button').mod('focused', true).js()(function() {
 /* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/icon/icon.bemhtml.js */
 block('icon')(
     tag()('span'),
-    attrs()(function() {
+    addAttrs()(function() {
         var attrs = {},
             url = this.ctx.url;
         if(url) attrs.style = 'background-image:url(' + url + ')';
@@ -13895,7 +13952,7 @@ block('attach').elem('control')(
 
     tag()('input'),
 
-    attrs()(function() {
+    addAttrs()(function() {
         var attrs = { type : 'file' },
             attach = this._attach;
 
@@ -13929,14 +13986,15 @@ block('attach').elem('clear').tag()('span');
 
 /* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/attach/__clear/attach__clear.bemhtml.js */
 /* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
-block('button').mod('togglable', 'check').attrs()(function() {
-    return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
+block('button').mod('togglable', 'check').addAttrs()(function() {
+    return this.extend({ 'aria-pressed' : String(!!this.mods.checked) },
+        applyNext());
 });
 
 /* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_check.bemhtml.js */
 /* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
-block('button').mod('togglable', 'radio').attrs()(function() {
-    return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
+block('button').mod('togglable', 'radio').addAttrs()(function() {
+    return { 'aria-pressed' : String(!!this.mods.checked) };
 });
 
 /* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/button/_togglable/button_togglable_radio.bemhtml.js */
@@ -13944,7 +14002,7 @@ block('button').mod('togglable', 'radio').attrs()(function() {
 block('button').mod('type', 'link')(
     tag()('a'),
 
-    attrs()(function() {
+    addAttrs()(function() {
         var ctx = this.ctx,
             attrs = { role : 'link' };
 
@@ -13953,7 +14011,7 @@ block('button').mod('type', 'link')(
             attrs['aria-disabled'] = 'true' :
             attrs.href = ctx.url;
 
-        return this.extend(applyNext(), attrs);
+        return attrs;
     }),
 
     mod('disabled', true)
@@ -14001,7 +14059,7 @@ block('checkbox').elem('box').tag()('span');
 block('checkbox').elem('control')(
     tag()('input'),
 
-    attrs()(function() {
+    addAttrs()(function() {
         // NOTE: don't remove autocomplete attribute, otherwise js and DOM may be desynced
         var attrs = { type : 'checkbox', autocomplete : 'off' },
             ctx = this.ctx;
@@ -14019,7 +14077,7 @@ block('checkbox').elem('control')(
 /* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
 block('checkbox').elem('text')(
     tag()('span'),
-    attrs()({ role : 'presentation' })
+    addAttrs()({ role : 'presentation' })
 );
 
 /* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox/__text/checkbox__text.bemhtml.js */
@@ -14066,11 +14124,11 @@ block('checkbox').mod('type', 'button')(
 block('checkbox-group')(
     tag()('span'),
 
-    attrs()({ role : 'group' }),
+    addAttrs()({ role : 'group' }),
 
     js()(true),
 
-    mix()([{ block : 'control-group' }]),
+    addMix()([{ block : 'control-group' }]),
 
     content()(function() {
         var mods = this.mods,
@@ -14105,7 +14163,7 @@ block('checkbox-group')(
 
 /* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/checkbox-group/checkbox-group.bemhtml.js */
 /* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/control-group/control-group.bemhtml.js */
-block('control-group').attrs()({ role : 'group' });
+block('control-group').addAttrs()({ role : 'group' });
 
 /* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/control-group/control-group.bemhtml.js */
 /* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/dropdown/dropdown.bemhtml.js */
@@ -14175,7 +14233,7 @@ block('popup')(
             zIndexGroupLevel : ctx.zIndexGroupLevel
         };
     }),
-    attrs()({ 'aria-hidden' : 'true' })
+    addAttrs()({ 'aria-hidden' : 'true' })
 );
 
 /* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/popup/popup.bemhtml.js */
@@ -14252,9 +14310,9 @@ block('link')(
     js()(true),
 
     // NOTE: mix below is to satisfy interface of `control`
-    mix()([{ elem : 'control' }]),
+    addMix()([{ elem : 'control' }]),
 
-    attrs()(function() {
+    addAttrs()(function() {
         var ctx = this.ctx,
             attrs = { role : 'link' },
             tabIndex;
@@ -14288,7 +14346,7 @@ block('link')(
 /* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
 block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
     tag()('span'),
-    attrs()(function() {
+    addAttrs()(function() {
         return this.extend(applyNext(), { role : 'button' });
     })
 );
@@ -14296,13 +14354,13 @@ block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
 /* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/link/_pseudo/link_pseudo.bemhtml.js */
 /* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/image/image.bemhtml.js */
 block('image')(
-    attrs()({ role : 'img' }),
+    addAttrs()({ role : 'img' }),
 
     tag()('span'),
 
     match(function() { return typeof this.ctx.content === 'undefined'; })(
         tag()('img'),
-        attrs()(function() {
+        addAttrs()(function() {
             var ctx = this.ctx;
             return this.extend(applyNext(),
                 {
@@ -14337,7 +14395,7 @@ block('input').elem('box').tag()('span');
 block('input').elem('control')(
     tag()('input'),
 
-    attrs()(function() {
+    addAttrs()(function() {
         var input = this._input,
             attrs = {
                 id : input.id,
@@ -14359,7 +14417,7 @@ block('input').elem('control')(
 /* begin: /Users/tadatuta/projects/bem/bem-components/touch.blocks/input/__control/input__control.bemhtml.js */
 block('input').elem('control')(
 
-    attrs()(function() {
+    addAttrs()(function() {
         return this.extend({
             autocomplete : 'off',
             autocorrect : 'off',
@@ -14443,10 +14501,12 @@ block('menu')(
             attrs['aria-disabled'] = 'true' :
             attrs.tabindex = 0;
 
-        return attrs;
+        // extend in backwards order:
+        // bemjson has more priority
+        return this.extend(attrs, applyNext());
     }),
     js()(true),
-    mix()({ elem : 'control' }),
+    addMix()({ elem : 'control' }),
     mod('disabled', true)
         .js()(function() {
             return this.extend(applyNext(), { tabIndex : 0 });
@@ -14468,15 +14528,16 @@ block('menu').elem('item')(
         elemMods.disabled = elemMods.disabled || this._menuMods.disabled;
         return applyNext();
     }),
-    js()(function() {
+    addJs()(function() {
         return { val : this.ctx.val };
     }),
-    attrs()(function(){
+    addAttrs()(function(){
         var elemMods = this.elemMods,
             menuMode = this._menuMods && this._menuMods.mode,
-            role = menuMode?
+            a = applyNext(),
+            role = (a && a.role) || (menuMode?
                         (menuMode === 'check'? 'menuitemcheckbox' : 'menuitemradio') :
-                        'menuitem',
+                        'menuitem'),
             attrs = {
                 role : role,
                 id : this.ctx.id || this.generateId(),
@@ -14491,9 +14552,9 @@ block('menu').elem('item')(
 /* end: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__item/menu__item.bemhtml.js */
 /* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/menu/__group/menu__group.bemhtml.js */
 block('menu').elem('group')(
-    attrs()({ role : 'group' }),
+    addAttrs()({ role : 'group' }),
     match(function() { return typeof this.ctx.title !== 'undefined'; })(
-        attrs()(function() {
+        addAttrs()(function() {
             return this.extend(applyNext(), {
                 'aria-label' : undefined,
                 'aria-labelledby' : this.generateId()
@@ -14548,7 +14609,7 @@ block('link').match(function() {
 block('modal')(
     js()(true),
 
-    mix()(function() {
+    addMix()(function() {
         return {
             block : 'popup',
             js : { zIndexGroupLevel : this.ctx.zIndexGroupLevel || 20 },
@@ -14556,7 +14617,7 @@ block('modal')(
         };
     }),
 
-    attrs()({
+    addAttrs()({
         role : 'dialog',
         'aria-hidden' : 'true'
     }),
@@ -14586,7 +14647,7 @@ block('progressbar')(
         return { val : this._val };
     }),
 
-    attrs()(function() {
+    addAttrs()(function() {
         return {
             role : 'progressbar',
             'aria-valuenow' : this._val + '%' /* NOTE: JAWS doesn't add 'percent' automatically */
@@ -14641,7 +14702,7 @@ block('radio').elem('box').tag()('span');
 block('radio').elem('control')(
     tag()('input'),
 
-    attrs()(function() {
+    addAttrs()(function() {
         // NOTE: don't remove autocomplete attribute, otherwise js and DOM may be desynced
         var ctx = this.ctx,
             attrs = {
@@ -14662,7 +14723,7 @@ block('radio').elem('control')(
 /* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/radio/__text/radio__text.bemhtml.js */
 block('radio').elem('text')(
     tag()('span'),
-    attrs()(function() {
+    addAttrs()(function() {
         return { role : 'presentation' };
     })
 );
@@ -14708,11 +14769,11 @@ block('radio').mod('type', 'button')(
 block('radio-group')(
     tag()('span'),
 
-    attrs()({ role : 'radiogroup' }),
+    addAttrs()({ role : 'radiogroup' }),
 
     js()(true),
 
-    mix()([{ block : 'control-group' }]),
+    addMix()([{ block : 'control-group' }]),
 
     content()(function() {
         var mods = this.mods,
@@ -14798,7 +14859,7 @@ block('select')(
         });
     }),
 
-    js()(function() {
+    addJs()(function() {
         var ctx = this.ctx;
         return {
             name : ctx.name,
@@ -14829,7 +14890,7 @@ block('select').mod('focused', true).js()(function() {
 /* begin: /Users/tadatuta/projects/bem/bem-components/common.blocks/select/__control/select__control.bemhtml.js */
 block('select').elem('control')(
     tag()('input'),
-    attrs()(function() {
+    addAttrs()(function() {
         return {
             type : 'hidden',
             name : this._select.name,
@@ -14878,7 +14939,7 @@ block('select').elem('button')(
 );
 
 block('button').elem('text').match(function() { return this._select; })(
-    attrs()(function() {
+    addAttrs()(function() {
         return { id : this._selectTextId };
     })
 );
@@ -15041,9 +15102,9 @@ block('textarea')(
     tag()('textarea'),
 
     // NOTE: mix below is to satisfy interface of `control`
-    mix()({ elem : 'control' }),
+    addMix()({ elem : 'control' }),
 
-    attrs()(function() {
+    addAttrs()(function() {
         var ctx = this.ctx,
             attrs = {
                 id : ctx.id,

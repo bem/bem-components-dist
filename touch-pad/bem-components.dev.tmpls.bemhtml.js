@@ -270,14 +270,15 @@ block('button')(
     js()(true),
 
     // NOTE: mix below is to satisfy interface of `control`
-    mix()({ elem : 'control' }),
+    addMix()({ elem : 'control' }),
 
-    attrs()(
+    addAttrs()(
         // Common attributes
         function() {
             var ctx = this.ctx,
+                a = applyNext(),
                 attrs = {
-                    role : 'button',
+                    role : (a && a.role) || 'button',
                     tabindex : ctx.tabIndex,
                     id : ctx.id,
                     title : ctx.title
@@ -300,7 +301,7 @@ block('button')(
 
             this.mods.disabled && (attrs.disabled = 'disabled');
 
-            return this.extend(applyNext(), attrs);
+            return attrs;
         })
     ),
 
@@ -336,7 +337,7 @@ block('button').mod('focused', true).js()(function() {
 /* ../../common.blocks/icon/icon.bemhtml.js begin */
 block('icon')(
     tag()('span'),
-    attrs()(function() {
+    addAttrs()(function() {
         var attrs = {},
             url = this.ctx.url;
         if(url) attrs.style = 'background-image:url(' + url + ')';
@@ -364,7 +365,7 @@ block('attach').elem('control')(
 
     tag()('input'),
 
-    attrs()(function() {
+    addAttrs()(function() {
         var attrs = { type : 'file' },
             attach = this._attach;
 
@@ -403,15 +404,16 @@ block('attach').elem('clear').tag()('span');
 /* ../../common.blocks/attach/__clear/attach__clear.bemhtml.js end */
 
 /* ../../common.blocks/button/_togglable/button_togglable_check.bemhtml.js begin */
-block('button').mod('togglable', 'check').attrs()(function() {
-    return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
+block('button').mod('togglable', 'check').addAttrs()(function() {
+    return this.extend({ 'aria-pressed' : String(!!this.mods.checked) },
+        applyNext());
 });
 
 /* ../../common.blocks/button/_togglable/button_togglable_check.bemhtml.js end */
 
 /* ../../common.blocks/button/_togglable/button_togglable_radio.bemhtml.js begin */
-block('button').mod('togglable', 'radio').attrs()(function() {
-    return this.extend(applyNext(), { 'aria-pressed' : String(!!this.mods.checked) });
+block('button').mod('togglable', 'radio').addAttrs()(function() {
+    return { 'aria-pressed' : String(!!this.mods.checked) };
 });
 
 /* ../../common.blocks/button/_togglable/button_togglable_radio.bemhtml.js end */
@@ -420,7 +422,7 @@ block('button').mod('togglable', 'radio').attrs()(function() {
 block('button').mod('type', 'link')(
     tag()('a'),
 
-    attrs()(function() {
+    addAttrs()(function() {
         var ctx = this.ctx,
             attrs = { role : 'link' };
 
@@ -429,7 +431,7 @@ block('button').mod('type', 'link')(
             attrs['aria-disabled'] = 'true' :
             attrs.href = ctx.url;
 
-        return this.extend(applyNext(), attrs);
+        return attrs;
     }),
 
     mod('disabled', true)
@@ -480,7 +482,7 @@ block('checkbox').elem('box').tag()('span');
 block('checkbox').elem('control')(
     tag()('input'),
 
-    attrs()(function() {
+    addAttrs()(function() {
         // NOTE: don't remove autocomplete attribute, otherwise js and DOM may be desynced
         var attrs = { type : 'checkbox', autocomplete : 'off' },
             ctx = this.ctx;
@@ -499,7 +501,7 @@ block('checkbox').elem('control')(
 /* ../../common.blocks/checkbox/__text/checkbox__text.bemhtml.js begin */
 block('checkbox').elem('text')(
     tag()('span'),
-    attrs()({ role : 'presentation' })
+    addAttrs()({ role : 'presentation' })
 );
 
 /* ../../common.blocks/checkbox/__text/checkbox__text.bemhtml.js end */
@@ -548,11 +550,11 @@ block('checkbox').mod('type', 'button')(
 block('checkbox-group')(
     tag()('span'),
 
-    attrs()({ role : 'group' }),
+    addAttrs()({ role : 'group' }),
 
     js()(true),
 
-    mix()([{ block : 'control-group' }]),
+    addMix()([{ block : 'control-group' }]),
 
     content()(function() {
         var mods = this.mods,
@@ -588,7 +590,7 @@ block('checkbox-group')(
 /* ../../common.blocks/checkbox-group/checkbox-group.bemhtml.js end */
 
 /* ../../common.blocks/control-group/control-group.bemhtml.js begin */
-block('control-group').attrs()({ role : 'group' });
+block('control-group').addAttrs()({ role : 'group' });
 
 /* ../../common.blocks/control-group/control-group.bemhtml.js end */
 
@@ -660,7 +662,7 @@ block('popup')(
             zIndexGroupLevel : ctx.zIndexGroupLevel
         };
     }),
-    attrs()({ 'aria-hidden' : 'true' })
+    addAttrs()({ 'aria-hidden' : 'true' })
 );
 
 /* ../../common.blocks/popup/popup.bemhtml.js end */
@@ -740,9 +742,9 @@ block('link')(
     js()(true),
 
     // NOTE: mix below is to satisfy interface of `control`
-    mix()([{ elem : 'control' }]),
+    addMix()([{ elem : 'control' }]),
 
-    attrs()(function() {
+    addAttrs()(function() {
         var ctx = this.ctx,
             attrs = { role : 'link' },
             tabIndex;
@@ -777,7 +779,7 @@ block('link')(
 /* ../../common.blocks/link/_pseudo/link_pseudo.bemhtml.js begin */
 block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
     tag()('span'),
-    attrs()(function() {
+    addAttrs()(function() {
         return this.extend(applyNext(), { role : 'button' });
     })
 );
@@ -786,13 +788,13 @@ block('link').mod('pseudo', true).match(function() { return !this.ctx.url; })(
 
 /* ../../common.blocks/image/image.bemhtml.js begin */
 block('image')(
-    attrs()({ role : 'img' }),
+    addAttrs()({ role : 'img' }),
 
     tag()('span'),
 
     match(function() { return typeof this.ctx.content === 'undefined'; })(
         tag()('img'),
-        attrs()(function() {
+        addAttrs()(function() {
             var ctx = this.ctx;
             return this.extend(applyNext(),
                 {
@@ -830,7 +832,7 @@ block('input').elem('box').tag()('span');
 block('input').elem('control')(
     tag()('input'),
 
-    attrs()(function() {
+    addAttrs()(function() {
         var input = this._input,
             attrs = {
                 id : input.id,
@@ -853,7 +855,7 @@ block('input').elem('control')(
 /* ../../touch.blocks/input/__control/input__control.bemhtml.js begin */
 block('input').elem('control')(
 
-    attrs()(function() {
+    addAttrs()(function() {
         return this.extend({
             autocomplete : 'off',
             autocorrect : 'off',
@@ -942,10 +944,12 @@ block('menu')(
             attrs['aria-disabled'] = 'true' :
             attrs.tabindex = 0;
 
-        return attrs;
+        // extend in backwards order:
+        // bemjson has more priority
+        return this.extend(attrs, applyNext());
     }),
     js()(true),
-    mix()({ elem : 'control' }),
+    addMix()({ elem : 'control' }),
     mod('disabled', true)
         .js()(function() {
             return this.extend(applyNext(), { tabIndex : 0 });
@@ -969,15 +973,16 @@ block('menu').elem('item')(
         elemMods.disabled = elemMods.disabled || this._menuMods.disabled;
         return applyNext();
     }),
-    js()(function() {
+    addJs()(function() {
         return { val : this.ctx.val };
     }),
-    attrs()(function(){
+    addAttrs()(function(){
         var elemMods = this.elemMods,
             menuMode = this._menuMods && this._menuMods.mode,
-            role = menuMode?
+            a = applyNext(),
+            role = (a && a.role) || (menuMode?
                         (menuMode === 'check'? 'menuitemcheckbox' : 'menuitemradio') :
-                        'menuitem',
+                        'menuitem'),
             attrs = {
                 role : role,
                 id : this.ctx.id || this.generateId(),
@@ -993,9 +998,9 @@ block('menu').elem('item')(
 
 /* ../../common.blocks/menu/__group/menu__group.bemhtml.js begin */
 block('menu').elem('group')(
-    attrs()({ role : 'group' }),
+    addAttrs()({ role : 'group' }),
     match(function() { return typeof this.ctx.title !== 'undefined'; })(
-        attrs()(function() {
+        addAttrs()(function() {
             return this.extend(applyNext(), {
                 'aria-label' : undefined,
                 'aria-labelledby' : this.generateId()
@@ -1053,7 +1058,7 @@ block('link').match(function() {
 block('modal')(
     js()(true),
 
-    mix()(function() {
+    addMix()(function() {
         return {
             block : 'popup',
             js : { zIndexGroupLevel : this.ctx.zIndexGroupLevel || 20 },
@@ -1061,7 +1066,7 @@ block('modal')(
         };
     }),
 
-    attrs()({
+    addAttrs()({
         role : 'dialog',
         'aria-hidden' : 'true'
     }),
@@ -1092,7 +1097,7 @@ block('progressbar')(
         return { val : this._val };
     }),
 
-    attrs()(function() {
+    addAttrs()(function() {
         return {
             role : 'progressbar',
             'aria-valuenow' : this._val + '%' /* NOTE: JAWS doesn't add 'percent' automatically */
@@ -1150,7 +1155,7 @@ block('radio').elem('box').tag()('span');
 block('radio').elem('control')(
     tag()('input'),
 
-    attrs()(function() {
+    addAttrs()(function() {
         // NOTE: don't remove autocomplete attribute, otherwise js and DOM may be desynced
         var ctx = this.ctx,
             attrs = {
@@ -1172,7 +1177,7 @@ block('radio').elem('control')(
 /* ../../common.blocks/radio/__text/radio__text.bemhtml.js begin */
 block('radio').elem('text')(
     tag()('span'),
-    attrs()(function() {
+    addAttrs()(function() {
         return { role : 'presentation' };
     })
 );
@@ -1220,11 +1225,11 @@ block('radio').mod('type', 'button')(
 block('radio-group')(
     tag()('span'),
 
-    attrs()({ role : 'radiogroup' }),
+    addAttrs()({ role : 'radiogroup' }),
 
     js()(true),
 
-    mix()([{ block : 'control-group' }]),
+    addMix()([{ block : 'control-group' }]),
 
     content()(function() {
         var mods = this.mods,
@@ -1312,7 +1317,7 @@ block('select')(
         });
     }),
 
-    js()(function() {
+    addJs()(function() {
         var ctx = this.ctx;
         return {
             name : ctx.name,
@@ -1345,7 +1350,7 @@ block('select').mod('focused', true).js()(function() {
 /* ../../common.blocks/select/__control/select__control.bemhtml.js begin */
 block('select').elem('control')(
     tag()('input'),
-    attrs()(function() {
+    addAttrs()(function() {
         return {
             type : 'hidden',
             name : this._select.name,
@@ -1395,7 +1400,7 @@ block('select').elem('button')(
 );
 
 block('button').elem('text').match(function() { return this._select; })(
-    attrs()(function() {
+    addAttrs()(function() {
         return { id : this._selectTextId };
     })
 );
@@ -1564,9 +1569,9 @@ block('textarea')(
     tag()('textarea'),
 
     // NOTE: mix below is to satisfy interface of `control`
-    mix()({ elem : 'control' }),
+    addMix()({ elem : 'control' }),
 
-    attrs()(function() {
+    addAttrs()(function() {
         var ctx = this.ctx,
             attrs = {
                 id : ctx.id,
